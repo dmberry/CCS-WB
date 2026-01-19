@@ -1,0 +1,318 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Editorial color palette */
+    --ink: 0 0% 10%;
+    --charcoal: 0 0% 18%;
+    --slate: 0 0% 29%;
+    --ivory: 40 33% 97%;
+    --cream: 40 24% 94%;
+    --parchment: 40 24% 89%;
+    --burgundy: 352 47% 33%;
+    --gold: 43 85% 38%;
+
+    /* Semantic mappings */
+    --background: 40 33% 97%;
+    --foreground: 0 0% 10%;
+    --muted: 40 24% 94%;
+    --muted-foreground: 0 0% 42%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --border: 40 24% 87%;
+    --input: 40 24% 87%;
+    --primary: 352 47% 33%;
+    --primary-foreground: 40 33% 97%;
+    --secondary: 43 85% 38%;
+    --secondary-foreground: 0 0% 10%;
+    --accent: 40 24% 94%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 40 33% 97%;
+    --ring: 352 47% 33%;
+    --radius: 0.25rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-ivory text-ink;
+    font-feature-settings: "rlig" 1, "calt" 1, "kern" 1;
+  }
+
+  /* Editorial typography defaults */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+}
+
+/* Editorial scrollbar - refined and subtle */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(26, 26, 26, 0.15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(26, 26, 26, 0.25);
+}
+
+/* Focus ring for accessibility */
+.focus-visible:focus {
+  @apply outline-none ring-2 ring-burgundy ring-offset-2 ring-offset-ivory;
+}
+
+/* Editorial dividers */
+.editorial-divider {
+  @apply h-px bg-gradient-to-r from-transparent via-parchment-dark to-transparent;
+}
+
+.thin-rule {
+  @apply h-px bg-parchment-dark;
+}
+
+/* Drop cap for editorial feel */
+.drop-cap::first-letter {
+  @apply float-left text-display-2xl font-display font-bold text-burgundy;
+  line-height: 0.85;
+  margin-right: 0.1em;
+  margin-top: 0.05em;
+}
+
+/* Pull quote styling */
+.pull-quote {
+  @apply relative font-display text-display-md italic text-slate pl-6;
+}
+
+.pull-quote::before {
+  content: "";
+  @apply absolute left-0 top-0 bottom-0 w-0.5 bg-burgundy;
+}
+
+/* Editorial buttons */
+.btn-editorial {
+  @apply inline-flex items-center justify-center font-sans text-body-sm font-medium;
+  @apply px-5 py-2.5 border border-parchment-dark rounded-sm;
+  @apply transition-all duration-300 ease-out;
+  @apply focus:outline-none focus:ring-2 focus:ring-burgundy focus:ring-offset-2 focus:ring-offset-ivory;
+}
+
+.btn-editorial-primary {
+  @apply btn-editorial bg-burgundy text-ivory border-burgundy;
+  @apply hover:bg-burgundy-900 hover:border-burgundy-900;
+  @apply active:bg-burgundy-950;
+}
+
+.btn-editorial-secondary {
+  @apply btn-editorial bg-transparent text-ink border-ink/20;
+  @apply hover:bg-cream hover:border-ink/30;
+  @apply active:bg-parchment;
+}
+
+.btn-editorial-ghost {
+  @apply btn-editorial bg-transparent text-slate border-transparent;
+  @apply hover:text-ink hover:bg-cream;
+  @apply active:bg-parchment;
+}
+
+/* Editorial inputs */
+.input-editorial {
+  @apply w-full font-body text-body-md text-ink;
+  @apply px-4 py-3 bg-white border border-parchment-dark rounded-sm;
+  @apply shadow-editorial-inner;
+  @apply transition-all duration-200;
+  @apply placeholder:text-slate-muted;
+  @apply focus:outline-none focus:border-burgundy focus:ring-1 focus:ring-burgundy;
+}
+
+.input-editorial-lg {
+  @apply input-editorial text-body-lg py-4;
+}
+
+/* Editorial cards */
+.card-editorial {
+  @apply bg-white border border-parchment rounded-sm;
+  @apply shadow-editorial;
+  @apply transition-all duration-300 ease-out;
+}
+
+.card-editorial:hover {
+  @apply shadow-editorial-md border-parchment-dark;
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Typing indicator animation - slower for editorial feel */
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+.typing-dot {
+  animation: bounce 1.8s infinite ease-in-out both;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: -0.4s;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: -0.2s;
+}
+
+/* Message slide-in animation - elegant and slower */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-enter {
+  animation: slideIn 0.5s ease-out;
+}
+
+/* Staggered reveal animation */
+@keyframes staggerReveal {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stagger-reveal {
+  animation: staggerReveal 0.6s ease-out backwards;
+}
+
+.stagger-reveal:nth-child(1) { animation-delay: 0.1s; }
+.stagger-reveal:nth-child(2) { animation-delay: 0.2s; }
+.stagger-reveal:nth-child(3) { animation-delay: 0.3s; }
+.stagger-reveal:nth-child(4) { animation-delay: 0.4s; }
+.stagger-reveal:nth-child(5) { animation-delay: 0.5s; }
+
+/* Card hover effect - refined */
+.card-hover {
+  @apply transition-all duration-300 ease-out;
+}
+
+.card-hover:hover {
+  @apply shadow-editorial-md -translate-y-0.5;
+}
+
+/* Prose styling for generated content - editorial */
+.prose {
+  @apply text-ink font-body text-body-md;
+}
+
+.prose h1 {
+  @apply font-display text-display-xl font-bold mb-6 text-ink;
+}
+
+.prose h2 {
+  @apply font-display text-display-lg font-bold mb-4 text-ink;
+}
+
+.prose h3 {
+  @apply font-display text-display-md font-bold mb-3 text-ink;
+}
+
+.prose p {
+  @apply mb-5 leading-relaxed;
+}
+
+.prose ul {
+  @apply list-disc list-outside ml-6 mb-5 space-y-2;
+}
+
+.prose ol {
+  @apply list-decimal list-outside ml-6 mb-5 space-y-2;
+}
+
+.prose li {
+  @apply leading-relaxed;
+}
+
+.prose blockquote {
+  @apply border-l-2 border-burgundy pl-5 italic my-6 text-slate;
+}
+
+.prose code {
+  @apply font-mono text-body-sm bg-cream px-1.5 py-0.5 rounded-sm text-burgundy-900;
+}
+
+.prose pre {
+  @apply bg-cream p-5 rounded-sm overflow-x-auto mb-5 border border-parchment;
+}
+
+.prose a {
+  @apply text-burgundy underline underline-offset-2 decoration-burgundy/30;
+  @apply hover:decoration-burgundy transition-colors;
+}
+
+.prose strong {
+  @apply font-semibold text-ink;
+}
+
+.prose em {
+  @apply italic;
+}
+
+/* Bibliography/citation styling */
+.citation {
+  @apply font-body text-body-sm text-slate;
+}
+
+.citation-title {
+  @apply font-body font-medium text-ink not-italic;
+}
+
+.citation-authors {
+  @apply text-slate-muted;
+}
+
+.citation-journal {
+  @apply italic text-slate;
+}
+
+/* Paper texture overlay for depth */
+.paper-texture {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  pointer-events: none;
+}

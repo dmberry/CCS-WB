@@ -1,0 +1,311 @@
+import { NextRequest, NextResponse } from "next/server";
+import { generateId, getCurrentTimestamp } from "@/lib/utils";
+import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from "@/lib/rate-limit";
+import { extractAIConfig, validateAIConfig, generateAIResponse } from "@/lib/ai/client";
+import type { ChatRequest, ChatResponse } from "@/types/api";
+import type { Message } from "@/types/session";
+
+// System prompt for the critical code studies assistant
+function buildSystemPrompt(
+  settings: { beDirectMode: boolean; teachMeMode: boolean },
+  currentPhase: string,
+  domain?: string,
+  mode?: string,
+  createLanguage?: string
+): string {
+  const domainContext = domain
+    ? `The code being analysed belongs to the ${domain} domain. Reference relevant histories, platforms, and cultural contexts from this area.`
+    : "No specific code domain has been specified. Be open to code from any context.";
+
+  const modeContext = getModeContext(mode, createLanguage);
+
+  const feedbackStyle = settings.beDirectMode
+    ? `Be direct in your interpretive suggestions. Offer clear readings and invite challenge or elaboration.`
+    : `Use a graduated approach. Start with open questions that invite the analyst to develop their own reading. Only offer interpretive suggestions if they seem stuck.`;
+
+  const teachingStyle = settings.teachMeMode
+    ? `When discussing hermeneutic concepts (close reading, intentional fallacy, triadic structure, execution context), explain them briefly and offer to go deeper. Connect to critical code studies scholarship.`
+    : `Guide through Socratic dialogue. Ask questions that prompt deeper engagement with the code rather than lecturing about methodology.`;
+
+  return `You are a critical code studies assistant helping scholars engage in close reading and hermeneutic analysis of software. Your role is to facilitate rigorous interpretation of code as a cultural artefact.
+
+${domainContext}
+
+${modeContext}
+
+## Current Conversation Phase: ${currentPhase}
+${getPhaseGuidance(currentPhase)}
+
+## Your Approach
+${feedbackStyle}
+${teachingStyle}
+
+## Critical Code Studies Principles
+1. **Code is text** - Software deserves the same close reading we give literature
+2. **Code is cultural** - It embodies values, assumptions, and historical contexts
+3. **Code is performative** - It does things in the world; execution matters
+4. **Code has authors** - Intentionality, style, and craft are interpretable
+5. **Code has audiences** - Other programmers, machines, users, maintainers
+
+## The Triadic Hermeneutic Structure
+Help the analyst navigate between:
+1. **Human intention** - What did the author(s) mean to accomplish? What values and assumptions are embedded?
+2. **Computational generation** - How does the code structure its logic? What metaphors and abstractions does it employ?
+3. **Executable code** - What does it actually do when run? What effects does it produce?
+
+## Layers of Code Reading
+Guide analysis through these interpretive layers:
+- **Lexical** - Variable names, function names, comments as linguistic choices
+- **Syntactic** - Structure, control flow, organisation as rhetorical choices
+- **Semantic** - What the code means, its logic and purpose
+- **Pragmatic** - How the code functions in context, its effects
+- **Cultural** - Historical moment, platform constraints, community conventions
+
+## Response Guidelines
+- Be intellectually curious and collaborative
+- Ask one or two focused interpretive questions at a time
+- Acknowledge interesting observations and productive lines of inquiry
+- Offer multiple possible readings rather than single "correct" interpretations
+- Connect to broader critical theory when relevant (but don't force it)
+- Reference specific lines or passages when discussing the code
+- Be willing to sit with ambiguity and contradiction
+
+## When Code is Present
+When the analyst shares code:
+- Read it carefully, noting structural and stylistic features
+- Identify interesting interpretive entry points
+- Ask what drew their attention to particular passages
+- Suggest connections between different parts of the code
+- Explore the relationship between comments and code
+- Consider what the code reveals about its moment of creation
+
+Remember: Your role is to deepen engagement with code as a meaningful text. The goal is richer interpretation, not definitive answers.`;
+}
+
+function getModeContext(mode?: string, createLanguage?: string): string {
+  switch (mode) {
+    case "critique":
+      return `## Mode: Code Critique
+The analyst has specific code they want to examine closely. Focus on:
+- Close reading of the code as text
+- Identifying interpretive entry points
+- Exploring multiple layers of meaning
+- Connecting observations to broader patterns`;
+    case "archaeology":
+      return `## Mode: Code Archaeology
+The analyst is exploring historical software. Focus on:
+- Reconstructing the original context (platform, era, constraints)
+- Understanding what was possible and conventional at the time
+- Tracing influences and lineages
+- Connecting to computing history and culture
+- Considering what the code reveals about its moment`;
+    case "interpret":
+      return `## Mode: Hermeneutic Exploration
+The analyst wants to explore interpretive approaches without a fixed code object. Focus on:
+- Discussing hermeneutic frameworks for code analysis
+- Exploring the triadic structure (intention, generation, execution)
+- Connecting to critical theory and digital humanities
+- Helping them develop their interpretive toolkit`;
+    case "create":
+      const lang = createLanguage || "Python";
+      return `## Mode: Code Creation (Vibe Coding)
+The user wants to learn by building. Help them create simple implementations of classic algorithms to understand how they work.
+
+**IMPORTANT: Generate all code in ${lang}.** This is the user's chosen language.
+
+Focus on:
+- Exploring what algorithm or code pattern to implement
+- Building step-by-step with explanations
+- Understanding the underlying logic and design choices
+- Connecting to historical examples and inspirations
+- Keeping implementations simple and readable for critique
+
+### Classic Algorithm Inspirations
+Suggest and help implement simple versions of:
+- **ELIZA**: Pattern matching and response generation (Weizenbaum, 1966)
+- **Love Letter Generator**: Combinatorial text generation (Strachey, 1952)
+- **Poetry generators**: Like Nick Montfort's ppg256 (https://collection.eliterature.org/2/works/montfort_ppg256/ppg256.html)
+- **Sorting algorithms**: Bubble sort, selection sort for algorithmic thinking
+- **Cellular automata**: Simple rule-based generation
+- **Markov chains**: Text generation from patterns
+
+### Implementation Approach
+- Write all code in ${lang}
+- Start with the simplest possible version
+- Build incrementally, explaining each addition
+- Keep code readable and well-commented
+- Version each iteration so the user can see progress
+- When satisfied, offer to transfer to critique mode for close reading`;
+    default:
+      return "";
+  }
+}
+
+function getPhaseGuidance(phase: string): string {
+  switch (phase) {
+    // Critique/archaeology/interpret phases
+    case "opening":
+      return `You're beginning the analysis. Understand what code they're examining and what drew their attention to it. If they haven't shared code yet, invite them to do so.`;
+    case "surface":
+      return `Focus on surface-level reading: syntax, structure, naming conventions, comments. What patterns are visible? What choices stand out?`;
+    case "context":
+      return `Explore the code's context: When was it written? For what platform? By whom? Under what constraints? How does historical moment shape the code?`;
+    case "interpretation":
+      return `Move into deeper hermeneutic analysis. What does the code mean? What values does it embody? How do different readings complement or contradict each other?`;
+    case "synthesis":
+      return `Help draw together the interpretive threads. What larger argument or reading emerges from the analysis? What remains unresolved or ambiguous?`;
+    case "output":
+      return `The analyst is ready to generate outputs. Help shape their interpretation into a code critique, annotated reading, or scholarly analysis.`;
+    // Create mode phases
+    case "concept":
+      return `Explore what the user wants to create. Discuss classic algorithms, their history, and what makes them interesting. Help them choose something to implement.`;
+    case "scaffolding":
+      return `Set up the basic structure of the code. Explain the fundamental approach and create a minimal working version.`;
+    case "iteration":
+      return `Refine and develop the code together. Add features, improve readability, and explain design decisions. Each iteration should be marked as a new version.`;
+    case "reflection":
+      return `Step back and examine what was created. Discuss the design choices, what the code reveals about the algorithm, and how it could be analysed critically.`;
+    case "transfer":
+      return `The user is ready to move their created code into critique mode. Help them prepare for close reading of what they built.`;
+    default:
+      return `Continue the natural flow of interpretation while deepening engagement with the code.`;
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Check rate limit
+    const clientId = getClientIdentifier(request);
+    const rateLimitResult = checkRateLimit(clientId, RATE_LIMITS.chat);
+
+    if (!rateLimitResult.allowed) {
+      const waitSeconds = Math.ceil(rateLimitResult.resetIn / 1000);
+      return NextResponse.json(
+        {
+          error: "rate_limit",
+          message: `You're sending messages too quickly. Please wait ${waitSeconds} seconds before trying again.`,
+          retryAfter: waitSeconds,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": waitSeconds.toString(),
+            "X-RateLimit-Limit": rateLimitResult.limit.toString(),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": Math.ceil(Date.now() / 1000 + rateLimitResult.resetIn / 1000).toString(),
+          },
+        }
+      );
+    }
+
+    const body: ChatRequest = await request.json();
+    const { messages, settings, currentPhase, subfield, analysisContext, literatureContext, mode, codeContext, createLanguage } = body;
+
+    // Build context from code files and analysis if available
+    let additionalContext = "";
+
+    // Include code context if present
+    if (codeContext && codeContext.length > 0) {
+      additionalContext += "\n\n## Code Under Analysis\n";
+      codeContext.forEach((code: { name: string; language?: string; content?: string; author?: string; date?: string; platform?: string; context?: string }) => {
+        additionalContext += `### ${code.name}`;
+        if (code.language) additionalContext += ` (${code.language})`;
+        additionalContext += "\n";
+        if (code.author) additionalContext += `Author: ${code.author}\n`;
+        if (code.date) additionalContext += `Date: ${code.date}\n`;
+        if (code.platform) additionalContext += `Platform: ${code.platform}\n`;
+        if (code.context) additionalContext += `Context: ${code.context}\n`;
+        if (code.content) {
+          additionalContext += "\n```\n" + code.content + "\n```\n\n";
+        }
+      });
+    }
+
+    // Include analysis results if available
+    if (analysisContext && analysisContext.length > 0) {
+      additionalContext += "\n\n## Analysis Notes\n";
+      analysisContext.forEach((result) => {
+        additionalContext += `### ${result.type.charAt(0).toUpperCase() + result.type.slice(1)} Analysis\n`;
+        additionalContext += `${result.summary}\n`;
+        if (result.notes && result.notes.length > 0) {
+          additionalContext += "\nInterpretive notes:\n";
+          result.notes.forEach((note: { type: string; message: string; lineReference?: string }) => {
+            additionalContext += `- [${note.type}]${note.lineReference ? ` (${note.lineReference})` : ""}: ${note.message}\n`;
+          });
+        }
+        additionalContext += "\n";
+      });
+    }
+
+    // Include reference context if available
+    if (literatureContext && literatureContext.length > 0) {
+      additionalContext += "\n\n## Related References\n";
+      literatureContext.forEach((ref) => {
+        additionalContext += `- ${ref.title}`;
+        if (ref.year) additionalContext += ` (${ref.year})`;
+        if (ref.repository) additionalContext += ` [${ref.repository}]`;
+        if (ref.isHistorical) additionalContext += " [Historical]";
+        additionalContext += "\n";
+      });
+    }
+
+    // Use domain instead of subfield, pass mode for context
+    const systemPrompt = buildSystemPrompt(settings, currentPhase, subfield, mode, createLanguage) + additionalContext;
+
+    // Extract and validate AI configuration from request headers
+    const aiConfig = extractAIConfig(request);
+    const validation = validateAIConfig(aiConfig);
+
+    if (!validation.valid) {
+      return NextResponse.json(
+        {
+          error: "configuration_error",
+          message: validation.error || "Invalid AI configuration. Please check your settings.",
+          requiresSetup: validation.requiresSetup,
+        },
+        { status: 503 }
+      );
+    }
+
+    // Convert messages to AI SDK format
+    const aiMessages = messages
+      .filter((m) => m.role !== "system")
+      .map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+
+    // Call AI API using unified client
+    const responseContent = await generateAIResponse(aiConfig, {
+      system: systemPrompt,
+      messages: aiMessages,
+      maxTokens: 1024,
+    });
+
+    // Build response message
+    const assistantMessage: Message = {
+      id: generateId(),
+      role: "assistant",
+      content: responseContent,
+      timestamp: getCurrentTimestamp(),
+      metadata: {
+        phase: currentPhase as NonNullable<Message["metadata"]>["phase"],
+      },
+    };
+
+    const chatResponse: ChatResponse = {
+      message: assistantMessage,
+    };
+
+    return NextResponse.json(chatResponse);
+  } catch (error) {
+    console.error("Chat API error:", error);
+    return NextResponse.json(
+      {
+        error: "chat_error",
+        message: "Failed to process chat message. Please try again.",
+      },
+      { status: 500 }
+    );
+  }
+}
