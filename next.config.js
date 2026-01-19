@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  devIndicators: false, // Hide the Next.js dev indicator
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",
