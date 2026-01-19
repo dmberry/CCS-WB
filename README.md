@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 0.2.0** | CCS Methodology v2.4
+**Version 1.0.0** | CCS Methodology v2.4
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -29,7 +29,7 @@ The assistant adapts its engagement style based on your experience:
 - **Practitioner**: Uses vocabulary freely, focuses on analysis
 - **Research**: Engages as peer, challenges interpretations, technical depth
 
-### IDE-Style Critique Layout (v0.2)
+### IDE-Style Critique Layout
 The critique mode features a three-panel layout for focused code analysis:
 
 1. **Left panel**: File tree with colour-coded filenames by type
@@ -40,21 +40,26 @@ The critique mode features a three-panel layout for focused code analysis:
    - Grey: Text and other files
 
 2. **Centre panel**: Code editor with line numbers
+   - Toggle between Edit and Annotate modes
    - Click any line to add an annotation
    - Six annotation types: Observation, Question, Metaphor, Pattern, Context, Critique
    - Annotations display inline as `// An:Type: content`
    - Download annotated code with annotations preserved
+   - Customisable font size and display settings
 
 3. **Right panel**: Chat interface with guided prompts
    - Context preview shows what the LLM sees
    - Phase-appropriate questions guide analysis
    - "Help Annotate" asks the LLM to suggest annotations
+   - Resizable panel divider (drag to resize)
+   - Customisable chat font size
 
 ### Project Management
 - **Save/Load projects** as `.ccs` files (JSON internally)
 - **Load Project** button on landing page auto-detects mode
 - **Export session logs** in JSON, Text, or PDF format for research documentation
 - Session logs include metadata, annotated code, full conversation, and statistics
+- Click filename in header to rename project
 
 ### Conversation Phases
 
@@ -103,7 +108,8 @@ Choose your preferred AI provider in browser settings:
 ## Technology Stack
 
 ### Frontend
-- **Framework**: Next.js 14 with TypeScript
+- **Framework**: Next.js 16 with React 19 and TypeScript
+- **Bundler**: Turbopack (Next.js 16 default)
 - **Styling**: Tailwind CSS with editorial design system
 - **State**: React Context + useReducer
 - **PDF Export**: jsPDF
@@ -171,29 +177,56 @@ Recommended models for code analysis: `llama3.2`, `mistral`, `codellama`
 ## Project Structure
 
 ```
-CCS-lab/
+CCS-WB/
 ├── src/
-│   ├── app/                    # Next.js app router
-│   │   ├── api/               # API routes
-│   │   │   ├── chat/          # Main dialogue API
-│   │   │   ├── literature/    # Literature search
-│   │   │   ├── generate/      # Output generation
-│   │   │   └── skill-document/ # CCS methodology
-│   │   ├── conversation/      # Main conversation page
-│   │   └── page.tsx           # Landing page
+│   ├── app/                          # Next.js app router
+│   │   ├── api/                      # API routes
+│   │   │   ├── chat/route.ts         # Main dialogue API
+│   │   │   ├── literature/route.ts   # Literature search
+│   │   │   ├── generate/route.ts     # Output generation
+│   │   │   ├── skill-document/route.ts
+│   │   │   ├── test-connection/route.ts
+│   │   │   ├── analyze/route.ts
+│   │   │   ├── export/route.ts
+│   │   │   └── upload/route.ts
+│   │   ├── conversation/page.tsx     # Main conversation page
+│   │   ├── layout.tsx
+│   │   └── page.tsx                  # Landing page
 │   ├── components/
-│   │   ├── layouts/           # CritiqueLayout (IDE-style)
-│   │   ├── code/              # CodeEditorPanel, annotations
-│   │   ├── chat/              # ContextPreview
-│   │   ├── prompts/           # GuidedPrompts
-│   │   └── settings/          # AIProviderSettings
-│   ├── context/               # SessionContext, AISettingsContext
+│   │   ├── layouts/
+│   │   │   └── CritiqueLayout.tsx    # IDE-style three-panel layout
+│   │   ├── code/
+│   │   │   ├── CodeEditorPanel.tsx   # Code editor with annotations
+│   │   │   ├── CodeDiffViewer.tsx    # Side-by-side comparison
+│   │   │   └── AnnotatedCodeViewer.tsx
+│   │   ├── chat/
+│   │   │   ├── ContextPreview.tsx    # Shows LLM context
+│   │   │   └── MessageBubble.tsx     # Chat message styling
+│   │   ├── prompts/
+│   │   │   └── GuidedPrompts.tsx     # Phase-appropriate questions
+│   │   └── settings/
+│   │       └── AIProviderSettings.tsx
+│   ├── context/
+│   │   ├── SessionContext.tsx        # Session state (useReducer)
+│   │   └── AISettingsContext.tsx     # AI provider config
 │   ├── lib/
-│   │   ├── ai/               # Multi-provider AI client
-│   │   └── prompts/          # CCS methodology loader
-│   └── types/                 # TypeScript types
-├── Critical-Code-Studies-Skill.md  # CCS methodology v2.4
-└── public/                    # Static assets
+│   │   ├── ai/
+│   │   │   ├── client.ts             # Multi-provider AI client
+│   │   │   └── config.ts
+│   │   ├── export/
+│   │   │   └── session-log.ts        # Session log export utilities
+│   │   ├── prompts/
+│   │   │   └── ccs-methodology.ts    # Loads skill document
+│   │   ├── utils.ts
+│   │   └── config.ts
+│   └── types/
+│       ├── session.ts                # Core types + GUIDED_PROMPTS
+│       ├── ai-settings.ts
+│       ├── api.ts
+│       └── index.ts
+├── Critical-Code-Studies-Skill.md    # CCS methodology v2.4
+├── CCS-Bibliography.md               # Reference bibliography
+└── public/                           # Static assets
 ```
 
 ## Critical Code Studies Methodology
@@ -225,6 +258,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 1.0.0 | Next.js 16 with Turbopack, React 19, unified font size controls, resizable panels, edit/annotate mode toggle, improved UI consistency |
 | 0.2.0 | IDE-style critique layout, inline annotations, session log export, experience levels, Load Project |
 | 0.1.0 | Initial release with four modes, multi-provider AI, create mode |
 

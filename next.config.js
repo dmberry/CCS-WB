@@ -6,7 +6,10 @@ const nextConfig = {
       bodySizeLimit: "10mb",
     },
   },
-  // Handle PDF files
+  // Turbopack config (Next.js 16+ default bundler)
+  // Empty config silences the webpack migration warning
+  turbopack: {},
+  // Webpack fallback for compatibility (used when running with --webpack flag)
   webpack: (config) => {
     config.resolve.alias.canvas = false;
     config.resolve.alias.encoding = false;

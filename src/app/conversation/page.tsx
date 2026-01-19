@@ -19,7 +19,6 @@ import {
   X,
   FileText,
   Download,
-  FileUp,
   FileDown,
   Cpu,
   Code,
@@ -28,6 +27,9 @@ import {
   Lightbulb,
   Save,
   FolderOpen,
+  Settings2,
+  Minus,
+  Plus,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
@@ -37,9 +39,19 @@ import { CritiqueLayout } from "@/components/layouts";
 import { PROVIDER_CONFIGS } from "@/lib/ai/config";
 import { APP_VERSION, APP_NAME } from "@/lib/config";
 import { GUIDED_PROMPTS } from "@/types";
+import {
+  generateSessionLog,
+  exportSessionLogJSON,
+  exportSessionLogText,
+  exportSessionLogPDF,
+  MODE_CODES,
+  MODE_LABELS,
+  CCS_SKILL_VERSION,
+} from "@/lib/export";
 
-// CCS Skill document version (should match Critical-Code-Studies-Skill.md)
-const CCS_SKILL_VERSION = "2.4";
+// Font size constants for chat
+const MIN_CHAT_FONT_SIZE = 10;
+const MAX_CHAT_FONT_SIZE = 24;
 
 // Opening prompts based on mode
 const openingPrompts: Record<string, string> = {
@@ -84,7 +96,6 @@ export default function ConversationPage() {
   const [generatedOutput, setGeneratedOutput] = useState<{ content: string; type: string } | null>(null);
   const [selectedOutputType, setSelectedOutputType] = useState<"annotation" | "critique" | "reading">("critique");
   const [showExportModal, setShowExportModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const [selectedCodeDetails, setSelectedCodeDetails] = useState<CodeReference | null>(null);
   const [selectedRefDetails, setSelectedRefDetails] = useState<ReferenceResult | null>(null);
@@ -100,27 +111,13 @@ export default function ConversationPage() {
   const [showCodeAnnotator, setShowCodeAnnotator] = useState<{ code: string; fileId: string; fileName?: string; language?: string } | null>(null);
   const [showGuidedPrompts, setShowGuidedPrompts] = useState(false);
   const [projectName, setProjectName] = useState<string>("");
+  const [chatFontSize, setChatFontSize] = useState<number>(14);
+  const [showChatFontSettings, setShowChatFontSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sessionLoadInputRef = useRef<HTMLInputElement>(null);
   const hasAddedOpeningMessage = useRef(false);
-
-  // Mode codes for filenames
-  const MODE_CODES: Record<string, string> = {
-    critique: "CR",
-    archaeology: "AR",
-    interpret: "IN",
-    create: "WR",
-  };
-
-  // Mode labels for error messages
-  const MODE_LABELS: Record<string, string> = {
-    CR: "Critique",
-    AR: "Archaeology",
-    IN: "Interpret",
-    WR: "Create",
-  };
 
   // Check if there are unsaved changes (more than just the initial assistant message)
   const hasUnsavedChanges = useCallback(() => {
@@ -1048,356 +1045,86 @@ export default function ConversationPage() {
     setSuccessMessage("PDF exported successfully!");
   };
 
-  // Annotation types for statistics
-  const LINE_ANNOTATION_TYPES = ["observation", "question", "metaphor", "pattern", "context", "critique"] as const;
-
-  // Generate comprehensive session log data
-  const generateSessionLog = useCallback(() => {
-    const modeCode = MODE_CODES[session.mode] || "XX";
-    const modeLabel = MODE_LABELS[modeCode] || session.mode;
-
-    return {
-      metadata: {
-        projectName: projectName || "Untitled",
-        sessionId: session.id,
-        mode: session.mode,
-        modeLabel: modeLabel,
-        modeCode: modeCode,
-        experienceLevel: session.experienceLevel,
-        currentPhase: session.currentPhase,
-        createdAt: session.createdAt,
-        lastModified: session.lastModified,
-        exportedAt: new Date().toISOString(),
-        logVersion: "1.0",
-        appVersion: APP_VERSION,
-        ccsSkillVersion: CCS_SKILL_VERSION,
-      },
-      codeArtefacts: session.codeFiles.map((file) => ({
-        id: file.id,
-        name: file.name,
-        language: file.language,
-        source: file.source,
-        author: file.author,
-        date: file.date,
-        platform: file.platform,
-        context: file.context,
-        uploadedAt: file.uploadedAt,
-        size: file.size,
-      })),
-      conversationLog: session.messages.map((msg) => ({
-        id: msg.id,
-        role: msg.role,
-        content: msg.content,
-        timestamp: msg.timestamp,
-        phase: msg.metadata?.phase,
-        feedbackLevel: msg.metadata?.feedbackLevel,
-      })),
-      analysisContext: session.analysisResults,
-      literatureReferences: session.references,
-      critiqueArtefacts: session.critiqueArtifacts,
-      settings: {
-        beDirectMode: session.settings.beDirectMode,
-        teachMeMode: session.settings.teachMeMode,
-      },
-      statistics: {
-        totalMessages: session.messages.length,
-        userMessages: session.messages.filter((m) => m.role === "user").length,
-        assistantMessages: session.messages.filter((m) => m.role === "assistant").length,
-        codeFiles: session.codeFiles.length,
-        totalAnnotations: session.lineAnnotations.length,
-        annotationsByType: LINE_ANNOTATION_TYPES.reduce((acc, type) => {
-          acc[type] = session.lineAnnotations.filter((a) => a.type === type).length;
-          return acc;
-        }, {} as Record<string, number>),
-        critiqueArtefacts: session.critiqueArtifacts.length,
-        references: session.references.length,
-      },
-    };
-  }, [session, projectName, MODE_CODES, MODE_LABELS, LINE_ANNOTATION_TYPES]);
-
-  // Export session log as JSON
+  // Export handlers using shared utilities
   const handleExportSessionLogJSON = useCallback(() => {
-    const sessionLog = generateSessionLog();
-    const blob = new Blob([JSON.stringify(sessionLog, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const safeFileName = (projectName || "session").replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase();
+    const log = generateSessionLog(session, projectName);
     const modeCode = MODE_CODES[session.mode] || "XX";
-    a.download = `${safeFileName}-${modeCode}-log.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    exportSessionLogJSON(log, projectName, modeCode);
     setShowExportModal(false);
     setSuccessMessage("Session log exported as JSON!");
-  }, [generateSessionLog, projectName, session.mode, MODE_CODES]);
+  }, [session, projectName]);
 
-  // Export session log as Text
   const handleExportSessionLogText = useCallback(() => {
-    const log = generateSessionLog();
-    const lines: string[] = [];
-
-    lines.push("═".repeat(80));
-    lines.push("CRITICAL CODE STUDIES SESSION LOG");
-    lines.push("═".repeat(80));
-    lines.push(`CCS-WB v${APP_VERSION} | CCS Methodology v${CCS_SKILL_VERSION}`);
-    lines.push("");
-
-    lines.push("SESSION METADATA");
-    lines.push("─".repeat(40));
-    lines.push(`Project: ${log.metadata.projectName}`);
-    lines.push(`Mode: ${log.metadata.modeLabel} (-${log.metadata.modeCode})`);
-    lines.push(`Experience Level: ${log.metadata.experienceLevel || "Not set"}`);
-    lines.push(`Current Phase: ${log.metadata.currentPhase}`);
-    lines.push(`Session ID: ${log.metadata.sessionId}`);
-    lines.push(`Created: ${new Date(log.metadata.createdAt).toLocaleString()}`);
-    lines.push(`Last Modified: ${new Date(log.metadata.lastModified).toLocaleString()}`);
-    lines.push(`Exported: ${new Date(log.metadata.exportedAt).toLocaleString()}`);
-    lines.push("");
-
-    lines.push("STATISTICS");
-    lines.push("─".repeat(40));
-    lines.push(`Total Messages: ${log.statistics.totalMessages}`);
-    lines.push(`  User: ${log.statistics.userMessages}`);
-    lines.push(`  Assistant: ${log.statistics.assistantMessages}`);
-    lines.push(`Code Files: ${log.statistics.codeFiles}`);
-    lines.push(`Annotations: ${log.statistics.totalAnnotations}`);
-    if (log.statistics.totalAnnotations > 0) {
-      Object.entries(log.statistics.annotationsByType).forEach(([type, count]) => {
-        if (count > 0) lines.push(`  ${type}: ${count}`);
-      });
-    }
-    lines.push(`Critique Artefacts: ${log.statistics.critiqueArtefacts}`);
-    lines.push(`Literature References: ${log.statistics.references}`);
-    lines.push("");
-
-    if (log.codeArtefacts.length > 0) {
-      lines.push("═".repeat(80));
-      lines.push("CODE ARTEFACTS");
-      lines.push("═".repeat(80));
-      log.codeArtefacts.forEach((file, index) => {
-        lines.push("");
-        lines.push(`[${index + 1}] ${file.name}${file.language ? ` (${file.language})` : ""}`);
-        lines.push("─".repeat(40));
-        if (file.author) lines.push(`Author: ${file.author}`);
-        if (file.date) lines.push(`Date: ${file.date}`);
-        if (file.platform) lines.push(`Platform: ${file.platform}`);
-        if (file.context) lines.push(`Context: ${file.context}`);
-        lines.push(`Source: ${file.source || "unknown"}`);
-        lines.push("");
-      });
-    }
-
-    lines.push("═".repeat(80));
-    lines.push("CONVERSATION LOG");
-    lines.push("═".repeat(80));
-    lines.push("");
-
-    log.conversationLog.forEach((msg) => {
-      const timestamp = new Date(msg.timestamp).toLocaleString();
-      const role = msg.role.toUpperCase();
-      const phase = msg.phase ? ` [${msg.phase}]` : "";
-      lines.push(`[${timestamp}] ${role}${phase}`);
-      lines.push("─".repeat(40));
-      lines.push(msg.content);
-      lines.push("");
-    });
-
-    if (log.literatureReferences.length > 0) {
-      lines.push("═".repeat(80));
-      lines.push("LITERATURE REFERENCES");
-      lines.push("═".repeat(80));
-      lines.push("");
-      log.literatureReferences.forEach((ref, index) => {
-        lines.push(`[${index + 1}] ${ref.title}${ref.year ? ` (${ref.year})` : ""}`);
-        if (ref.authors) lines.push(`    Authors: ${ref.authors}`);
-        if (ref.repository) lines.push(`    Source: ${ref.repository}`);
-        if (ref.url) lines.push(`    URL: ${ref.url}`);
-        lines.push("");
-      });
-    }
-
-    if (log.critiqueArtefacts.length > 0) {
-      lines.push("═".repeat(80));
-      lines.push("CRITIQUE ARTEFACTS");
-      lines.push("═".repeat(80));
-      lines.push("");
-      log.critiqueArtefacts.forEach((artifact, index) => {
-        lines.push(`[${index + 1}] ${artifact.type.toUpperCase()} (v${artifact.version})`);
-        lines.push(`    Created: ${new Date(artifact.createdAt).toLocaleString()}`);
-        lines.push("─".repeat(40));
-        lines.push(artifact.content);
-        lines.push("");
-      });
-    }
-
-    lines.push("═".repeat(80));
-    lines.push("END OF SESSION LOG");
-    lines.push("═".repeat(80));
-
-    const text = lines.join("\n");
-    const blob = new Blob([text], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const safeFileName = (projectName || "session").replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase();
+    const log = generateSessionLog(session, projectName);
     const modeCode = MODE_CODES[session.mode] || "XX";
-    a.download = `${safeFileName}-${modeCode}-log.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    exportSessionLogText(log, projectName, modeCode);
     setShowExportModal(false);
     setSuccessMessage("Session log exported as text!");
-  }, [generateSessionLog, projectName, session.mode, MODE_CODES]);
+  }, [session, projectName]);
 
-  // Export session log as PDF
   const handleExportSessionLogPDF = useCallback(() => {
-    const log = generateSessionLog();
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    const contentWidth = pageWidth - 2 * margin;
-    let yPos = margin;
-
-    const addWrappedText = (text: string, fontSize: number, isBold = false) => {
-      doc.setFontSize(fontSize);
-      doc.setFont("helvetica", isBold ? "bold" : "normal");
-      const lines = doc.splitTextToSize(text, contentWidth);
-      const lineHeight = fontSize * 0.4;
-      for (const line of lines) {
-        if (yPos + lineHeight > pageHeight - margin) {
-          doc.addPage();
-          yPos = margin;
-        }
-        doc.text(line, margin, yPos);
-        yPos += lineHeight;
-      }
-      yPos += 2;
-    };
-
-    const addSection = (title: string) => {
-      yPos += 5;
-      if (yPos > pageHeight - margin - 20) {
-        doc.addPage();
-        yPos = margin;
-      }
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(124, 45, 54);
-      doc.text(title, margin, yPos);
-      yPos += 8;
-      doc.setTextColor(0, 0, 0);
-    };
-
-    // Title
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(124, 45, 54);
-    doc.text("Critical Code Studies Session Log", margin, yPos);
-    yPos += 8;
-
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-    doc.text(`CCS-WB v${APP_VERSION} | CCS Methodology v${CCS_SKILL_VERSION}`, margin, yPos);
-    yPos += 8;
-
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(50, 50, 50);
-    doc.text(log.metadata.projectName, margin, yPos);
-    yPos += 8;
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-    doc.text(`${log.metadata.modeLabel} Mode | ${log.metadata.experienceLevel || "No level set"} | Phase: ${log.metadata.currentPhase}`, margin, yPos);
-    yPos += 6;
-    doc.text(`Exported: ${new Date(log.metadata.exportedAt).toLocaleString()}`, margin, yPos);
-    yPos += 10;
-    doc.setTextColor(0, 0, 0);
-
-    addSection("Statistics");
-    addWrappedText(`Messages: ${log.statistics.totalMessages} (User: ${log.statistics.userMessages}, Assistant: ${log.statistics.assistantMessages})`, 10);
-    addWrappedText(`Code Files: ${log.statistics.codeFiles} | Annotations: ${log.statistics.totalAnnotations}`, 10);
-    if (log.statistics.critiqueArtefacts > 0) {
-      addWrappedText(`Critique Artefacts: ${log.statistics.critiqueArtefacts}`, 10);
-    }
-
-    addSection("Conversation Log");
-    log.conversationLog.forEach((msg) => {
-      const timestamp = new Date(msg.timestamp).toLocaleString();
-      const role = msg.role === "user" ? "User" : "Assistant";
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(msg.role === "user" ? 0 : 124, msg.role === "user" ? 0 : 45, msg.role === "user" ? 0 : 54);
-      addWrappedText(`[${timestamp}] ${role}${msg.phase ? ` (${msg.phase})` : ""}`, 9, true);
-      doc.setTextColor(0, 0, 0);
-      doc.setFont("helvetica", "normal");
-      const content = msg.content.length > 500 ? msg.content.substring(0, 500) + "..." : msg.content;
-      addWrappedText(content, 9);
-      yPos += 2;
-    });
-
-    const pageCount = doc.internal.pages.length - 1;
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Page ${i} of ${pageCount} | Critical Code Studies Session Log | ${log.metadata.projectName}`, pageWidth / 2, pageHeight - 10, { align: "center" });
-    }
-
-    const safeFileName = (projectName || "session").replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase();
+    const log = generateSessionLog(session, projectName);
     const modeCode = MODE_CODES[session.mode] || "XX";
-    doc.save(`${safeFileName}-${modeCode}-log.pdf`);
+    exportSessionLogPDF(log, projectName, modeCode);
     setShowExportModal(false);
     setSuccessMessage("Session log exported as PDF!");
-  }, [generateSessionLog, projectName, session.mode, MODE_CODES]);
-
-  const handleImportSession = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const content = e.target?.result as string;
-        const importedSession = JSON.parse(content);
-
-        // Validate the imported data has required fields
-        if (!importedSession.id || !importedSession.mode || !importedSession.messages) {
-          throw new Error("Invalid session file format");
-        }
-
-        importSession(importedSession);
-        setShowImportModal(false);
-
-        // Add a welcome back message
-        addMessage({
-          role: "assistant",
-          content: `Welcome back! I've restored your previous session from ${importedSession.exportedAt ? new Date(importedSession.exportedAt).toLocaleDateString() : "an earlier date"}. You had ${importedSession.messages.length} messages in your conversation. Let's continue where you left off.`,
-        });
-      } catch (error) {
-        console.error("Import error:", error);
-        alert("Failed to import session. Please check the file format.");
-      }
-    };
-    reader.readAsText(file);
-
-    // Reset the file input
-    event.target.value = "";
-  };
+  }, [session, projectName]);
 
   // Use the new IDE-style layout for critique mode
   if (session.mode === "critique") {
     return (
-      <CritiqueLayout
-        onNavigateHome={handleNavigateHome}
-      />
+      <>
+        <CritiqueLayout
+          onNavigateHome={handleNavigateHome}
+        />
+        {/* Unsaved Changes Warning Modal for Critique Mode */}
+        {showUnsavedWarning && (
+          <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-sm shadow-editorial-lg p-6 w-full max-w-md mx-4 border border-parchment">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display text-display-md text-ink">Unsaved Changes</h3>
+                <button
+                  onClick={() => setShowUnsavedWarning(false)}
+                  className="text-slate-muted hover:text-ink transition-colors"
+                >
+                  <X className="h-5 w-5" strokeWidth={1.5} />
+                </button>
+              </div>
+              <p className="font-body text-body-sm text-slate mb-6">
+                You have unsaved work in this session. Would you like to save your project before leaving?
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={() => {
+                    setShowUnsavedWarning(false);
+                    // For critique mode, the save functionality is in CritiqueLayout
+                    // Just close the modal and let the user save manually
+                    alert("Please use the Save button (💾) in the toolbar to save your project first.");
+                  }}
+                  className="w-full btn-editorial-primary py-3"
+                >
+                  Go Back to Save
+                </button>
+                <button
+                  onClick={() => {
+                    setShowUnsavedWarning(false);
+                    router.push('/');
+                  }}
+                  className="w-full btn-editorial bg-gold text-ink border-gold hover:bg-gold-light py-3"
+                >
+                  Leave Without Saving
+                </button>
+                <button
+                  onClick={() => setShowUnsavedWarning(false)}
+                  className="w-full btn-editorial-ghost py-3"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -1471,8 +1198,17 @@ export default function ConversationPage() {
           )}
         </div>
 
-        {/* Center: Full filename with extension */}
-        <div className="absolute left-1/2 transform -translate-x-1/2">
+        {/* Center: Full filename with extension - click to rename */}
+        <button
+          onClick={() => {
+            const newName = prompt("Rename project:", projectName || "Untitled");
+            if (newName !== null && newName.trim()) {
+              setProjectName(newName.trim());
+            }
+          }}
+          className="absolute left-1/2 transform -translate-x-1/2 hover:bg-cream px-2 py-0.5 rounded-sm transition-colors"
+          title="Click to rename"
+        >
           {projectName ? (
             <span className="font-mono text-xs text-ink">
               {projectName.replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase()}-{MODE_CODES[session.mode] || "XX"}.ccs
@@ -1482,7 +1218,7 @@ export default function ConversationPage() {
               untitled-{MODE_CODES[session.mode] || "XX"}.ccs
             </span>
           )}
-        </div>
+        </button>
 
         <div className="relative flex items-center gap-1">
           {/* Hidden file input for loading */}
@@ -1524,16 +1260,6 @@ export default function ConversationPage() {
             title="Export outputs"
           >
             <Download className="h-4 w-4" strokeWidth={1.5} />
-          </button>
-
-          {/* Import button (legacy) */}
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="p-1.5 rounded-sm text-slate hover:text-ink hover:bg-cream transition-colors"
-            aria-label="Import session (legacy)"
-            title="Import session (legacy)"
-          >
-            <FileUp className="h-4 w-4" strokeWidth={1.5} />
           </button>
 
           {/* Settings toggle */}
@@ -1975,51 +1701,6 @@ export default function ConversationPage() {
         </div>
       )}
 
-      {/* Import modal - Editorial style */}
-      {showImportModal && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-editorial-lg p-6 w-full max-w-md mx-4 border border-parchment">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-display text-display-md text-ink">Import Session</h3>
-              <button
-                onClick={() => setShowImportModal(false)}
-                className="text-slate-muted hover:text-ink transition-colors"
-              >
-                <X className="h-5 w-5" strokeWidth={1.5} />
-              </button>
-            </div>
-            <p className="font-body text-body-sm text-slate mb-6">
-              Import a previously exported session to continue where you left off.
-            </p>
-            <div className="border-2 border-dashed border-parchment-dark rounded-sm p-10 text-center bg-cream/50">
-              <FileUp className="h-12 w-12 text-slate-muted mx-auto mb-4" strokeWidth={1.5} />
-              <p className="font-body text-body-sm text-slate mb-5">
-                Select a JSON file to import
-              </p>
-              <label className="cursor-pointer">
-                <span className="btn-editorial-primary">
-                  Choose File
-                </span>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleImportSession}
-                  className="hidden"
-                />
-              </label>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <button
-                onClick={() => setShowImportModal(false)}
-                className="btn-editorial-secondary"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Unsaved Changes Warning Modal - Editorial style */}
       {showUnsavedWarning && (
         <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
@@ -2334,10 +2015,72 @@ export default function ConversationPage() {
             !isMobile && isContextPanelOpen ? "md:mr-80" : ""
           )}
         >
+          {/* Chat header with font size controls */}
+          <div className="px-6 py-2 border-b border-parchment bg-cream/30 flex items-center justify-between">
+            <span className="font-sans text-[10px] uppercase tracking-widest text-slate-muted">
+              Conversation
+            </span>
+            <div className="relative">
+              <button
+                onClick={() => setShowChatFontSettings(!showChatFontSettings)}
+                className={cn(
+                  "p-1 transition-colors",
+                  showChatFontSettings ? "text-burgundy" : "text-slate-muted hover:text-ink"
+                )}
+                title="Font size settings"
+              >
+                <Settings2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+              </button>
+              {showChatFontSettings && (
+                <div className="absolute top-full right-0 mt-1 w-36 bg-white rounded-sm shadow-lg border border-parchment p-3 z-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-display text-xs text-ink">Font Size</h4>
+                    <button
+                      onClick={() => setShowChatFontSettings(false)}
+                      className="p-0.5 text-slate hover:text-ink"
+                    >
+                      <X className="h-3 w-3" strokeWidth={1.5} />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setChatFontSize(prev => Math.max(MIN_CHAT_FONT_SIZE, prev - 1))}
+                      disabled={chatFontSize <= MIN_CHAT_FONT_SIZE}
+                      className="p-1 rounded-sm border border-parchment hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <Minus className="h-3 w-3" strokeWidth={1.5} />
+                    </button>
+                    <input
+                      type="number"
+                      min={MIN_CHAT_FONT_SIZE}
+                      max={MAX_CHAT_FONT_SIZE}
+                      value={chatFontSize}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val)) {
+                          setChatFontSize(Math.min(MAX_CHAT_FONT_SIZE, Math.max(MIN_CHAT_FONT_SIZE, val)));
+                        }
+                      }}
+                      className="w-12 px-1 py-0.5 text-center text-[11px] font-mono border border-parchment rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy"
+                    />
+                    <button
+                      onClick={() => setChatFontSize(prev => Math.min(MAX_CHAT_FONT_SIZE, prev + 1))}
+                      disabled={chatFontSize >= MAX_CHAT_FONT_SIZE}
+                      className="p-1 rounded-sm border border-parchment hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="h-3 w-3" strokeWidth={1.5} />
+                    </button>
+                    <span className="text-[9px] text-slate-muted">px</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-5">
             {session.messages.map((message) => (
-              <MessageBubble key={message.id} message={message} />
+              <MessageBubble key={message.id} message={message} fontSize={chatFontSize} />
             ))}
 
             {isLoading && (
@@ -2871,34 +2614,36 @@ export default function ConversationPage() {
   );
 }
 
-// Message bubble component - Editorial style
-function MessageBubble({ message }: { message: Message }) {
+// Message bubble component - Editorial style (matching critique mode)
+function MessageBubble({ message, fontSize = 14 }: { message: Message; fontSize?: number }) {
   const isUser = message.role === "user";
 
   return (
     <div
       className={cn(
-        "flex message-enter",
-        isUser ? "justify-end" : "justify-start"
+        "message-enter",
+        isUser ? "flex flex-col items-end" : "flex flex-col items-start"
       )}
     >
       <div
         className={cn(
-          "max-w-[80%] rounded-sm px-5 py-4",
+          "max-w-[80%] rounded-sm px-4 py-3",
           isUser
-            ? "bg-burgundy text-ivory shadow-editorial"
-            : "bg-white border border-parchment text-ink shadow-editorial"
+            ? "bg-burgundy/10 text-ink"
+            : "bg-white border border-parchment text-ink"
         )}
       >
-        <p className="font-body text-body-md whitespace-pre-wrap leading-relaxed">{message.content}</p>
-        <div
-          className={cn(
-            "font-sans text-caption mt-3",
-            isUser ? "text-ivory/60" : "text-slate-muted"
-          )}
+        <p
+          className="font-body whitespace-pre-wrap leading-relaxed"
+          style={{ fontSize: `${fontSize}px` }}
         >
+          {message.content}
+        </p>
+      </div>
+      <div className="mt-1 px-1">
+        <span className="font-sans text-[9px] text-slate-muted">
           {formatTimestamp(message.timestamp)}
-        </div>
+        </span>
       </div>
     </div>
   );

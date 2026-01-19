@@ -22,22 +22,32 @@ import {
   FolderOpen,
   FileText,
   FileDown,
+  Settings2,
+  Minus,
+  Plus,
 } from "lucide-react";
-import jsPDF from "jspdf";
 import { CodeEditorPanel, generateAnnotatedCode } from "@/components/code";
 import { ContextPreview } from "@/components/chat";
 import { GuidedPrompts } from "@/components/prompts";
 import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
 import { PROVIDER_CONFIGS } from "@/lib/ai/config";
-import { APP_VERSION } from "@/lib/config";
+import {
+  generateSessionLog,
+  exportSessionLogJSON,
+  exportSessionLogText,
+  exportSessionLogPDF,
+  MODE_CODES,
+  MODE_LABELS,
+} from "@/lib/export";
 import ReactMarkdown from "react-markdown";
-
-// CCS Skill document version (should match Critical-Code-Studies-Skill.md)
-const CCS_SKILL_VERSION = "2.4";
 
 interface CritiqueLayoutProps {
   onNavigateHome: () => void;
 }
+
+// Font size constants for chat
+const MIN_CHAT_FONT_SIZE = 10;
+const MAX_CHAT_FONT_SIZE = 24;
 
 // Opening prompt for critique mode
 const CRITIQUE_OPENING = "What code would you like to explore? You can paste it directly, upload a file, or describe what you're looking at. I'm curious what drew your attention to this particular piece of software.";
@@ -99,6 +109,15 @@ export function CritiqueLayout({
   const [projectName, setProjectName] = useState<string>("");
   const [showExportModal, setShowExportModal] = useState(false);
 
+  // Resizable panel state (percentage width for code panel)
+  const [codePanelWidth, setCodePanelWidth] = useState(50);
+  const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Chat font size (in points)
+  const [chatFontSize, setChatFontSize] = useState<number>(14);
+  const [showChatFontSettings, setShowChatFontSettings] = useState(false);
+
   // Code contents storage (fileId -> content)
   const [codeContents, setCodeContents] = useState<Map<string, string>>(new Map());
 
@@ -125,6 +144,43 @@ export function CritiqueLayout({
       });
     }
   }, [session.messages.length, addMessage]);
+
+  // Handle panel resize dragging
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging || !containerRef.current) return;
+
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
+
+      // Clamp between 25% and 75%
+      setCodePanelWidth(Math.min(75, Math.max(25, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      // Prevent text selection while dragging
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = "col-resize";
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+  }, [isDragging]);
 
   // Generate annotated code context for LLM
   const annotatedCodeContext = useMemo(() => {
@@ -337,22 +393,6 @@ export function CritiqueLayout({
     setShowGuidedPrompts(false);
   }, []);
 
-  // Mode codes for filenames
-  const MODE_CODES: Record<string, string> = {
-    critique: "CR",
-    archaeology: "AR",
-    interpret: "IN",
-    create: "WR",
-  };
-
-  // Mode labels for error messages
-  const MODE_LABELS: Record<string, string> = {
-    CR: "Critique",
-    AR: "Archaeology",
-    IN: "Interpret",
-    WR: "Create",
-  };
-
   // Save session with code contents
   const handleSaveSession = useCallback(() => {
     // Prompt for project name
@@ -464,413 +504,29 @@ export function CritiqueLayout({
     };
     reader.readAsText(file);
     event.target.value = "";
-  }, [importSession, addMessage, MODE_CODES, MODE_LABELS]);
+  }, [importSession, addMessage]);
 
-  // Generate comprehensive session log data
-  const generateSessionLog = useCallback(() => {
-    const modeCode = MODE_CODES[session.mode] || "XX";
-    const modeLabel = MODE_LABELS[modeCode] || session.mode;
-
-    return {
-      // Session metadata
-      metadata: {
-        projectName: projectName || "Untitled",
-        sessionId: session.id,
-        mode: session.mode,
-        modeLabel: modeLabel,
-        modeCode: modeCode,
-        experienceLevel: session.experienceLevel,
-        currentPhase: session.currentPhase,
-        createdAt: session.createdAt,
-        lastModified: session.lastModified,
-        exportedAt: new Date().toISOString(),
-        logVersion: "1.0",
-        appVersion: APP_VERSION,
-        ccsSkillVersion: CCS_SKILL_VERSION,
-      },
-
-      // Code artefacts with full content and annotations
-      codeArtefacts: session.codeFiles.map((file) => {
-        const content = codeContents.get(file.id) || "";
-        const fileAnnotations = session.lineAnnotations.filter(
-          (a) => a.codeFileId === file.id
-        );
-        const annotatedCode = content ? generateAnnotatedCode(content, fileAnnotations) : "";
-
-        return {
-          id: file.id,
-          name: file.name,
-          language: file.language,
-          source: file.source,
-          author: file.author,
-          date: file.date,
-          platform: file.platform,
-          context: file.context,
-          uploadedAt: file.uploadedAt,
-          size: file.size,
-          rawContent: content,
-          annotatedContent: annotatedCode,
-          annotations: fileAnnotations.map((ann) => ({
-            id: ann.id,
-            lineNumber: ann.lineNumber,
-            lineContent: ann.lineContent,
-            type: ann.type,
-            content: ann.content,
-            createdAt: ann.createdAt,
-          })),
-        };
-      }),
-
-      // Full conversation log
-      conversationLog: session.messages.map((msg) => ({
-        id: msg.id,
-        role: msg.role,
-        content: msg.content,
-        timestamp: msg.timestamp,
-        phase: msg.metadata?.phase,
-        feedbackLevel: msg.metadata?.feedbackLevel,
-      })),
-
-      // Analysis context
-      analysisContext: session.analysisResults,
-
-      // Literature references
-      literatureReferences: session.references,
-
-      // Generated critique artefacts
-      critiqueArtefacts: session.critiqueArtifacts,
-
-      // Session settings
-      settings: {
-        beDirectMode: session.settings.beDirectMode,
-        teachMeMode: session.settings.teachMeMode,
-      },
-
-      // Summary statistics
-      statistics: {
-        totalMessages: session.messages.length,
-        userMessages: session.messages.filter((m) => m.role === "user").length,
-        assistantMessages: session.messages.filter((m) => m.role === "assistant").length,
-        codeFiles: session.codeFiles.length,
-        totalAnnotations: session.lineAnnotations.length,
-        annotationsByType: LINE_ANNOTATION_TYPES.reduce((acc, type) => {
-          acc[type] = session.lineAnnotations.filter((a) => a.type === type).length;
-          return acc;
-        }, {} as Record<string, number>),
-        critiqueArtefacts: session.critiqueArtifacts.length,
-        references: session.references.length,
-      },
-    };
-  }, [session, codeContents, projectName, MODE_CODES, MODE_LABELS]);
-
-  // Export as JSON
+  // Export handlers using shared utilities
   const handleExportJSON = useCallback(() => {
-    const sessionLog = generateSessionLog();
-    const blob = new Blob([JSON.stringify(sessionLog, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const safeFileName = (projectName || "session").replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase();
+    const log = generateSessionLog(session, projectName, codeContents, generateAnnotatedCode);
     const modeCode = MODE_CODES[session.mode] || "XX";
-    a.download = `${safeFileName}-${modeCode}-log.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    exportSessionLogJSON(log, projectName, modeCode);
     setShowExportModal(false);
-  }, [generateSessionLog, projectName, session.mode, MODE_CODES]);
+  }, [session, projectName, codeContents]);
 
-  // Export as Text
   const handleExportText = useCallback(() => {
-    const log = generateSessionLog();
-    const lines: string[] = [];
-
-    // Header
-    lines.push("═".repeat(80));
-    lines.push("CRITICAL CODE STUDIES SESSION LOG");
-    lines.push("═".repeat(80));
-    lines.push(`CCS-WB v${APP_VERSION} | CCS Methodology v${CCS_SKILL_VERSION}`);
-    lines.push("");
-
-    // Metadata
-    lines.push("SESSION METADATA");
-    lines.push("─".repeat(40));
-    lines.push(`Project: ${log.metadata.projectName}`);
-    lines.push(`Mode: ${log.metadata.modeLabel} (-${log.metadata.modeCode})`);
-    lines.push(`Experience Level: ${log.metadata.experienceLevel || "Not set"}`);
-    lines.push(`Current Phase: ${log.metadata.currentPhase}`);
-    lines.push(`Session ID: ${log.metadata.sessionId}`);
-    lines.push(`Created: ${new Date(log.metadata.createdAt).toLocaleString()}`);
-    lines.push(`Last Modified: ${new Date(log.metadata.lastModified).toLocaleString()}`);
-    lines.push(`Exported: ${new Date(log.metadata.exportedAt).toLocaleString()}`);
-    lines.push("");
-
-    // Statistics
-    lines.push("STATISTICS");
-    lines.push("─".repeat(40));
-    lines.push(`Total Messages: ${log.statistics.totalMessages}`);
-    lines.push(`  User: ${log.statistics.userMessages}`);
-    lines.push(`  Assistant: ${log.statistics.assistantMessages}`);
-    lines.push(`Code Files: ${log.statistics.codeFiles}`);
-    lines.push(`Annotations: ${log.statistics.totalAnnotations}`);
-    if (log.statistics.totalAnnotations > 0) {
-      Object.entries(log.statistics.annotationsByType).forEach(([type, count]) => {
-        if (count > 0) lines.push(`  ${type}: ${count}`);
-      });
-    }
-    lines.push(`Critique Artefacts: ${log.statistics.critiqueArtefacts}`);
-    lines.push(`Literature References: ${log.statistics.references}`);
-    lines.push("");
-
-    // Code Artefacts
-    if (log.codeArtefacts.length > 0) {
-      lines.push("═".repeat(80));
-      lines.push("CODE ARTEFACTS");
-      lines.push("═".repeat(80));
-
-      log.codeArtefacts.forEach((file, index) => {
-        lines.push("");
-        lines.push(`[${index + 1}] ${file.name}${file.language ? ` (${file.language})` : ""}`);
-        lines.push("─".repeat(40));
-        if (file.author) lines.push(`Author: ${file.author}`);
-        if (file.date) lines.push(`Date: ${file.date}`);
-        if (file.platform) lines.push(`Platform: ${file.platform}`);
-        if (file.context) lines.push(`Context: ${file.context}`);
-        lines.push(`Source: ${file.source || "unknown"}`);
-        lines.push(`Annotations: ${file.annotations.length}`);
-        lines.push("");
-
-        if (file.annotatedContent) {
-          lines.push("--- Code with Annotations ---");
-          lines.push(file.annotatedContent);
-          lines.push("--- End Code ---");
-        }
-        lines.push("");
-      });
-    }
-
-    // Conversation Log
-    lines.push("═".repeat(80));
-    lines.push("CONVERSATION LOG");
-    lines.push("═".repeat(80));
-    lines.push("");
-
-    log.conversationLog.forEach((msg) => {
-      const timestamp = new Date(msg.timestamp).toLocaleString();
-      const role = msg.role.toUpperCase();
-      const phase = msg.phase ? ` [${msg.phase}]` : "";
-      lines.push(`[${timestamp}] ${role}${phase}`);
-      lines.push("─".repeat(40));
-      lines.push(msg.content);
-      lines.push("");
-    });
-
-    // Literature References
-    if (log.literatureReferences.length > 0) {
-      lines.push("═".repeat(80));
-      lines.push("LITERATURE REFERENCES");
-      lines.push("═".repeat(80));
-      lines.push("");
-
-      log.literatureReferences.forEach((ref, index) => {
-        lines.push(`[${index + 1}] ${ref.title}${ref.year ? ` (${ref.year})` : ""}`);
-        if (ref.authors) lines.push(`    Authors: ${ref.authors}`);
-        if (ref.repository) lines.push(`    Source: ${ref.repository}`);
-        if (ref.url) lines.push(`    URL: ${ref.url}`);
-        lines.push("");
-      });
-    }
-
-    // Critique Artefacts
-    if (log.critiqueArtefacts.length > 0) {
-      lines.push("═".repeat(80));
-      lines.push("CRITIQUE ARTEFACTS");
-      lines.push("═".repeat(80));
-      lines.push("");
-
-      log.critiqueArtefacts.forEach((artifact, index) => {
-        lines.push(`[${index + 1}] ${artifact.type.toUpperCase()} (v${artifact.version})`);
-        lines.push(`    Created: ${new Date(artifact.createdAt).toLocaleString()}`);
-        lines.push("─".repeat(40));
-        lines.push(artifact.content);
-        lines.push("");
-      });
-    }
-
-    // Footer
-    lines.push("═".repeat(80));
-    lines.push("END OF SESSION LOG");
-    lines.push("═".repeat(80));
-
-    const text = lines.join("\n");
-    const blob = new Blob([text], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    const safeFileName = (projectName || "session").replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase();
+    const log = generateSessionLog(session, projectName, codeContents, generateAnnotatedCode);
     const modeCode = MODE_CODES[session.mode] || "XX";
-    a.download = `${safeFileName}-${modeCode}-log.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    exportSessionLogText(log, projectName, modeCode);
     setShowExportModal(false);
-  }, [generateSessionLog, projectName, session.mode, MODE_CODES]);
+  }, [session, projectName, codeContents]);
 
-  // Export as PDF
   const handleExportPDF = useCallback(() => {
-    const log = generateSessionLog();
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    const contentWidth = pageWidth - 2 * margin;
-    let yPos = margin;
-
-    // Helper to add wrapped text
-    const addWrappedText = (text: string, fontSize: number, isBold = false) => {
-      doc.setFontSize(fontSize);
-      doc.setFont("helvetica", isBold ? "bold" : "normal");
-      const lines = doc.splitTextToSize(text, contentWidth);
-      const lineHeight = fontSize * 0.4;
-
-      for (const line of lines) {
-        if (yPos + lineHeight > pageHeight - margin) {
-          doc.addPage();
-          yPos = margin;
-        }
-        doc.text(line, margin, yPos);
-        yPos += lineHeight;
-      }
-      yPos += 2;
-    };
-
-    const addSection = (title: string) => {
-      yPos += 5;
-      if (yPos > pageHeight - margin - 20) {
-        doc.addPage();
-        yPos = margin;
-      }
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(124, 45, 54); // Burgundy
-      doc.text(title, margin, yPos);
-      yPos += 8;
-      doc.setTextColor(0, 0, 0);
-    };
-
-    // Title
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(124, 45, 54);
-    doc.text("Critical Code Studies Session Log", margin, yPos);
-    yPos += 8;
-
-    // Version info
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-    doc.text(`CCS-WB v${APP_VERSION} | CCS Methodology v${CCS_SKILL_VERSION}`, margin, yPos);
-    yPos += 8;
-
-    // Project name
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(50, 50, 50);
-    doc.text(log.metadata.projectName, margin, yPos);
-    yPos += 8;
-
-    // Mode badge
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 100, 100);
-    doc.text(`${log.metadata.modeLabel} Mode | ${log.metadata.experienceLevel || "No level set"} | Phase: ${log.metadata.currentPhase}`, margin, yPos);
-    yPos += 6;
-    doc.text(`Exported: ${new Date(log.metadata.exportedAt).toLocaleString()}`, margin, yPos);
-    yPos += 10;
-
-    doc.setTextColor(0, 0, 0);
-
-    // Statistics
-    addSection("Statistics");
-    addWrappedText(`Messages: ${log.statistics.totalMessages} (User: ${log.statistics.userMessages}, Assistant: ${log.statistics.assistantMessages})`, 10);
-    addWrappedText(`Code Files: ${log.statistics.codeFiles} | Annotations: ${log.statistics.totalAnnotations}`, 10);
-    if (log.statistics.critiqueArtefacts > 0) {
-      addWrappedText(`Critique Artefacts: ${log.statistics.critiqueArtefacts}`, 10);
-    }
-
-    // Code Artefacts
-    if (log.codeArtefacts.length > 0) {
-      addSection("Code Artefacts");
-      log.codeArtefacts.forEach((file) => {
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "bold");
-        addWrappedText(`${file.name}${file.language ? ` (${file.language})` : ""}`, 11, true);
-
-        if (file.author || file.date || file.platform) {
-          const meta = [file.author, file.date, file.platform].filter(Boolean).join(" | ");
-          addWrappedText(meta, 9);
-        }
-
-        addWrappedText(`Annotations: ${file.annotations.length}`, 9);
-
-        // Show first 50 lines of annotated code
-        if (file.annotatedContent) {
-          const codeLines = file.annotatedContent.split("\n").slice(0, 50);
-          doc.setFontSize(8);
-          doc.setFont("courier", "normal");
-          codeLines.forEach((line) => {
-            if (yPos > pageHeight - margin) {
-              doc.addPage();
-              yPos = margin;
-            }
-            doc.text(line.substring(0, 100), margin, yPos);
-            yPos += 3;
-          });
-          if (file.annotatedContent.split("\n").length > 50) {
-            addWrappedText(`... (${file.annotatedContent.split("\n").length - 50} more lines)`, 8);
-          }
-          doc.setFont("helvetica", "normal");
-        }
-        yPos += 5;
-      });
-    }
-
-    // Conversation Log (summary)
-    addSection("Conversation Log");
-    log.conversationLog.forEach((msg) => {
-      const timestamp = new Date(msg.timestamp).toLocaleString();
-      const role = msg.role === "user" ? "User" : "Assistant";
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(msg.role === "user" ? 0 : 124, msg.role === "user" ? 0 : 45, msg.role === "user" ? 0 : 54);
-      addWrappedText(`[${timestamp}] ${role}${msg.phase ? ` (${msg.phase})` : ""}`, 9, true);
-      doc.setTextColor(0, 0, 0);
-      doc.setFont("helvetica", "normal");
-      // Truncate long messages
-      const content = msg.content.length > 500 ? msg.content.substring(0, 500) + "..." : msg.content;
-      addWrappedText(content, 9);
-      yPos += 2;
-    });
-
-    // Footer on all pages
-    const pageCount = doc.internal.pages.length - 1;
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Page ${i} of ${pageCount} | Critical Code Studies Session Log | ${log.metadata.projectName}`, pageWidth / 2, pageHeight - 10, { align: "center" });
-    }
-
-    const safeFileName = (projectName || "session").replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase();
+    const log = generateSessionLog(session, projectName, codeContents, generateAnnotatedCode);
     const modeCode = MODE_CODES[session.mode] || "XX";
-    doc.save(`${safeFileName}-${modeCode}-log.pdf`);
+    exportSessionLogPDF(log, projectName, modeCode);
     setShowExportModal(false);
-  }, [generateSessionLog, projectName, session.mode, MODE_CODES]);
-
-  // Import LINE_ANNOTATION_TYPES for statistics
-  const LINE_ANNOTATION_TYPES = ["observation", "question", "metaphor", "pattern", "context", "critique"] as const;
+  }, [session, projectName, codeContents]);
 
   return (
     <div className="h-screen flex flex-col bg-ivory">
@@ -922,8 +578,17 @@ export function CritiqueLayout({
           </div>
         </div>
 
-        {/* Center: Full filename with extension */}
-        <div className="absolute left-1/2 transform -translate-x-1/2">
+        {/* Center: Full filename with extension - click to rename */}
+        <button
+          onClick={() => {
+            const newName = prompt("Rename project:", projectName || "Untitled");
+            if (newName !== null && newName.trim()) {
+              setProjectName(newName.trim());
+            }
+          }}
+          className="absolute left-1/2 transform -translate-x-1/2 hover:bg-cream px-2 py-0.5 rounded-sm transition-colors"
+          title="Click to rename"
+        >
           {projectName ? (
             <span className="font-mono text-xs text-ink">
               {projectName.replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase()}-{MODE_CODES[session.mode] || "XX"}.ccs
@@ -933,7 +598,7 @@ export function CritiqueLayout({
               untitled-{MODE_CODES[session.mode] || "XX"}.ccs
             </span>
           )}
-        </div>
+        </button>
         <div className="flex items-center gap-1">
           <input
             ref={sessionLoadInputRef}
@@ -970,12 +635,18 @@ export function CritiqueLayout({
       </header>
 
       {/* Main three-panel layout */}
-      <div className="flex-1 flex overflow-hidden">
+      <div ref={containerRef} className="flex-1 flex overflow-hidden">
         {/* Left + Center: Code Editor Panel */}
-        <div className="w-1/2 border-r border-parchment">
+        <div
+          className="border-r border-parchment"
+          style={{ width: `${codePanelWidth}%` }}
+        >
           <CodeEditorPanel
             codeFiles={session.codeFiles}
             codeContents={codeContents}
+            onCodeContentChange={(fileId, content) => {
+              setCodeContents((prev) => new Map(prev).set(fileId, content));
+            }}
             onDeleteFile={handleDeleteFile}
             onRenameFile={handleRenameFile}
             onDuplicateFile={handleDuplicateFile}
@@ -983,8 +654,79 @@ export function CritiqueLayout({
           />
         </div>
 
+        {/* Resizable divider */}
+        <div
+          onMouseDown={handleMouseDown}
+          className={cn(
+            "w-1 cursor-col-resize hover:bg-burgundy/30 transition-colors flex-shrink-0",
+            isDragging && "bg-burgundy/30"
+          )}
+        />
+
         {/* Right: Chat Panel */}
-        <div className="w-1/2 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Chat header with font size controls */}
+          <div className="px-4 py-2 border-b border-parchment bg-cream/30 flex items-center justify-between">
+            <span className="font-sans text-[10px] uppercase tracking-widest text-slate-muted">
+              Conversation
+            </span>
+            <div className="relative">
+              <button
+                onClick={() => setShowChatFontSettings(!showChatFontSettings)}
+                className={cn(
+                  "p-1 transition-colors",
+                  showChatFontSettings ? "text-burgundy" : "text-slate-muted hover:text-ink"
+                )}
+                title="Font size settings"
+              >
+                <Settings2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+              </button>
+              {showChatFontSettings && (
+                <div className="absolute top-full right-0 mt-1 w-36 bg-white rounded-sm shadow-lg border border-parchment p-3 z-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-display text-xs text-ink">Font Size</h4>
+                    <button
+                      onClick={() => setShowChatFontSettings(false)}
+                      className="p-0.5 text-slate hover:text-ink"
+                    >
+                      <X className="h-3 w-3" strokeWidth={1.5} />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setChatFontSize(prev => Math.max(MIN_CHAT_FONT_SIZE, prev - 1))}
+                      disabled={chatFontSize <= MIN_CHAT_FONT_SIZE}
+                      className="p-1 rounded-sm border border-parchment hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <Minus className="h-3 w-3" strokeWidth={1.5} />
+                    </button>
+                    <input
+                      type="number"
+                      min={MIN_CHAT_FONT_SIZE}
+                      max={MAX_CHAT_FONT_SIZE}
+                      value={chatFontSize}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val)) {
+                          setChatFontSize(Math.min(MAX_CHAT_FONT_SIZE, Math.max(MIN_CHAT_FONT_SIZE, val)));
+                        }
+                      }}
+                      className="w-12 px-1 py-0.5 text-center text-[11px] font-mono border border-parchment rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy"
+                    />
+                    <button
+                      onClick={() => setChatFontSize(prev => Math.min(MAX_CHAT_FONT_SIZE, prev + 1))}
+                      disabled={chatFontSize >= MAX_CHAT_FONT_SIZE}
+                      className="p-1 rounded-sm border border-parchment hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="h-3 w-3" strokeWidth={1.5} />
+                    </button>
+                    <span className="text-[9px] text-slate-muted">px</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {session.messages.map((message) => (
@@ -1003,7 +745,10 @@ export function CritiqueLayout({
                       : "bg-white border border-parchment"
                   )}
                 >
-                  <div className="font-body text-sm prose prose-sm max-w-none">
+                  <div
+                    className="font-body prose max-w-none"
+                    style={{ fontSize: `${chatFontSize}px` }}
+                  >
                     <ReactMarkdown>{message.content}</ReactMarkdown>
                   </div>
                 </div>

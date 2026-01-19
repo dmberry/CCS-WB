@@ -184,6 +184,7 @@ function sessionReducer(state: Session, action: SessionAction): Session {
         critiqueArtifacts: Array.isArray(imported.critiqueArtifacts) ? imported.critiqueArtifacts :
                            Array.isArray(imported.puzzleArtifacts) ? imported.puzzleArtifacts : [],
         messages: Array.isArray(action.payload.messages) ? action.payload.messages : [],
+        lineAnnotations: Array.isArray(action.payload.lineAnnotations) ? action.payload.lineAnnotations : [],
         // Ensure settings object exists with defaults
         settings: {
           ...defaultSession.settings,
@@ -192,6 +193,10 @@ function sessionReducer(state: Session, action: SessionAction): Session {
         // Ensure other required fields have defaults
         currentPhase: action.payload.currentPhase || "opening",
         feedbackEscalation: typeof action.payload.feedbackEscalation === "number" ? action.payload.feedbackEscalation : 0,
+        // Explicitly preserve experienceLevel from imported data
+        experienceLevel: action.payload.experienceLevel,
+        // Preserve createState for Create mode sessions
+        createState: action.payload.createState,
         lastModified: now,
       };
 

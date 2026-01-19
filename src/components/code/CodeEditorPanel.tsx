@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSession } from "@/context/SessionContext";
 import { cn } from "@/lib/utils";
 import {
@@ -15,6 +15,9 @@ import {
   Pencil,
   Copy,
   Upload,
+  Settings2,
+  Minus,
+  Plus,
 } from "lucide-react";
 import type { LineAnnotation, LineAnnotationType, CodeReference } from "@/types";
 import {
@@ -26,11 +29,29 @@ interface CodeEditorPanelProps {
   codeFiles: CodeReference[];
   codeContents: Map<string, string>; // fileId -> code content
   onCodeChange?: () => void;
+  onCodeContentChange?: (fileId: string, content: string) => void; // Edit code content
   onDeleteFile?: (fileId: string) => void;
   onRenameFile?: (fileId: string, newName: string) => void;
   onDuplicateFile?: (fileId: string) => void;
   onLoadCode?: () => void; // Trigger file upload from sidebar
 }
+
+type EditorMode = "annotate" | "edit";
+
+// Display settings for code viewer
+interface DisplaySettings {
+  fontSize: number; // Font size in pixels
+  bold: boolean;
+}
+
+const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
+  fontSize: 12,
+  bold: false,
+};
+
+// Min/max font sizes
+const MIN_FONT_SIZE = 8;
+const MAX_FONT_SIZE = 24;
 
 // Annotation type prefixes for inline display
 const ANNOTATION_PREFIXES: Record<LineAnnotationType, string> = {
@@ -41,6 +62,19 @@ const ANNOTATION_PREFIXES: Record<LineAnnotationType, string> = {
   context: "Ctx",
   critique: "Crit",
 };
+
+// Reverse mapping: prefix -> type
+const PREFIX_TO_TYPE: Record<string, LineAnnotationType> = {
+  Obs: "observation",
+  Q: "question",
+  Met: "metaphor",
+  Pat: "pattern",
+  Ctx: "context",
+  Crit: "critique",
+};
+
+// Regex to match annotation lines: // An:Type: content (with optional leading whitespace)
+const ANNOTATION_LINE_REGEX = /^\s*\/\/\s*An:(Obs|Q|Met|Pat|Ctx|Crit):\s*(.*)$/;
 
 const ANNOTATION_COLORS: Record<LineAnnotationType, string> = {
   observation: "text-blue-600",
@@ -152,6 +186,7 @@ const LANGUAGE_EXTENSIONS: Record<string, string> = {
 export function CodeEditorPanel({
   codeFiles,
   codeContents,
+  onCodeContentChange,
   onDeleteFile,
   onRenameFile,
   onDuplicateFile,
@@ -162,6 +197,7 @@ export function CodeEditorPanel({
     addLineAnnotation,
     updateLineAnnotation,
     removeLineAnnotation,
+    clearLineAnnotations,
   } = useSession();
 
   const [selectedFileId, setSelectedFileId] = useState<string | null>(
@@ -170,6 +206,9 @@ export function CodeEditorPanel({
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(
     new Set(codeFiles.map((f) => f.id))
   );
+  const [editorMode, setEditorMode] = useState<EditorMode>("annotate");
+  // Store the "clean" code (without embedded annotations) for edit mode
+  const [editModeCode, setEditModeCode] = useState<string>("");
 
   // Auto-select first file when codeFiles changes (e.g., after loading a session)
   useEffect(() => {
@@ -195,6 +234,19 @@ export function CodeEditorPanel({
   const [fileMenuOpen, setFileMenuOpen] = useState<string | null>(null);
   const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [showDisplaySettings, setShowDisplaySettings] = useState(false);
+  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
+
+  // Refs for syncing scroll between line numbers and textarea in edit mode
+  const lineNumbersRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Sync line numbers scroll with textarea scroll
+  const handleTextareaScroll = useCallback(() => {
+    if (lineNumbersRef.current && textareaRef.current) {
+      lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop;
+    }
+  }, []);
 
   // Get current file and its code
   const selectedFile = useMemo(
@@ -292,6 +344,82 @@ export function CodeEditorPanel({
     const category = LANGUAGE_CATEGORIES[normalised] || "other";
     return FILE_CATEGORY_COLORS[category];
   }, []);
+
+  // Handle code content edit (in edit mode, we edit the embedded version)
+  const handleCodeEdit = useCallback((newContent: string) => {
+    setEditModeCode(newContent);
+  }, []);
+
+  // Switch to Edit mode: embed annotations into code
+  const handleSwitchToEdit = useCallback(() => {
+    if (!selectedFileId) return;
+
+    // Generate code with embedded annotations
+    const annotatedCode = generateAnnotatedCode(currentCode, fileAnnotations);
+    setEditModeCode(annotatedCode);
+    setEditorMode("edit");
+  }, [selectedFileId, currentCode, fileAnnotations]);
+
+  // Switch to Annotate mode: extract annotations from code
+  const handleSwitchToAnnotate = useCallback(() => {
+    if (!selectedFileId || !onCodeContentChange) return;
+
+    // Parse the edited code to extract clean code and annotations
+    const lines = editModeCode.split("\n");
+    const cleanLines: string[] = [];
+    const extractedAnnotations: Array<{
+      lineNumber: number;
+      type: LineAnnotationType;
+      content: string;
+      lineContent: string;
+    }> = [];
+
+    let currentCodeLineNumber = 0;
+    let lastCodeLine = "";
+
+    for (const line of lines) {
+      const match = line.match(ANNOTATION_LINE_REGEX);
+      if (match) {
+        // This is an annotation line
+        const [, prefix, content] = match;
+        const type = PREFIX_TO_TYPE[prefix];
+        if (type && currentCodeLineNumber > 0) {
+          extractedAnnotations.push({
+            lineNumber: currentCodeLineNumber,
+            type,
+            content: content.trim(),
+            lineContent: lastCodeLine,
+          });
+        }
+      } else {
+        // This is a code line
+        cleanLines.push(line);
+        currentCodeLineNumber++;
+        lastCodeLine = line;
+      }
+    }
+
+    const cleanCode = cleanLines.join("\n");
+
+    // Update the actual code content
+    onCodeContentChange(selectedFileId, cleanCode);
+
+    // Clear existing annotations for this file and add extracted ones
+    clearLineAnnotations(selectedFileId);
+
+    // Add the extracted annotations
+    for (const ann of extractedAnnotations) {
+      addLineAnnotation({
+        codeFileId: selectedFileId,
+        lineNumber: ann.lineNumber,
+        lineContent: ann.lineContent,
+        type: ann.type,
+        content: ann.content,
+      });
+    }
+
+    setEditorMode("annotate");
+  }, [selectedFileId, editModeCode, onCodeContentChange, clearLineAnnotations, addLineAnnotation]);
 
   // Download annotated code
   const handleDownloadCode = useCallback(() => {
@@ -469,18 +597,35 @@ export function CodeEditorPanel({
         {/* Editor header */}
         {selectedFile && (
           <div className="px-4 py-2 border-b border-parchment bg-cream/50 flex items-center justify-between">
+            {/* Left group: mode toggle and tools */}
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-ink">{selectedFile.name}</span>
-              {selectedFile.language && (
-                <span className="font-mono text-[9px] text-slate-muted bg-parchment/50 px-1.5 py-0.5 rounded">
-                  {selectedFile.language}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-sans text-[9px] text-slate-muted">
-                {fileAnnotations.length} annotation{fileAnnotations.length !== 1 ? "s" : ""}
-              </span>
+              {/* Edit/Annotate mode toggle */}
+              <div className="flex items-center border border-parchment rounded-sm overflow-hidden">
+                <button
+                  onClick={handleSwitchToEdit}
+                  className={cn(
+                    "px-2 py-0.5 text-[9px] font-sans transition-colors",
+                    editorMode === "edit"
+                      ? "bg-burgundy text-ivory"
+                      : "bg-white text-slate hover:bg-cream"
+                  )}
+                  title="Edit code (annotations embedded as comments)"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={handleSwitchToAnnotate}
+                  className={cn(
+                    "px-2 py-0.5 text-[9px] font-sans transition-colors",
+                    editorMode === "annotate"
+                      ? "bg-burgundy text-ivory"
+                      : "bg-white text-slate hover:bg-cream"
+                  )}
+                  title="Annotate code (click lines to add annotations)"
+                >
+                  Annotate
+                </button>
+              </div>
               <div className="relative">
                 <button
                   onClick={() => setShowAnnotationHelp(!showAnnotationHelp)}
@@ -540,18 +685,148 @@ export function CodeEditorPanel({
               >
                 <Download className="h-3.5 w-3.5" strokeWidth={1.5} />
               </button>
+              {/* Display settings */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowDisplaySettings(!showDisplaySettings)}
+                  className={cn(
+                    "p-1 transition-colors",
+                    showDisplaySettings ? "text-burgundy" : "text-slate-muted hover:text-ink"
+                  )}
+                  title="Display settings"
+                >
+                  <Settings2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                </button>
+                {showDisplaySettings && (
+                  <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-sm shadow-lg border border-parchment p-3 z-50">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-display text-xs text-ink">Display</h4>
+                      <button
+                        onClick={() => setShowDisplaySettings(false)}
+                        className="p-0.5 text-slate hover:text-ink"
+                      >
+                        <X className="h-3 w-3" strokeWidth={1.5} />
+                      </button>
+                    </div>
+
+                    {/* Font Size */}
+                    <div className="mb-3">
+                      <label className="font-sans text-[9px] uppercase tracking-wider text-slate-muted mb-1 block">
+                        Size
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setDisplaySettings(prev => ({
+                            ...prev,
+                            fontSize: Math.max(MIN_FONT_SIZE, prev.fontSize - 1)
+                          }))}
+                          disabled={displaySettings.fontSize <= MIN_FONT_SIZE}
+                          className="p-1 rounded-sm border border-parchment hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <Minus className="h-3 w-3" strokeWidth={1.5} />
+                        </button>
+                        <input
+                          type="number"
+                          min={MIN_FONT_SIZE}
+                          max={MAX_FONT_SIZE}
+                          value={displaySettings.fontSize}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val)) {
+                              setDisplaySettings(prev => ({
+                                ...prev,
+                                fontSize: Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, val))
+                              }));
+                            }
+                          }}
+                          className="w-12 px-1 py-0.5 text-center text-[11px] font-mono border border-parchment rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy"
+                        />
+                        <button
+                          onClick={() => setDisplaySettings(prev => ({
+                            ...prev,
+                            fontSize: Math.min(MAX_FONT_SIZE, prev.fontSize + 1)
+                          }))}
+                          disabled={displaySettings.fontSize >= MAX_FONT_SIZE}
+                          className="p-1 rounded-sm border border-parchment hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <Plus className="h-3 w-3" strokeWidth={1.5} />
+                        </button>
+                        <span className="text-[9px] text-slate-muted ml-1">px</span>
+                      </div>
+                    </div>
+
+                    {/* Bold toggle */}
+                    <div className="flex items-center justify-between">
+                      <label className="font-sans text-[9px] uppercase tracking-wider text-slate-muted">
+                        Bold
+                      </label>
+                      <button
+                        onClick={() => setDisplaySettings(prev => ({ ...prev, bold: !prev.bold }))}
+                        className={cn(
+                          "w-9 h-5 rounded-full transition-colors relative flex-shrink-0",
+                          displaySettings.bold ? "bg-burgundy" : "bg-parchment"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform",
+                            displaySettings.bold ? "translate-x-4" : "translate-x-0"
+                          )}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Right group: annotation count */}
+            <span className="font-sans text-[9px] text-slate-muted">
+              {fileAnnotations.length} annotation{fileAnnotations.length !== 1 ? "s" : ""}
+            </span>
           </div>
         )}
 
-        {/* Code with inline annotations */}
+        {/* Code with inline annotations or edit mode */}
         <div className="flex-1 overflow-auto">
           {!selectedFile ? (
             <div className="flex items-center justify-center h-full text-slate-muted">
               <p className="font-body text-sm">Select or upload a code file to begin analysis</p>
             </div>
+          ) : editorMode === "edit" ? (
+            /* Edit mode - editable textarea with embedded annotations */
+            <div className="h-full flex overflow-hidden">
+              {/* Line numbers for edit mode */}
+              <div
+                ref={lineNumbersRef}
+                className="w-12 flex-shrink-0 text-right pr-3 pt-1 text-slate-muted select-none border-r border-parchment/50 bg-cream/30 font-mono overflow-hidden"
+                style={{ fontSize: `${displaySettings.fontSize}px`, lineHeight: "20px" }}
+              >
+                {editModeCode.split("\n").map((_, index) => (
+                  <div key={index + 1}>{index + 1}</div>
+                ))}
+              </div>
+              {/* Editable code area */}
+              <textarea
+                ref={textareaRef}
+                value={editModeCode}
+                onChange={(e) => handleCodeEdit(e.target.value)}
+                onScroll={handleTextareaScroll}
+                className={cn(
+                  "flex-1 px-4 pt-1 font-mono bg-white resize-none focus:outline-none whitespace-pre overflow-auto",
+                  displaySettings.bold && "font-semibold"
+                )}
+                spellCheck={false}
+                wrap="off"
+                style={{ fontSize: `${displaySettings.fontSize}px`, tabSize: 2, lineHeight: "20px" }}
+              />
+            </div>
           ) : (
-            <div className="font-mono text-[11px] leading-relaxed">
+            /* Annotate mode - line-by-line view with annotations */
+            <div
+              className="leading-relaxed font-mono"
+              style={{ fontSize: `${displaySettings.fontSize}px` }}
+            >
               {lines.map((line, index) => {
                 const lineNumber = index + 1;
                 const lineAnnotations = annotationsByLine.get(lineNumber) || [];
@@ -572,14 +847,17 @@ export function CodeEditorPanel({
                         {lineNumber}
                       </div>
                       {/* Code content */}
-                      <div className="flex-1 px-4 py-0.5 whitespace-pre overflow-x-auto">
+                      <div className={cn(
+                        "flex-1 px-4 py-0.5 whitespace-pre overflow-x-auto",
+                        displaySettings.bold && "font-semibold"
+                      )}>
                         {line || " "}
                       </div>
                       {/* Add annotation button (shown on hover) */}
                       <div className="w-8 flex-shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <MessageSquarePlus
-                          className="h-3.5 w-3.5 text-slate-muted hover:text-burgundy"
-                          strokeWidth={1.5}
+                          className="h-4 w-4 text-burgundy/70 hover:text-burgundy hover:scale-110 transition-all"
+                          strokeWidth={2}
                         />
                       </div>
                     </div>
@@ -588,9 +866,9 @@ export function CodeEditorPanel({
                     {lineAnnotations.map((annotation) => (
                       <div
                         key={annotation.id}
-                        className="flex border-l-2 border-amber-300 bg-amber-50/30"
+                        className="flex border-l-2 border-amber-400 bg-amber-100/40"
                       >
-                        <div className="w-12 flex-shrink-0 border-r border-parchment/50 bg-cream/30" />
+                        <div className="w-12 flex-shrink-0 border-r border-parchment/50 bg-amber-50/40" />
                         <div className="flex-1 px-4 py-1 flex items-start gap-2">
                           {editingAnnotationId === annotation.id ? (
                             <div className="flex-1 flex items-center gap-2">
@@ -738,7 +1016,8 @@ export function generateAnnotatedCode(
 
     const lineAnnotations = annotationsByLine.get(lineNumber) || [];
     lineAnnotations.forEach((ann) => {
-      result.push(`// An:${ANNOTATION_PREFIXES[ann.type]}: ${ann.content}`);
+      // Indent annotations with two tabs for readability in edit mode
+      result.push(`\t\t// An:${ANNOTATION_PREFIXES[ann.type]}: ${ann.content}`);
     });
   });
 
