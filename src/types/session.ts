@@ -248,61 +248,63 @@ export const CODE_DOMAINS = CCS_EXPERIENCE_LEVELS;
 export type CodeDomain = ExperienceLevel;
 
 // Guided prompts for each phase - helps users know what questions to ask
+// Prompts starting with "Analyse" or "Explain" etc are LLM-actionable
+// Others are reflective questions for the user to consider before engaging
 export const GUIDED_PROMPTS: Record<EntryMode, Partial<Record<ConversationPhase, string[]>>> = {
   critique: {
     opening: [
-      "What drew your attention to this code?",
-      "Who wrote this and when?",
-      "What problem does this code solve?",
+      "Describe the overall structure and purpose of this code",
+      "What language features and paradigms does this code use?",
+      "Identify the key abstractions in this code",
     ],
     surface: [
-      "What naming conventions stand out?",
-      "What metaphors appear in variable names?",
-      "How is the code structured?",
-      "What do the comments reveal?",
+      "Analyse the naming conventions used in this code",
+      "What metaphors appear in variable and function names?",
+      "Examine the code structure and organisation",
+      "What do the comments reveal about the author's intent?",
     ],
     context: [
-      "What platform was this written for?",
-      "What constraints shaped this code?",
-      "What was happening in computing history?",
+      "What platform constraints might have shaped this code?",
+      "Research the historical context of when this was written",
+      "What computing conventions of the era are visible?",
     ],
     interpretation: [
-      "What values are embedded in this code?",
-      "What does the code make visible or invisible?",
-      "Whose interests does this serve?",
-      "What power relations are encoded?",
+      "What values and assumptions are embedded in this code?",
+      "What does this code make visible or invisible?",
+      "Analyse the power relations encoded in this software",
+      "What ideological assumptions underpin the design?",
     ],
     synthesis: [
-      "What larger argument emerges?",
-      "How do different readings complement each other?",
-      "What remains ambiguous or unresolved?",
+      "Summarise the key interpretive threads from our analysis",
+      "How do different readings complement or contradict each other?",
+      "What remains ambiguous or unresolved in our interpretation?",
     ],
     output: [
-      "Generate a code critique",
-      "Create line-by-line annotations",
-      "Write a close reading essay",
+      "Generate a formal code critique document",
+      "Create detailed line-by-line annotations",
+      "Write a close reading essay on this code",
     ],
   },
   archaeology: {
     opening: [
-      "When was this code written?",
-      "What platform or system was it for?",
-      "How was this code recovered?",
+      "Research when this code was written and by whom",
+      "What platform or system was this written for?",
+      "Trace the provenance of this code",
     ],
     surface: [
-      "What language or dialect is this?",
-      "What historical idioms appear?",
+      "Identify the language dialect and version",
+      "What historical idioms and patterns appear?",
       "How does the structure reflect its era?",
     ],
     context: [
       "What were the technical constraints of the time?",
-      "Who was the intended audience?",
-      "What contemporary software influenced this?",
+      "Research the intended audience for this software",
+      "What contemporary software might have influenced this?",
     ],
     interpretation: [
-      "How does this differ from modern approaches?",
+      "Compare this to modern approaches to the same problem",
       "What assumptions reveal its historical moment?",
-      "What has been lost or gained since?",
+      "What has been lost or gained since this was written?",
     ],
     synthesis: [
       "What does this code reveal about its era?",
@@ -311,40 +313,40 @@ export const GUIDED_PROMPTS: Record<EntryMode, Partial<Record<ConversationPhase,
   },
   interpret: {
     opening: [
-      "What hermeneutic approach interests you?",
-      "What aspect of code interpretation are you exploring?",
+      "Explain different hermeneutic approaches to code",
+      "What aspects of code interpretation should I understand?",
     ],
     surface: [
-      "How does close reading apply to code?",
-      "What is extrafunctional significance?",
+      "How does close reading apply to source code?",
+      "Explain extrafunctional significance in code",
     ],
     context: [
-      "How do platform studies inform interpretation?",
-      "What role does execution context play?",
+      "How do platform studies inform code interpretation?",
+      "Explain the role of execution context in interpretation",
     ],
     interpretation: [
-      "How do we navigate intention vs reception?",
-      "What is the triadic hermeneutic structure?",
-      "How do we avoid over-reading or under-reading?",
+      "How do we navigate author intention vs reader reception?",
+      "Explain the triadic hermeneutic structure",
+      "How do we avoid over-reading or under-reading code?",
     ],
   },
   create: {
     concept: [
-      "What classic algorithm inspires you?",
-      "What would you like to learn by building?",
+      "Suggest classic algorithms I could implement to learn",
+      "What simple project would help me understand pattern matching?",
     ],
     scaffolding: [
-      "What's the simplest working version?",
-      "What data structures do we need?",
+      "Create the simplest working version of this",
+      "What data structures do we need for this?",
     ],
     iteration: [
-      "What feature should we add next?",
-      "How can we make this more readable?",
+      "Add the next logical feature to this code",
+      "Refactor this to be more readable",
     ],
     reflection: [
-      "What design choices did we make?",
-      "What values are embedded in our code?",
-      "Ready to analyse what we built?",
+      "Analyse the design choices we made in this code",
+      "What values are embedded in the code we built?",
+      "I'm ready to transfer this to critique mode for analysis",
     ],
   },
 };

@@ -26,6 +26,8 @@ import {
   MessageSquarePlus,
   GitCompare,
   Lightbulb,
+  Save,
+  FolderOpen,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { AIProviderSettings } from "@/components/settings/AIProviderSettings";

@@ -245,7 +245,26 @@ export async function POST(request: NextRequest) {
 
     // Include code context if present
     if (codeContext && codeContext.length > 0) {
+      // Check if any code has annotations (lines containing "// An:")
+      const hasAnnotations = codeContext.some((code: { content?: string }) =>
+        code.content?.includes("// An:")
+      );
+
       additionalContext += "\n\n## Code Under Analysis\n";
+
+      // If annotations present, explain the annotation system
+      if (hasAnnotations) {
+        additionalContext += `**Analyst Annotations**: The code below includes inline annotations marked with \`// An:TYPE:\` where TYPE indicates the kind of observation:
+- **Obs** (Observation): A notable feature, pattern, or detail the analyst has identified
+- **Q** (Question): Something the analyst wants to explore or understand better
+- **Met** (Metaphor): A metaphorical or figurative interpretation of the code
+- **Pat** (Pattern): A recurring structure, idiom, or convention identified
+- **Ctx** (Context): Historical, cultural, or situational context relevant to this line
+- **Crit** (Critique): A critical observation or interpretive claim
+
+Engage with these annotations in your response. They represent the analyst's developing interpretation and are entry points for deeper discussion.\n\n`;
+      }
+
       codeContext.forEach((code: { name: string; language?: string; content?: string; author?: string; date?: string; platform?: string; context?: string }) => {
         additionalContext += `### ${code.name}`;
         if (code.language) additionalContext += ` (${code.language})`;
@@ -306,13 +325,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if we have code context to include
+    const hasCode = codeContext && codeContext.length > 0 &&
+      codeContext.some((code: { content?: string }) => code.content);
+    const hasAnnotations = hasCode &&
+      codeContext!.some((code: { content?: string }) => code.content?.includes("// An:"));
+
+    // Helper to add line numbers to code
+    const addLineNumbers = (code: string): string => {
+      const lines = code.split("\n");
+      return lines.map((line, i) => `${String(i + 1).padStart(3, " ")} | ${line}`).join("\n");
+    };
+
     // Convert messages to AI SDK format
     const aiMessages = messages
       .filter((m) => m.role !== "system")
-      .map((m) => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
-      }));
+      .map((m, index, arr) => {
+        let content = m.content;
+
+        // For the last user message, include the code with line numbers
+        // This ensures the LLM can reference specific lines accurately
+        if (m.role === "user" && index === arr.length - 1 && hasCode) {
+          let codeBlock = hasAnnotations
+            ? "**Code with my annotations (line numbers shown):**\n\n"
+            : "**Code being analysed (line numbers shown):**\n\n";
+          codeContext!.forEach((code: { name: string; language?: string; content?: string }) => {
+            if (code.content) {
+              const numberedCode = addLineNumbers(code.content);
+              codeBlock += `File: ${code.name}\n\`\`\`\n${numberedCode}\n\`\`\`\n\n`;
+            }
+          });
+          if (hasAnnotations) {
+            codeBlock += "Please engage with my `// An:TYPE:` annotations above.\n\n";
+          } else {
+            codeBlock += "When suggesting annotations, use the exact line numbers shown above.\n\n";
+          }
+          content = codeBlock + content;
+        }
+
+        return {
+          role: m.role as "user" | "assistant",
+          content,
+        };
+      });
 
     // Call AI API using unified client
     const responseContent = await generateAIResponse(aiConfig, {

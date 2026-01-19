@@ -24,6 +24,7 @@ type SessionAction =
   | { type: "ADD_MESSAGE"; payload: Message }
   | { type: "ADD_CODE"; payload: CodeReference }
   | { type: "REMOVE_CODE"; payload: string }
+  | { type: "UPDATE_CODE"; payload: { id: string; updates: Partial<CodeReference> } }
   | { type: "ADD_ANALYSIS"; payload: AnalysisResult }
   | { type: "ADD_REFERENCES"; payload: ReferenceResult[] }
   | { type: "CLEAR_REFERENCES" }
@@ -95,6 +96,17 @@ function sessionReducer(state: Session, action: SessionAction): Session {
       return {
         ...state,
         codeFiles: state.codeFiles.filter((f) => f.id !== action.payload),
+        // Also remove annotations for this file
+        lineAnnotations: state.lineAnnotations.filter((a) => a.codeFileId !== action.payload),
+        lastModified: now,
+      };
+
+    case "UPDATE_CODE":
+      return {
+        ...state,
+        codeFiles: state.codeFiles.map((f) =>
+          f.id === action.payload.id ? { ...f, ...action.payload.updates } : f
+        ),
         lastModified: now,
       };
 
@@ -335,6 +347,7 @@ interface SessionContextType {
   addMessage: (message: Omit<Message, "id" | "timestamp">) => void;
   addCode: (code: Omit<CodeReference, "id" | "uploadedAt">) => string;
   removeCode: (codeId: string) => void;
+  updateCode: (codeId: string, updates: Partial<CodeReference>) => void;
   addAnalysis: (analysis: Omit<AnalysisResult, "id" | "createdAt">) => void;
   addReferences: (refs: ReferenceResult[]) => void;
   clearReferences: () => void;
@@ -396,6 +409,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const removeCode = useCallback((codeId: string) => {
     dispatch({ type: "REMOVE_CODE", payload: codeId });
+  }, []);
+
+  const updateCode = useCallback((codeId: string, updates: Partial<CodeReference>) => {
+    dispatch({ type: "UPDATE_CODE", payload: { id: codeId, updates } });
   }, []);
 
   const addAnalysis = useCallback(
@@ -515,6 +532,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     addMessage,
     addCode,
     removeCode,
+    updateCode,
     addAnalysis,
     addReferences,
     clearReferences,

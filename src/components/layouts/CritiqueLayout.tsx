@@ -17,8 +17,9 @@ import {
   Settings,
   Cpu,
   Lightbulb,
-  BookOpen,
-  FileOutput,
+  Sparkles,
+  Save,
+  FolderOpen,
 } from "lucide-react";
 import { CodeEditorPanel, generateAnnotatedCode } from "@/components/code";
 import { ContextPreview } from "@/components/chat";
@@ -36,6 +37,35 @@ interface CritiqueLayoutProps {
 // Opening prompt for critique mode
 const CRITIQUE_OPENING = "What code would you like to explore? You can paste it directly, upload a file, or describe what you're looking at. I'm curious what drew your attention to this particular piece of software.";
 
+// Languages for code critique (broader than create mode)
+const CRITIQUE_LANGUAGES = [
+  "",           // Empty = auto-detect / unspecified
+  "Python",
+  "JavaScript",
+  "TypeScript",
+  "Java",
+  "C",
+  "C++",
+  "C#",
+  "Go",
+  "Rust",
+  "Ruby",
+  "PHP",
+  "Swift",
+  "Kotlin",
+  "BASIC",
+  "Lisp",
+  "Scheme",
+  "Haskell",
+  "Perl",
+  "COBOL",
+  "Fortran",
+  "Assembly",
+  "SQL",
+  "Shell",
+  "Other",
+] as const;
+
 export function CritiqueLayout({
   onNavigateHome,
   onExport,
@@ -45,7 +75,10 @@ export function CritiqueLayout({
     session,
     addMessage,
     addCode,
+    removeCode,
+    updateCode,
     updateSettings,
+    importSession,
   } = useSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured } = useAISettings();
 
@@ -60,6 +93,7 @@ export function CritiqueLayout({
   const [codeInputText, setCodeInputText] = useState("");
   const [codeInputName, setCodeInputName] = useState("");
   const [codeInputLanguage, setCodeInputLanguage] = useState("");
+  const [projectName, setProjectName] = useState<string>("");
 
   // Code contents storage (fileId -> content)
   const [codeContents, setCodeContents] = useState<Map<string, string>>(new Map());
@@ -68,6 +102,7 @@ export function CritiqueLayout({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sessionLoadInputRef = useRef<HTMLInputElement>(null);
   const hasAddedOpeningMessage = useRef(false);
 
   // Scroll to bottom on new messages
@@ -143,15 +178,16 @@ export function CritiqueLayout({
               analysisContext: session.analysisResults,
               literatureContext: session.references,
               // Include annotated code context
-              codeContext: session.codeFiles.map((file) => ({
-                ...file,
-                content: codeContents.get(file.id)
-                  ? generateAnnotatedCode(
-                      codeContents.get(file.id)!,
-                      session.lineAnnotations.filter((a) => a.codeFileId === file.id)
-                    )
-                  : undefined,
-              })),
+              codeContext: session.codeFiles.map((file) => {
+                const code = codeContents.get(file.id);
+                const fileAnnotations = session.lineAnnotations.filter((a) => a.codeFileId === file.id);
+                return {
+                  ...file,
+                  content: code
+                    ? generateAnnotatedCode(code, fileAnnotations)
+                    : undefined,
+                };
+              }),
             }),
             timeout: 60000,
           });
@@ -297,10 +333,122 @@ export function CritiqueLayout({
     setShowGuidedPrompts(false);
   }, []);
 
+  // Mode codes for filenames
+  const MODE_CODES: Record<string, string> = {
+    critique: "CR",
+    archaeology: "AR",
+    interpret: "IN",
+    create: "WR",
+  };
+
+  // Save session with code contents
+  const handleSaveSession = useCallback(() => {
+    // Prompt for project name
+    const defaultName = projectName || "Untitled";
+    const name = prompt("Save session as:", defaultName);
+    if (!name) return; // User cancelled
+
+    // Update project name state
+    setProjectName(name);
+
+    const exportData = {
+      ...session,
+      projectName: name,
+      // Include code contents as a serializable object
+      codeContentsMap: Object.fromEntries(codeContents),
+      exportedAt: new Date().toISOString(),
+      version: "1.1", // New version with code contents
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    // Sanitize filename and add mode code with .ccs extension
+    const safeFileName = name.replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase();
+    const modeCode = MODE_CODES[session.mode] || "XX";
+    a.download = `${safeFileName}-${modeCode}.ccs`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [session, codeContents, projectName]);
+
+  // File management handlers
+  const handleDeleteFile = useCallback((fileId: string) => {
+    removeCode(fileId);
+    setCodeContents((prev) => {
+      const next = new Map(prev);
+      next.delete(fileId);
+      return next;
+    });
+  }, [removeCode]);
+
+  const handleRenameFile = useCallback((fileId: string, newName: string) => {
+    updateCode(fileId, { name: newName });
+  }, [updateCode]);
+
+  const handleDuplicateFile = useCallback((fileId: string) => {
+    const originalFile = session.codeFiles.find((f) => f.id === fileId);
+    const originalContent = codeContents.get(fileId);
+    if (!originalFile || !originalContent) return;
+
+    const newId = addCode({
+      name: `${originalFile.name} (copy)`,
+      language: originalFile.language,
+      source: originalFile.source,
+      size: originalContent.length,
+    });
+
+    setCodeContents((prev) => new Map(prev).set(newId, originalContent));
+  }, [session.codeFiles, codeContents, addCode]);
+
+  // Load session with code contents
+  const handleLoadSession = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const importedData = JSON.parse(content);
+
+        // Validate required fields
+        if (!importedData.id || !importedData.mode) {
+          throw new Error("Invalid session file format");
+        }
+
+        // Import the session
+        importSession(importedData);
+
+        // Restore project name if present
+        if (importedData.projectName) {
+          setProjectName(importedData.projectName);
+        }
+
+        // Restore code contents if present
+        if (importedData.codeContentsMap) {
+          setCodeContents(new Map(Object.entries(importedData.codeContentsMap)));
+        }
+
+        // Add welcome message
+        addMessage({
+          role: "assistant",
+          content: `Session "${importedData.projectName || "Untitled"}" restored from ${importedData.exportedAt ? new Date(importedData.exportedAt).toLocaleDateString() : "file"}. ${importedData.codeFiles?.length || 0} code file(s) and ${importedData.lineAnnotations?.length || 0} annotation(s) loaded.`,
+        });
+      } catch (error) {
+        console.error("Load error:", error);
+        alert("Failed to load session. Please check the file format.");
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
+  }, [importSession, addMessage]);
+
   return (
     <div className="h-screen flex flex-col bg-ivory">
       {/* Header */}
-      <header className="border-b border-parchment bg-ivory px-4 py-2 flex items-center justify-between z-10">
+      <header className="border-b border-parchment bg-ivory px-4 py-2 flex items-center justify-between z-10 relative">
         <div className="flex items-center gap-4">
           <button
             onClick={onNavigateHome}
@@ -311,20 +459,81 @@ export function CritiqueLayout({
           <span className="font-sans text-[10px] text-burgundy bg-burgundy/5 px-2 py-0.5 border border-burgundy/10 rounded-sm">
             Critique Mode
           </span>
-          {session.experienceLevel && (
+          <div className="relative">
             <button
               onClick={() => setShowExperienceHelp(!showExperienceHelp)}
-              className="font-sans text-[8px] uppercase tracking-wide text-slate-muted hover:text-ink"
+              className="font-sans text-[9px] uppercase tracking-wide text-slate-muted hover:text-ink transition-colors border border-parchment px-1.5 py-0.5 rounded-sm"
             >
-              {EXPERIENCE_LEVEL_LABELS[session.experienceLevel as ExperienceLevel]}
+              {session.experienceLevel
+                ? EXPERIENCE_LEVEL_LABELS[session.experienceLevel as ExperienceLevel]
+                : "No level set"}
             </button>
+
+            {/* Experience level help popup */}
+            {showExperienceHelp && session.experienceLevel && (
+              <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-sm shadow-lg border border-parchment p-3 z-50">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-display text-xs text-ink">Experience Level</h4>
+                  <button
+                    onClick={() => setShowExperienceHelp(false)}
+                    className="p-0.5 text-slate hover:text-ink transition-colors"
+                  >
+                    <X className="h-3 w-3" strokeWidth={1.5} />
+                  </button>
+                </div>
+                <p className="font-sans text-[10px] font-medium text-burgundy mb-1">
+                  {EXPERIENCE_LEVEL_LABELS[session.experienceLevel as ExperienceLevel]}
+                </p>
+                <p className="font-body text-[10px] text-slate leading-snug mb-2">
+                  {EXPERIENCE_LEVEL_DESCRIPTIONS[session.experienceLevel as ExperienceLevel]}
+                </p>
+                <p className="font-body text-[9px] text-slate-muted italic">
+                  To change, start a new session from the home page.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Center: Full filename with extension */}
+        <div className="absolute left-1/2 transform -translate-x-1/2">
+          {projectName ? (
+            <span className="font-mono text-xs text-ink">
+              {projectName.replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase()}-{MODE_CODES[session.mode] || "XX"}.ccs
+            </span>
+          ) : (
+            <span className="font-mono text-xs text-slate-muted italic">
+              untitled-{MODE_CODES[session.mode] || "XX"}.ccs
+            </span>
           )}
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={onExport} className="p-1.5 text-slate hover:text-ink" title="Export">
+          <input
+            ref={sessionLoadInputRef}
+            type="file"
+            className="hidden"
+            accept=".ccs,.json"
+            onChange={handleLoadSession}
+          />
+          <button
+            onClick={handleSaveSession}
+            className="p-1.5 text-slate hover:text-ink"
+            title="Save session"
+          >
+            <Save className="h-4 w-4" strokeWidth={1.5} />
+          </button>
+          <button
+            onClick={() => sessionLoadInputRef.current?.click()}
+            className="p-1.5 text-slate hover:text-ink"
+            title="Load session"
+          >
+            <FolderOpen className="h-4 w-4" strokeWidth={1.5} />
+          </button>
+          <div className="w-px h-4 bg-parchment mx-1" />
+          <button onClick={onExport} className="p-1.5 text-slate hover:text-ink" title="Export outputs">
             <Download className="h-4 w-4" strokeWidth={1.5} />
           </button>
-          <button onClick={onImport} className="p-1.5 text-slate hover:text-ink" title="Import">
+          <button onClick={onImport} className="p-1.5 text-slate hover:text-ink" title="Import session (legacy)">
             <FileUp className="h-4 w-4" strokeWidth={1.5} />
           </button>
           <button
@@ -343,6 +552,9 @@ export function CritiqueLayout({
           <CodeEditorPanel
             codeFiles={session.codeFiles}
             codeContents={codeContents}
+            onDeleteFile={handleDeleteFile}
+            onRenameFile={handleRenameFile}
+            onDuplicateFile={handleDuplicateFile}
           />
         </div>
 
@@ -435,6 +647,18 @@ export function CritiqueLayout({
               >
                 Paste Code
               </button>
+              {session.codeFiles.length > 0 && (
+                <button
+                  onClick={() => {
+                    setInput("Suggest 3-5 annotations I could add to this code. For each suggestion, specify the line number, annotation type (Obs, Q, Met, Pat, Ctx, or Crit), and the annotation text. Focus on interesting interpretive entry points for close reading.");
+                    inputRef.current?.focus();
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 font-sans text-xs text-slate hover:bg-cream rounded-sm"
+                >
+                  <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  Help Annotate
+                </button>
+              )}
               {(GUIDED_PROMPTS[session.mode]?.[session.currentPhase]?.length ?? 0) > 0 && (
                 <button
                   onClick={() => setShowGuidedPrompts(!showGuidedPrompts)}
@@ -460,13 +684,17 @@ export function CritiqueLayout({
                     placeholder="File name"
                     className="flex-1 px-2 py-1 text-xs border border-parchment rounded bg-white"
                   />
-                  <input
-                    type="text"
+                  <select
                     value={codeInputLanguage}
                     onChange={(e) => setCodeInputLanguage(e.target.value)}
-                    placeholder="Language"
-                    className="w-24 px-2 py-1 text-xs border border-parchment rounded bg-white"
-                  />
+                    className="w-28 px-2 py-1 text-xs border border-parchment rounded bg-white"
+                  >
+                    {CRITIQUE_LANGUAGES.map((lang) => (
+                      <option key={lang} value={lang}>
+                        {lang || "Language"}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <textarea
                   value={codeInputText}

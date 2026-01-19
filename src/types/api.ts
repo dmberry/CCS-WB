@@ -22,7 +22,7 @@ export interface ChatRequest {
   createLanguage?: string;  // Language for create mode code generation
   analysisContext?: AnalysisResult[];
   literatureContext?: ReferenceResult[];  // References
-  codeContext?: CodeReference[];  // Code being analysed
+  codeContext?: (CodeReference & { content?: string })[];  // Code being analysed with optional content
 }
 
 export interface ChatResponse {
