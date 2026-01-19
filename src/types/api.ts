@@ -1,5 +1,5 @@
 /**
- * API request and response types for CCS-lab
+ * API request and response types for CCS-WB
  */
 
 import type {

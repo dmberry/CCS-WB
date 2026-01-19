@@ -1,5 +1,5 @@
 """
-CCS-lab - Python Analysis Service
+CCS-WB - Python Analysis Service
 
 FastAPI microservice for code analysis, file processing,
 and supporting critical code studies analysis tasks.
@@ -17,7 +17,7 @@ import tempfile
 import os
 
 app = FastAPI(
-    title="CCS-lab Analysis Service",
+    title="CCS-WB Analysis Service",
     description="Code analysis and file processing for critical code studies",
     version="0.1.0",
 )

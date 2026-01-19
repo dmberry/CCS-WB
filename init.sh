@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# CCS-lab - Development Environment Setup
+# CCS-WB - Development Environment Setup
 # This script initializes and runs the development environment
 
 set -e
 
 echo "======================================"
-echo "   CCS-lab - Setup & Run"
+echo "   CCS-WB - Setup & Run"
 echo "======================================"
 echo ""
 
@@ -60,7 +60,7 @@ if [ ! -f .env.local ]; then
         echo "  - SEMANTIC_SCHOLAR_API_KEY (optional, for higher rate limits)"
     else
         cat > .env.local << 'EOF'
-# CCS-lab Environment Variables
+# CCS-WB Environment Variables
 # Copy this to .env.local and fill in your values
 
 # Claude API (Optional - can configure in browser)
@@ -157,7 +157,7 @@ fi
 
 echo ""
 echo "======================================"
-echo -e "${GREEN}   CCS-lab is running!${NC}"
+echo -e "${GREEN}   CCS-WB is running!${NC}"
 echo "======================================"
 echo ""
 echo "Access the application:"

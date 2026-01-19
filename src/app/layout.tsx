@@ -28,7 +28,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "CCS-lab",
+  title: "CCS-WB",
   description:
     "Critical Code Studies Laboratory: Close reading and hermeneutic analysis of software as cultural artefact",
   keywords: [

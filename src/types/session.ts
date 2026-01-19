@@ -1,5 +1,5 @@
 /**
- * Core types for the CCS-lab (Critical Code Studies Lab) application
+ * Core types for the CCS-WB (Critical Code Studies Workbench) application
  */
 
 export type EntryMode = 'critique' | 'archaeology' | 'interpret' | 'create';

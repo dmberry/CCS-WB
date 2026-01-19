@@ -89,7 +89,7 @@ function reconstructAbstract(invertedIndex: Record<string, number[]> | null | un
 
 // Search OpenAlex API - simple, fast search
 async function searchOpenAlex(query: string, limit: number = 20): Promise<ReferenceResult[]> {
-  const email = process.env.OPENALEX_EMAIL || "ccs-lab@example.com";
+  const email = process.env.OPENALEX_EMAIL || "ccs-wb@example.com";
 
   const apiUrl = new URL(`${OPENALEX_API}/works`);
   apiUrl.searchParams.set("search", query);

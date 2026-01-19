@@ -152,7 +152,7 @@ For a completely free setup using local AI:
 ## Project Structure
 
 ```
-ccs-lab/
+ccs-wb/
 ├── src/
 │   ├── app/                 # Next.js app router
 │   │   ├── api/            # API routes

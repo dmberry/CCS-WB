@@ -1,4 +1,4 @@
-# CCS-lab - Python Analysis Service Dependencies
+# CCS-WB - Python Analysis Service Dependencies
 
 # Web framework
 fastapi>=0.109.0

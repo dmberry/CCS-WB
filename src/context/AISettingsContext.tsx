@@ -15,7 +15,7 @@ import type {
 import { DEFAULT_AI_SETTINGS } from "@/types/ai-settings";
 import { getDefaultModel, PROVIDER_CONFIGS } from "@/lib/ai/config";
 
-const STORAGE_KEY = "ccs-lab-ai-settings";
+const STORAGE_KEY = "ccs-wb-ai-settings";
 const STORAGE_VERSION = "1.0";
 
 interface AISettingsContextValue {

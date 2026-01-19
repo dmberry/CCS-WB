@@ -6,7 +6,7 @@ import { useSession } from "@/context/SessionContext";
 import { useAISettings } from "@/context/AISettingsContext";
 import { CODE_DOMAINS, type EntryMode, type CodeDomain } from "@/types";
 import { cn } from "@/lib/utils";
-import { Code, Archive, BookOpen, Sparkles, ChevronDown, Upload, Download, Settings, X } from "lucide-react";
+import { Code, Archive, BookOpen, Sparkles, ChevronDown, Upload, Download, Settings, HelpCircle, X, ExternalLink } from "lucide-react";
 import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
 import { PROVIDER_CONFIGS } from "@/lib/ai/config";
 
@@ -55,6 +55,7 @@ export default function WelcomePage() {
   const [selectedDomain, setSelectedDomain] = useState<CodeDomain | "">("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showAISettings, setShowAISettings] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if there's an existing session with content
@@ -72,7 +73,7 @@ export default function WelcomePage() {
   const handleExportSession = () => {
     const dataStr = JSON.stringify(session, null, 2);
     const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
-    const exportName = `ccs-lab-${new Date().toISOString().split("T")[0]}.json`;
+    const exportName = `ccs-wb-${new Date().toISOString().split("T")[0]}.json`;
 
     const linkElement = document.createElement("a");
     linkElement.setAttribute("href", dataUri);
@@ -92,7 +93,7 @@ export default function WelcomePage() {
         importSession(data);
         router.push("/conversation");
       } else {
-        alert("Invalid session file format. Please select a valid CCS-lab export file.");
+        alert("Invalid session file format. Please select a valid CCS-WB export file.");
       }
     } catch {
       alert("Failed to import session. Please check the file format.");
@@ -116,19 +117,29 @@ export default function WelcomePage() {
             <h1 className="font-display text-sm text-ink tracking-tight">
               Critical Code Studies Workbench
             </h1>
-            <button
-              onClick={() => setShowAISettings(true)}
-              className={cn(
-                "p-1 rounded-sm transition-colors",
-                !isAIConfigured
-                  ? "text-burgundy bg-burgundy/10 hover:bg-burgundy/20"
-                  : "text-slate hover:text-ink hover:bg-cream"
-              )}
-              aria-label="AI Settings"
-              title={isAIConfigured ? `Using ${PROVIDER_CONFIGS[aiSettings.provider]?.name || 'AI'}` : "Configure AI Provider"}
-            >
-              <Settings className="h-3.5 w-3.5" strokeWidth={1.5} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowHelp(true)}
+                className="p-1 rounded-sm transition-colors text-slate hover:text-ink hover:bg-cream"
+                aria-label="Help"
+                title="Help & Getting Started"
+              >
+                <HelpCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
+              </button>
+              <button
+                onClick={() => setShowAISettings(true)}
+                className={cn(
+                  "p-1 rounded-sm transition-colors",
+                  !isAIConfigured
+                    ? "text-burgundy bg-burgundy/10 hover:bg-burgundy/20"
+                    : "text-slate hover:text-ink hover:bg-cream"
+                )}
+                aria-label="AI Settings"
+                title={isAIConfigured ? `Using ${PROVIDER_CONFIGS[aiSettings.provider]?.name || 'AI'}` : "Configure AI Provider"}
+              >
+                <Settings className="h-3.5 w-3.5" strokeWidth={1.5} />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -148,6 +159,168 @@ export default function WelcomePage() {
             </div>
             <div className="p-5">
               <AIProviderSettings onClose={() => setShowAISettings(false)} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Help Modal */}
+      {showHelp && (
+        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-sm shadow-editorial-lg w-full max-w-2xl mx-4 border border-parchment max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b border-parchment">
+              <h3 className="font-display text-display-md text-ink">Getting Started</h3>
+              <button
+                onClick={() => setShowHelp(false)}
+                className="p-1 text-slate hover:text-ink transition-colors"
+              >
+                <X className="h-5 w-5" strokeWidth={1.5} />
+              </button>
+            </div>
+            <div className="p-5 space-y-6">
+              {/* About the Workbench */}
+              <section>
+                <h4 className="font-display text-sm text-ink mb-2">About the Workbench</h4>
+                <p className="font-body text-sm text-slate leading-relaxed">
+                  The Critical Code Studies Workbench facilitates close reading and hermeneutic analysis
+                  of software as cultural artefact. It supports code critique, code archaeology, and
+                  interpretive exploration of algorithms, following the methodology developed by
+                  CCS theorists and practitioners.
+                </p>
+              </section>
+
+              {/* AI Provider Setup */}
+              <section>
+                <h4 className="font-display text-sm text-ink mb-2">Setting Up an AI Provider</h4>
+                <p className="font-body text-sm text-slate leading-relaxed mb-3">
+                  The Workbench uses AI to facilitate dialogue about code. You can use cloud providers
+                  (Anthropic, OpenAI, Google) with an API key, or run a free local AI using Ollama.
+                </p>
+                <div className="bg-cream border border-parchment rounded-sm p-4">
+                  <p className="font-sans text-xs font-medium text-ink mb-2">Quick Setup Options:</p>
+                  <ul className="font-body text-sm text-slate space-y-1">
+                    <li>• <strong>Cloud AI:</strong> Click the ⚙️ Settings icon, choose a provider, enter your API key</li>
+                    <li>• <strong>Local AI:</strong> Install Ollama (free, private, no API key needed)</li>
+                  </ul>
+                </div>
+              </section>
+
+              {/* Ollama Section */}
+              <section>
+                <h4 className="font-display text-sm text-ink mb-2">Using Ollama (Free Local AI)</h4>
+                <p className="font-body text-sm text-slate leading-relaxed mb-3">
+                  Ollama runs large language models locally on your computer. Your code and conversations
+                  never leave your machine, making it ideal for sensitive or proprietary code analysis.
+                </p>
+
+                <div className="space-y-3">
+                  <div className="bg-cream border border-parchment rounded-sm p-4">
+                    <p className="font-sans text-xs font-medium text-ink mb-2">1. Install Ollama</p>
+                    <p className="font-body text-sm text-slate mb-2">
+                      Download from the official website:
+                    </p>
+                    <a
+                      href="https://ollama.ai"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-sans text-sm text-burgundy hover:underline"
+                    >
+                      ollama.ai <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <p className="font-body text-xs text-slate-muted mt-2">
+                      Available for macOS, Windows, and Linux. On macOS, just download and drag to Applications.
+                    </p>
+                  </div>
+
+                  <div className="bg-cream border border-parchment rounded-sm p-4">
+                    <p className="font-sans text-xs font-medium text-ink mb-2">2. Download a Model</p>
+                    <p className="font-body text-sm text-slate mb-2">
+                      Open Terminal and run:
+                    </p>
+                    <code className="block bg-ink text-ivory px-3 py-2 rounded-sm font-mono text-xs">
+                      ollama pull llama3.2
+                    </code>
+                    <p className="font-body text-xs text-slate-muted mt-2">
+                      Llama 3.2 (3B) works well for code analysis. For better results, try <code className="bg-parchment px-1 rounded">mistral</code> or <code className="bg-parchment px-1 rounded">codellama</code>.
+                    </p>
+                  </div>
+
+                  <div className="bg-cream border border-parchment rounded-sm p-4">
+                    <p className="font-sans text-xs font-medium text-ink mb-2">3. Start Ollama</p>
+                    <p className="font-body text-sm text-slate mb-2">
+                      Ollama runs automatically on macOS. If needed, start it manually:
+                    </p>
+                    <code className="block bg-ink text-ivory px-3 py-2 rounded-sm font-mono text-xs">
+                      ollama serve
+                    </code>
+                  </div>
+
+                  <div className="bg-cream border border-parchment rounded-sm p-4">
+                    <p className="font-sans text-xs font-medium text-ink mb-2">4. Configure the Workbench</p>
+                    <p className="font-body text-sm text-slate">
+                      Click the ⚙️ Settings icon, select &quot;Ollama (Local)&quot; as your provider,
+                      and choose your model from the dropdown. The Base URL is usually http://localhost:11434
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              {/* How It Works */}
+              <section>
+                <h4 className="font-display text-sm text-ink mb-2">How the Workbench Works</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-cream border border-parchment rounded-sm p-3">
+                    <p className="font-sans text-xs font-medium text-burgundy mb-1">Code Critique</p>
+                    <p className="font-body text-xs text-slate">
+                      Paste or upload code for close reading. The AI guides you through lexical,
+                      syntactic, semantic, and cultural layers of interpretation.
+                    </p>
+                  </div>
+                  <div className="bg-cream border border-parchment rounded-sm p-3">
+                    <p className="font-sans text-xs font-medium text-burgundy mb-1">Code Archaeology</p>
+                    <p className="font-body text-xs text-slate">
+                      Explore historical software in context. Understand the platform, era,
+                      and cultural moment that shaped the code.
+                    </p>
+                  </div>
+                  <div className="bg-cream border border-parchment rounded-sm p-3">
+                    <p className="font-sans text-xs font-medium text-burgundy mb-1">Interpret Code</p>
+                    <p className="font-body text-xs text-slate">
+                      Develop hermeneutic frameworks for understanding code as text.
+                      Navigate intention, generation, and execution.
+                    </p>
+                  </div>
+                  <div className="bg-cream border border-parchment rounded-sm p-3">
+                    <p className="font-sans text-xs font-medium text-burgundy mb-1">Create Code</p>
+                    <p className="font-body text-xs text-slate">
+                      Vibe coding: build simple versions of ELIZA, poetry generators,
+                      and other algorithms to understand them from the inside.
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Privacy Note */}
+              <section className="border-t border-parchment pt-4">
+                <p className="font-body text-xs text-slate-muted">
+                  <strong className="text-slate">Privacy:</strong> All data is processed transiently and never stored on servers.
+                  With Ollama, everything stays on your computer. Export sessions to save your work.
+                </p>
+              </section>
+
+              {/* Close Button */}
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setShowHelp(false)}
+                  className={cn(
+                    "px-4 py-2 font-sans text-sm text-ivory bg-burgundy",
+                    "border border-burgundy rounded-sm",
+                    "hover:bg-burgundy-dark transition-colors"
+                  )}
+                >
+                  Got it
+                </button>
+              </div>
             </div>
           </div>
         </div>
