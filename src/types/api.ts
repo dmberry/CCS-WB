@@ -17,7 +17,7 @@ export interface ChatRequest {
   messages: Message[];
   settings: SessionSettings;
   currentPhase: string;
-  subfield?: string;  // Domain (legacy name for compatibility)
+  experienceLevel?: string;  // CCS experience level (learning, practitioner, research)
   mode?: string;      // Entry mode (critique, archaeology, interpret, create)
   createLanguage?: string;  // Language for create mode code generation
   analysisContext?: AnalysisResult[];

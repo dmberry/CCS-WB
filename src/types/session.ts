@@ -143,7 +143,7 @@ export interface SessionSettings {
 export interface Session {
   id: string;
   mode: EntryMode;
-  domain?: string;              // Code domain (replaces subfield)
+  experienceLevel?: ExperienceLevel;  // CCS experience level (learning, practitioner, research)
   messages: Message[];
   codeFiles: CodeReference[];   // Code being analysed
   analysisResults: AnalysisResult[];
@@ -179,21 +179,29 @@ export type CreateLanguageOption = typeof CREATE_LANGUAGES[number];
 // CreateLanguage can be a preset or a custom string (when "Other" is selected)
 export type CreateLanguage = string;
 
-// Code domains for critical code studies
-export const CODE_DOMAINS = [
-  'Games & Demos',
-  'System Software',
-  'Web & Network',
-  'AI & Machine Learning',
-  'Creative & Artistic',
-  'Scientific & Research',
-  'Business & Enterprise',
-  'Historical (pre-1990)',
-  'Other',
+// CCS experience levels - affects how the assistant engages
+export const CCS_EXPERIENCE_LEVELS = [
+  'learning',      // New to CCS - explains concepts, offers scaffolding, suggests readings
+  'practitioner',  // Familiar with CCS - uses vocabulary freely, focuses on analysis
+  'research',      // Deep engagement - engages as peer, technical depth, challenges interpretations
 ] as const;
 
-export type CodeDomain = typeof CODE_DOMAINS[number];
+export type ExperienceLevel = typeof CCS_EXPERIENCE_LEVELS[number];
 
-// Legacy alias for compatibility during migration
-export const SUBFIELDS = CODE_DOMAINS;
-export type Subfield = CodeDomain;
+// Human-readable labels for experience levels
+export const EXPERIENCE_LEVEL_LABELS: Record<ExperienceLevel, string> = {
+  learning: "Learning CCS",
+  practitioner: "Practitioner",
+  research: "Researcher",
+};
+
+// Descriptions for experience levels (used in help tooltip)
+export const EXPERIENCE_LEVEL_DESCRIPTIONS: Record<ExperienceLevel, string> = {
+  learning: "New to critical code studies? The assistant will explain concepts, offer scaffolding, and suggest readings.",
+  practitioner: "Familiar with CCS methods. The assistant uses vocabulary freely and focuses on your analysis.",
+  research: "For deep scholarly engagement. The assistant engages as a peer, offers technical depth, and challenges interpretations.",
+};
+
+// Legacy aliases for compatibility during migration
+export const CODE_DOMAINS = CCS_EXPERIENCE_LEVELS;
+export type CodeDomain = ExperienceLevel;

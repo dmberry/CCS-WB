@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import jsPDF from "jspdf";
+import { APP_VERSION, APP_NAME } from "@/lib/config";
+
+// CCS Skill document version (should match Critical-Code-Studies-Skill.md)
+const CCS_SKILL_VERSION = "2.3";
 
 // Type definitions for session data
 interface Message {
@@ -62,8 +66,8 @@ interface CritiqueArtifact {
 
 interface SessionData {
   id: string;
-  mode: "critique" | "archaeology" | "interpret";
-  domain?: string;
+  mode: "critique" | "archaeology" | "interpret" | "create";
+  experienceLevel?: "learning" | "practitioner" | "research";
   messages: Message[];
   codeFiles: CodeReference[];
   analysisResults: AnalysisResult[];
@@ -112,16 +116,16 @@ function generatePDF(session: SessionData): Buffer {
   };
 
   // Title
-  doc.setFontSize(24);
+  doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(128, 0, 32); // Burgundy
-  doc.text("CCS-WB", margin, yPos);
+  doc.text(APP_NAME, margin, yPos);
   yPos += 8;
 
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "italic");
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
   doc.setTextColor(100, 100, 100);
-  doc.text("Critical Code Studies Laboratory", margin, yPos);
+  doc.text(`App v${APP_VERSION} · CCS Methodology v${CCS_SKILL_VERSION}`, margin, yPos);
   yPos += 10;
 
   // Session Info
@@ -130,11 +134,15 @@ function generatePDF(session: SessionData): Buffer {
   doc.setTextColor(100, 100, 100);
   const modeLabel = session.mode === "critique" ? "Code Critique" :
                     session.mode === "archaeology" ? "Code Archaeology" :
+                    session.mode === "create" ? "Code Creation" :
                     "Hermeneutic Exploration";
   doc.text(`Mode: ${modeLabel}`, margin, yPos);
   yPos += 6;
-  if (session.domain) {
-    doc.text(`Domain: ${session.domain}`, margin, yPos);
+  if (session.experienceLevel) {
+    const levelLabel = session.experienceLevel === "learning" ? "Learning CCS" :
+                       session.experienceLevel === "practitioner" ? "Practitioner" :
+                       "Researcher";
+    doc.text(`Experience: ${levelLabel}`, margin, yPos);
     yPos += 6;
   }
   doc.text(`Exported: ${new Date().toLocaleString()}`, margin, yPos);

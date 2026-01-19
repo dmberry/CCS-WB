@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "@/context/SessionContext";
 import { useAISettings } from "@/context/AISettingsContext";
 import { cn, formatTimestamp, fetchWithTimeout, retryWithBackoff } from "@/lib/utils";
-import type { Message, AnalysisResult, ReferenceResult, CodeReference, CreateLanguage } from "@/types";
-import { CREATE_LANGUAGES } from "@/types";
+import type { Message, AnalysisResult, ReferenceResult, CodeReference, CreateLanguage, ExperienceLevel } from "@/types";
+import { CREATE_LANGUAGES, EXPERIENCE_LEVEL_LABELS, EXPERIENCE_LEVEL_DESCRIPTIONS } from "@/types";
 import {
   Send,
   Upload,
@@ -27,6 +27,10 @@ import {
 import jsPDF from "jspdf";
 import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
 import { PROVIDER_CONFIGS } from "@/lib/ai/config";
+import { APP_VERSION, APP_NAME } from "@/lib/config";
+
+// CCS Skill document version (should match Critical-Code-Studies-Skill.md)
+const CCS_SKILL_VERSION = "2.3";
 
 // Opening prompts based on mode
 const openingPrompts: Record<string, string> = {
@@ -83,6 +87,7 @@ export default function ConversationPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [customLanguage, setCustomLanguage] = useState("");
   const [showCustomLanguageInput, setShowCustomLanguageInput] = useState(false);
+  const [showExperienceHelp, setShowExperienceHelp] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -186,7 +191,7 @@ export default function ConversationPage() {
               messages: [...session.messages, { role: "user", content: userMessage }],
               settings: session.settings,
               currentPhase: session.currentPhase,
-              subfield: session.domain,
+              experienceLevel: session.experienceLevel,
               mode: session.mode,
               createLanguage: session.createState?.language,
               analysisContext: session.analysisResults,
@@ -421,11 +426,6 @@ export default function ConversationPage() {
       if (code.platform) suggestions.push(code.platform);
     }
 
-    // Add suggestions from domain
-    if (session.domain) {
-      suggestions.push(session.domain.toLowerCase());
-    }
-
     // Add suggestions based on mode
     if (session.mode === "archaeology") {
       suggestions.push("computing history");
@@ -535,7 +535,7 @@ export default function ConversationPage() {
           messages: session.messages,
           references: session.references,
           analysisResults: session.analysisResults,
-          domain: session.domain,
+          experienceLevel: session.experienceLevel,
           codeContext: session.codeFiles,
         }),
       });
@@ -768,17 +768,17 @@ export default function ConversationPage() {
     };
 
     // Title - Editorial burgundy
-    doc.setFontSize(24);
+    doc.setFontSize(20);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(124, 45, 54); // Burgundy
-    doc.text("CCS-WB", margin, yPos);
-    yPos += 12;
+    doc.text(APP_NAME, margin, yPos);
+    yPos += 8;
 
-    // Subtitle
-    doc.setFontSize(14);
+    // Version info
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(100, 100, 100);
-    doc.text("Critical Code Studies Session", margin, yPos);
+    doc.text(`App v${APP_VERSION} · CCS Methodology v${CCS_SKILL_VERSION}`, margin, yPos);
     yPos += 8;
 
     // Session metadata
@@ -786,11 +786,11 @@ export default function ConversationPage() {
     doc.setTextColor(150, 150, 150);
     doc.text(`Exported: ${new Date().toLocaleString()}`, margin, yPos);
     yPos += 5;
-    if (session.domain) {
-      doc.text(`Domain: ${session.domain}`, margin, yPos);
+    if (session.experienceLevel) {
+      doc.text(`Experience: ${EXPERIENCE_LEVEL_LABELS[session.experienceLevel as ExperienceLevel] || session.experienceLevel}`, margin, yPos);
       yPos += 5;
     }
-    doc.text(`Mode: ${session.mode === 'critique' ? 'Code Critique' : session.mode === 'archaeology' ? 'Code Archaeology' : "Hermeneutic Exploration"}`, margin, yPos);
+    doc.text(`Mode: ${session.mode === 'critique' ? 'Code Critique' : session.mode === 'archaeology' ? 'Code Archaeology' : session.mode === 'create' ? 'Code Creation' : "Hermeneutic Exploration"}`, margin, yPos);
     yPos += 10;
 
     // Reset text color
@@ -950,10 +950,40 @@ export default function ConversationPage() {
           >
             Critical Code Studies Workbench
           </button>
-          {session.domain && (
-            <span className="font-sans text-[10px] uppercase tracking-widest text-burgundy bg-burgundy/5 px-2 py-1 border border-burgundy/20 rounded-sm">
-              {session.domain}
-            </span>
+          {session.experienceLevel && (
+            <div className="relative">
+              <button
+                onClick={() => setShowExperienceHelp(!showExperienceHelp)}
+                className="font-sans text-[8px] uppercase tracking-wide text-burgundy/70 bg-burgundy/5 px-1.5 py-0.5 border border-burgundy/10 rounded-sm hover:bg-burgundy/10 hover:border-burgundy/20 transition-colors cursor-help"
+                title="Click for info"
+              >
+                {EXPERIENCE_LEVEL_LABELS[session.experienceLevel as ExperienceLevel] || session.experienceLevel}
+              </button>
+
+              {/* Experience level help popup */}
+              {showExperienceHelp && (
+                <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-sm shadow-editorial-lg border border-parchment p-3 z-50 animate-fade-in">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-display text-xs text-ink">Current Experience Level</h4>
+                    <button
+                      onClick={() => setShowExperienceHelp(false)}
+                      className="p-0.5 text-slate hover:text-ink transition-colors"
+                    >
+                      <X className="h-3 w-3" strokeWidth={1.5} />
+                    </button>
+                  </div>
+                  <p className="font-sans text-[10px] font-medium text-burgundy mb-1">
+                    {EXPERIENCE_LEVEL_LABELS[session.experienceLevel as ExperienceLevel]}
+                  </p>
+                  <p className="font-body text-[10px] text-slate leading-snug mb-2">
+                    {EXPERIENCE_LEVEL_DESCRIPTIONS[session.experienceLevel as ExperienceLevel]}
+                  </p>
+                  <p className="font-body text-[9px] text-slate-muted italic">
+                    To change, start a new session from the home page.
+                  </p>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -1715,7 +1745,7 @@ export default function ConversationPage() {
                   rel="noopener noreferrer"
                   className="btn-editorial-primary"
                 >
-                  View Source
+                  View Document
                 </a>
               )}
               <button

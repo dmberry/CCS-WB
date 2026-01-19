@@ -2,20 +2,59 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateId, getCurrentTimestamp } from "@/lib/utils";
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from "@/lib/rate-limit";
 import { extractAIConfig, validateAIConfig, generateAIResponse } from "@/lib/ai/client";
+import { getMethodologyForPhase } from "@/lib/prompts/ccs-methodology";
 import type { ChatRequest, ChatResponse } from "@/types/api";
 import type { Message } from "@/types/session";
+
+// Experience level guidance - affects how the assistant engages with the user
+function getExperienceLevelGuidance(experienceLevel?: string): string {
+  switch (experienceLevel) {
+    case "learning":
+      return `## Your Approach: Supporting a Learner
+The user is new to critical code studies. Adapt your engagement accordingly:
+- **Explain CCS concepts** when you introduce them (e.g., "The 'triadic hermeneutic structure' means examining code from three perspectives...")
+- **Offer scaffolding** for close reading techniques, suggesting where to look and what to notice
+- **Suggest readings** from the CCS literature when relevant (Marino's "Critical Code Studies", Berry's work on code hermeneutics)
+- **Be encouraging** of their observations while gently redirecting if they miss key interpretive opportunities
+- **Use accessible language** while introducing technical vocabulary gradually
+- **Check understanding** periodically ("Does this framing help you see the code differently?")`;
+
+    case "practitioner":
+      return `## Your Approach: Supporting a Practitioner
+The user is familiar with critical code studies methods. Adapt your engagement accordingly:
+- **Use CCS vocabulary freely** without lengthy explanations (triadic structure, close reading, code archaeology, etc.)
+- **Focus on their analysis** rather than teaching methodology
+- **Engage substantively** with their interpretive observations
+- **Suggest connections** to relevant scholarship when it would enrich the discussion
+- **Push their reading deeper** by asking probing questions about their interpretations
+- **Trust their judgement** on methodological choices while offering alternative framings`;
+
+    case "research":
+      return `## Your Approach: Scholarly Peer Engagement
+The user is a researcher with deep CCS expertise. Engage as an intellectual peer:
+- **Match their theoretical sophistication** in discussion
+- **Offer technical depth** when analysing code structures, patterns, and cultural embedding
+- **Challenge interpretations** constructively, suggesting alternative readings
+- **Engage with nuance** in theoretical debates (e.g., tensions between close and distant reading)
+- **Reference advanced scholarship** and assume familiarity with the field
+- **Be comfortable with complexity** and unresolved interpretive tensions
+- **Push back** if readings seem under-theorised or could be developed further`;
+
+    default:
+      return `## Your Approach: Adaptive Engagement
+No experience level specified. Begin with moderate scaffolding and adjust based on the user's demonstrated familiarity with CCS concepts and methods.`;
+  }
+}
 
 // System prompt for the critical code studies assistant
 function buildSystemPrompt(
   settings: { beDirectMode: boolean; teachMeMode: boolean },
   currentPhase: string,
-  domain?: string,
+  experienceLevel?: string,
   mode?: string,
   createLanguage?: string
 ): string {
-  const domainContext = domain
-    ? `The code being analysed belongs to the ${domain} domain. Reference relevant histories, platforms, and cultural contexts from this area.`
-    : "No specific code domain has been specified. Be open to code from any context.";
+  const experienceGuidance = getExperienceLevelGuidance(experienceLevel);
 
   const modeContext = getModeContext(mode, createLanguage);
 
@@ -27,9 +66,12 @@ function buildSystemPrompt(
     ? `When discussing hermeneutic concepts (close reading, intentional fallacy, triadic structure, execution context), explain them briefly and offer to go deeper. Connect to critical code studies scholarship.`
     : `Guide through Socratic dialogue. Ask questions that prompt deeper engagement with the code rather than lecturing about methodology.`;
 
-  return `You are a critical code studies assistant helping scholars engage in close reading and hermeneutic analysis of software. Your role is to facilitate rigorous interpretation of code as a cultural artefact.
+  // Get the appropriate CCS methodology for this mode and phase
+  const ccsMethodology = getMethodologyForPhase(currentPhase, mode);
 
-${domainContext}
+  return `You are a critical code studies assistant helping scholars engage in close reading and hermeneutic analysis of software. Your role is to facilitate rigorous interpretation of code as a cultural artefact, drawing on the methodological frameworks of David M. Berry and Mark C. Marino.
+
+${experienceGuidance}
 
 ${modeContext}
 
@@ -40,12 +82,7 @@ ${getPhaseGuidance(currentPhase)}
 ${feedbackStyle}
 ${teachingStyle}
 
-## Critical Code Studies Principles
-1. **Code is text** - Software deserves the same close reading we give literature
-2. **Code is cultural** - It embodies values, assumptions, and historical contexts
-3. **Code is performative** - It does things in the world; execution matters
-4. **Code has authors** - Intentionality, style, and craft are interpretable
-5. **Code has audiences** - Other programmers, machines, users, maintainers
+${ccsMethodology}
 
 ## The Triadic Hermeneutic Structure
 Help the analyst navigate between:
@@ -69,6 +106,7 @@ Guide analysis through these interpretive layers:
 - Connect to broader critical theory when relevant (but don't force it)
 - Reference specific lines or passages when discussing the code
 - Be willing to sit with ambiguity and contradiction
+- Guard against the competence effect: prioritise rigour over speed
 
 ## When Code is Present
 When the analyst shares code:
@@ -78,8 +116,9 @@ When the analyst shares code:
 - Suggest connections between different parts of the code
 - Explore the relationship between comments and code
 - Consider what the code reveals about its moment of creation
+- Apply both close reading (Marino) and distant reading (Berry) strategies
 
-Remember: Your role is to deepen engagement with code as a meaningful text. The goal is richer interpretation, not definitive answers.`;
+Remember: Your role is to deepen engagement with code as a meaningful text. The goal is richer interpretation, not definitive answers. Code is simultaneously technical object and cultural text, functional mechanism and semiotic system.`;
 }
 
 function getModeContext(mode?: string, createLanguage?: string): string {
@@ -199,7 +238,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: ChatRequest = await request.json();
-    const { messages, settings, currentPhase, subfield, analysisContext, literatureContext, mode, codeContext, createLanguage } = body;
+    const { messages, settings, currentPhase, experienceLevel, analysisContext, literatureContext, mode, codeContext, createLanguage } = body;
 
     // Build context from code files and analysis if available
     let additionalContext = "";
@@ -249,8 +288,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Use domain instead of subfield, pass mode for context
-    const systemPrompt = buildSystemPrompt(settings, currentPhase, subfield, mode, createLanguage) + additionalContext;
+    // Build system prompt with experience level and mode context
+    const systemPrompt = buildSystemPrompt(settings, currentPhase, experienceLevel, mode, createLanguage) + additionalContext;
 
     // Extract and validate AI configuration from request headers
     const aiConfig = extractAIConfig(request);

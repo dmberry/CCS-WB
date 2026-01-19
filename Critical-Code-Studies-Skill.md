@@ -1,420 +1,259 @@
-# Critical Code Studies Skill
+# Critical Code Studies: Methodology Framework
 
-**Skill Purpose**: This skill provides a comprehensive methodological framework for Critical Code Studies (CCS), integrating two complementary approaches: David M. Berry's materialist-phenomenological method and Mark C. Marino's hermeneutic-rhetorical approach. It equips researchers to investigate computer code as simultaneously technical object and cultural text, functional mechanism and semiotic system.
+**Version**: 2.3 - Four-Mode Progressive Architecture with Examples
+**Authors**: Based on methodologies by David M. Berry, Mark C. Marino, and collaborative CCS community
 
-**Two Foundational Approaches**:
+---
 
-1. **Berry's Materialist-Phenomenological CCS**: Code as crystallisation of social formations, examined through multi-dimensional analysis (literature, mechanism, spatial form, repository), tests of strength, political economy, and phenomenology of computation.
+## CORE FOUNDATIONS (All Modes)
 
-2. **Marino's Hermeneutic-Rhetorical CCS**: Code as social text with extrafunctional significance, analysed through critical hermeneutics, close reading, rhetorical analysis, and interpretation of meaning beyond functionality.
+### What is Critical Code Studies?
 
-**Source Documents**:
-- Berry, D. M. (2011) *The Philosophy of Software: Code and Mediation in the Digital Age*
-- Berry, D. M. (2025b) 'Co-Writing with an LLM: Critical Code Studies and Building an Oxford TSA App'
-- Berry, D. M. (2025c) 'AI Sprints: A Method for Critical Augmentation in Digital Research'
-- Marino, M. C. (2020) *Critical Code Studies*
+Critical Code Studies (CCS) applies critical hermeneutics to interpretation of computer source code, program architecture, and documentation within sociohistorical context. Lines of code are not value-neutral and can be analysed using theoretical approaches applied to other semiotic systems.
 
-**Integration**: Both approaches share commitment to understanding code as embedded in power relations, requiring critical engagement with technical operations and social contexts. Berry emphasises genealogical investigation and political economy whilst Marino emphasises hermeneutic interpretation and semiotic analysis. Together they provide rigorous foundations for CCS as field.
+**Core premise**: Code is doubly hidden - by illiteracy and by screens on which output delights/distracts. Meaning grows out of functioning but is not limited to literal processes enacted.
 
-## Core Methodological Principles
-
-### Foundational Definitions
-
-**Berry**: Code must be approached in its multiplicity as simultaneously:
-- **Literature**: Readable text with hermeneutic dimensions
-- **Mechanism**: Operative machinery with material effects
-- **Spatial form**: Organised structure with architectural properties
-- **Repository**: Crystallisation of social norms, values, processes
-
-**Marino**: "Critical Code Studies applies critical hermeneutics to the interpretation of computer code, program architecture, and documentation within a sociohistorical context." 
-
-**Key concepts**:
-- **Extrafunctional significance** (Marino): Meaning grows out of functionality whilst exceeding it
-- **Double mediation** (Berry): Software mediates relationship with code in both writing and execution
-- **Code as social text** (Marino): Meaning develops as readers encounter code over time in shifting contexts
-
-### Code's Dual Character
-
-**Unambiguous dimension** (technical):
-- Produces specific computational effects
-- Must compile/execute correctly
-- Operations are precise and deterministic
-- Validated through tests of strength
-
-**Ambiguous dimension** (social):
-- Meaning proliferates through human interpretation
-- Circulates within multiple discourse communities
-- Subject to rhetorical triad of speaker, audience, message
-- Develops connotations through reception and recirculation
+**Code's dual character**:
+- **Unambiguous (technical)**: Produces specific computational effects, must compile/execute correctly, validated through tests of strength
+- **Ambiguous (social)**: Meaning proliferates through human interpretation, subject to rhetorical analysis, develops connotations through reception and recirculation
 
 **Methodological implication**: Cannot read code solely for functionality without considering what it means. Both dimensions require simultaneous attention.
 
-## Analytical Frameworks
+### Three Foundational Approaches
 
-### Tests of Strength (Berry)
+**1. Berry's Materialist-Phenomenological CCS**
+Code as crystallisation of social formations examined through:
+- Multi-dimensional analysis (literature, mechanism, spatial form, repository)
+- Tests of strength methodology (technical, epistemological, social, political-economic, aesthetic)
+- Political economy of computational capitalism
+- Three-fold analysis: Ontology (what code IS), Genealogy (where code comes FROM), Mechanology (what code DOES)
 
-Code validated through dual requirements:
+**2. Marino's Hermeneutic-Rhetorical CCS**
+Code as social text with extrafunctional significance:
+- Critical hermeneutics and close reading of source code, comments, naming conventions
+- Extrafunctional significance: meaning growing out of function whilst exceeding it
+- Hermeneutics of suspicion: read between lines, seek gaps and remainders
+- Multiple audiences: computer, programmers, users, managers, scholars, lawyers, artists
 
-**Legitimate Tests**: Syntax conformity, programming conventions, compilation compatibility, specification fulfillment
+**3. Centrifugal Close Reading** (*10 PRINT*)
+- Spiral outward from minimal program to cultural context
+- Variorum approach examining multiple versions
+- Porting as critical method revealing platform-specific affordances
 
-**Material Tests**: Compilation without errors, execution of specified functions, correct hardware interfacing, expected outputs
+### Constellational Analysis Framework (Berry 2024)
 
-**Critical insight**: Tests reveal code's limits—both technical constraints and ideological boundaries.
+Three dialectical levels (based on Habermas):
+1. **Technical-Instrumental**: How code implements control (formal logic, computer science)
+2. **Practical-Communicative**: How code operates as discourse (hermeneutics, social meaning)
+3. **Emancipatory**: How code embeds/resists power relations (ideology critique, political economy)
 
-### Reading Strategies
+Levels operate dialectically, not hierarchically - technical shapes but doesn't determine social meaning.
 
-**Close Reading** (Marino's emphasis):
-- Examine naming conventions, variable choices, comments
-- Analyse assumptions embedded in function names
-- Trace gender, cultural, political biases
-- Identify subject positions constructed in code
-- Apply hermeneutics of suspicion—read between lines
+---
 
-**Distant Reading** (Berry's emphasis):
-- Visual imagery and spatial organisation
-- Architectural patterns and modular structure
-- Code libraries and external linkages
-- Dependencies and infrastructural relations
+## MODE 1: CRITIQUE
 
-**Reading Levels** (integrated):
-- **Surface**: What code appears to do
-- **Functional**: What code actually executes
-- **Social**: What assumptions code embeds
-- **Political**: What power relations code encodes
-- **Phenomenological**: How code structures experience
+**Use when**: Analysing existing code for cultural, political, or ideological dimensions.
 
-### Three-fold Analysis (Berry)
+**Example**: Facebook News Feed (2009 chronological vs 2018 engagement-weighted) demonstrates shift from user-centric to profit-driven ranking through code comparison. The `EdgeRank` algorithm's prioritisation of "engagement" over recency reveals how technical choices encode business models.
 
-**Ontology**: What code IS
-- Material composition, virtual existence
-- Infrastructural embedding, mediated character
+### Phase 1: Foundational Critique
 
-**Genealogy**: Where code comes FROM
-- Historical development (media archaeology)
-- Evolution of practices, programming paradigms
-- Social formations of programming communities
+**Close Reading (Marino)**:
+- Read source code, comments, variable/function names, structure, paratexts (README, commits)
+- Identify extrafunctional significance beyond what code does
+- Examine gaps between stated purpose and implementation
+- Look for metaphors, tropes, conceptual frameworks
+- Apply hermeneutics of suspicion
 
-**Mechanology**: What code DOES
-- Dynamic operations, effects on social practices
-- Structuring of everyday life
-- Political and economic functions
+**Two-Part Case Study Method**:
+1. Technical explanation: Present code, explain functioning, define terms, annotate operations
+2. Interpretive analysis: Explore meaning beyond function, connect to social/political contexts, apply critical lenses
 
-## Key Methodological Concepts
+### Phase 2: Intermediate Critique
 
-### Extrafunctional Significance (Marino)
+**Running Code as Method (Berry 2024)**: Execute code to supplement hermeneutic reading - create sample data, run implementations, generate comparisons, use empirical results to test interpretive claims.
 
-**Definition**: Meaning that grows out of code's functioning but is not limited to literal processes it enacts.
+**Tests of Strength** - ask systematically:
+- Technical: What does code actually do? (operations, I/O, algorithms)
+- Epistemological: What knowledge produced? (categories, visibility/invisibility)
+- Social: How mediates relations? (power, access, practices shaped)
+- Political-Economic: What accumulation strategies? (value extraction, labour)
+- Aesthetic: What experience? (interface, temporality, affect)
 
-**Not**: Outside function, in addition to function, separate from function
-**Instead**: Growing out of function whilst exceeding it
+### Phase 3: Advanced Critique
 
-**Examples**:
-- **Climategate**: Temporary "fudge factor" becomes "smoking gun" through public reception
-- **Women on GitHub**: User ID number gains rhetorical significance through prominent display
-- **Anagram job interview**: Code choices convey identity, style, competence beyond mere functionality
+**Critical Theoretical Lenses**:
+- Postcolonial: linguistic imperialism in programming languages, acts of abrogation
+- Gender/Power: gendered subjects, patriarchal assumptions, feminist resistances
+- Race/Embodiment: racial formation in conversational agents, default whiteness
+- Infrastructure/Platform: modularity and fragmentation, lenticular logic (McPherson)
+- Surveillance Capitalism: behaviour tracking, profile updating, recommendation systems
+- Resistance Architectures: encryption, federation, user control (Signal, Mastodon)
 
-### Interpretation versus Isomorphism (Marino)
+---
 
-**Isomorphism** (computer science): One-to-one mapping between systems (like compiling)
+## MODE 2: ARCHAEOLOGY
 
-**Interpretation** (humanities): Identifying connections, resonances, disconnections, slippages, forces shaping/distorting meaning
+**Use when**: Recovering, reconstructing, or historically analysing code artifacts.
 
-**Example**: PRINT command
-- Isomorphism: Maps to display-to-screen or WriteLine in C#
-- Interpretation: Evokes inscription systems, print history, remediation of paper text
+**Example**: ELIZA recovery (2021) - found 1965 version on MIT fanfold paper in MAD-SLIP, discovered undocumented `CHANGE` function enabling live script editing during conversation. Archival work revealed Weizenbaum's therapeutic intentions predated the famous "Doctor" script.
 
-### Code Metaphors and Tropes (Berry)
+### Phase 1: Foundational Archaeology
 
-**Code as Engine**: Processing, mechanism, functionality (risk: obscures symbolic dimensions)
-**Code as Image**: Screenic dimension, interface, aesthetic (risk: screen essentialism)
-**Code as Language**: Expressiveness, communication, community formation
+**Code Archaeology (Jerz 2007)** - multi-source triangulation:
+1. Recover source code (archival work)
+2. Read code closely (technical function)
+3. Contextualise historically (when, why, how)
+4. Triangulate with other sources (interviews, sites, documentation)
+5. Interpret culturally
 
-### Hermeneutics of Suspicion (Marino)
+**Forensic Materiality (Kirschenbaum)**: Treat code as forensic evidence - physical inscription matters, examine file systems, compilation artifacts, version histories, backup media.
 
-CCS operates under Ricoeur's hermeneutics of suspicion (deconstruction, poststructuralism):
+**Finding Lost Code**: University archives, personal papers, corporate archives, backup tapes, published listings, oral histories.
 
-- Read between lines
-- Explore ambiguity and social contest
-- Seek gaps and remainders
-- Understand arbitrary nature of language opens communication to ideological influences
+### Phase 2: Intermediate Archaeology
 
-**Applied to code**: "Walls of computer do not remove code from world but encode the world and human biases"
+**Versioning and Genealogy**: Compare implementations across time, trace features, analyse priorities, document branching. Use variorum approach - collect versions, document differences, create comparison matrices.
 
-**Means analysing**: Race, ethnicity, gender, sexuality, socioeconomic status, political representation, ideology, power relations
+**Paratextual Engagement**: Examine manuals, transcripts, correspondence, proposals, institutional context, contemporary reviews.
 
-## Practical Application Framework
+**Porting as Method**: Port to different platforms/languages to reveal constraints, idioms, essential vs contingent aspects.
 
-### Stage 1: Identify Object of Analysis
+### Phase 3: Advanced Archaeology
 
-- Select specific code, system, or software practice
-- Define boundaries whilst remaining attentive to connections
-- Situate technically, socially, historically
+**Collaborative Historical Reconstruction**: Team with historian, programmer (historical languages), critical theorist, archivist. Move line by line, hermeneutic spiral, expect 6+ years for major studies.
 
-### Stage 2: Multi-level Reading
+**Code as Cultural Geography**: Map code structures to physical/cultural spaces, visit locations encoded in programs, compare representation to reality.
 
-**Technical reading**: What does code do computationally?
-**Social reading**: What practices does code embed/enable?
-**Political reading**: What power relations does code encode?
-**Phenomenological reading**: How does code structure experience?
+**Oral History**: Interview original programmers about design decisions, constraints, abandoned alternatives. When unavailable, interview colleagues, users, institutional memory holders.
 
-### Stage 3: Genealogical Tracing
+---
 
-**Historical**: How did this code/practice develop?
-**Social**: What communities produced it?
-**Economic**: What political economy supports it?
+## MODE 3: INTERPRET
 
-### Stage 4: Critical Analysis
+**Use when**: Exploring hermeneutic frameworks without a fixed code object, developing interpretive approaches, or building theoretical vocabulary for code analysis.
 
-**Expose**: Hidden assumptions, embedded values
-**Critique**: Political and ethical implications
-**Evaluate**: Alternatives and resistances
+### Phase 1: Framework Exploration
 
-### Stage 5: Synthesis
+**Hermeneutic Traditions**: Explore interpretive frameworks applicable to code:
+- Classical hermeneutics (Schleiermacher, Dilthey): author's intention, historical reconstruction
+- Philosophical hermeneutics (Gadamer): fusion of horizons, prejudice as enabling
+- Critical hermeneutics (Habermas, Ricoeur): ideology critique, suspicion and recovery
+- Deconstructive reading (Derrida): traces, supplements, undecidability
 
-**Integrate**: Technical, social, political dimensions
-**Theorise**: Broader implications
-**Propose**: Critical interventions or alternatives
+**Code's Interpretive Peculiarity**: Unlike literary texts, code has an execution dimension. Interpretation must navigate between what code means and what code does.
 
-## LLM-Assisted Critical Code Studies
+### Phase 2: Conceptual Development
 
-### Three Modes of Cognitive Augmentation (Berry)
+**Building Vocabulary**: Develop concepts for code interpretation:
+- Extrafunctional significance (Marino): meaning exceeding function
+- Tests of strength (Berry): systematic interrogation across dimensions
+- Triadic structure: human intention, computational generation, executable behaviour
+- Constellational analysis: technical, communicative, emancipatory levels
 
-**1. Cognitive Delegation** (danger mode):
-- LLM responsiveness creates false confidence in unworkable approaches
-- System generates elaborate solutions without signalling flaws
-- Developer persists with misconceived strategy
-- Augmentation becomes substitution
+**Methodological Toolkit**: Assemble approaches for different analytical purposes:
+- Close reading for textual detail
+- Distant reading for patterns across corpora
+- Running code as empirical supplement
+- Porting as comparative method
 
-**Warning signs**: LLM never refuses prompts, generates plausible-looking code that fails, shifts judgement burden to human
+### Phase 3: Theoretical Synthesis
 
-**2. Productive Augmentation** (optimal mode):
-- Human maintains strategic control over research/architectural decisions
-- LLM augments implementation, rapidly generates code
-- Clear division: human architectural thinking, machine code generation
-- Augmentation remains supplementary not substitutive
+**Critical Theory Connections**: Link code studies to broader critical traditions:
+- Frankfurt School: instrumental reason, administered society, culture industry
+- Foucault: discourse, power/knowledge, governmentality
+- Science and Technology Studies: actor-network theory, social construction
+- Platform Studies: material affordances, computational constraints
 
-**Optimal division**: Human (strategic decisions, problem design, critical evaluation) + LLM (code structure, implementation details, rapid iteration)
+**Developing Research Questions**: Move from methodological exploration to specific inquiries that can be pursued through critique, archaeology, or creation modes.
 
-**3. Cognitive Overhead** (hidden cost mode):
-- Managing LLM context consumes cognitive resources
-- Constant version tracking, context management required
-- LLM confusion requires repeated clarification
-- Scaling limits: beyond certain complexity, overhead exceeds benefits
+---
 
-**Example**: Approximately 1000-line program reached cognitive overhead limits surprisingly quickly
+## MODE 4: CREATE
 
-### The Competence Effect (Berry)
+**Use when**: Writing new code, developing systems, or using LLMs for code generation.
 
-Extension of Weizenbaum's ELIZA effect:
+**Example**: Mastodon's `visibility_policy` function prioritises user control through explicit privacy levels (`public`, `unlisted`, `private`, `direct`) rather than algorithmic opacity. Design choice embeds values of transparency and consent absent from corporate social media.
 
-**ELIZA effect** (original): Users projecting understanding onto simple pattern-matching
+### Phase 1: Foundational Create
 
-**Competence effect** (contemporary): LLM's functional capability masks absence of semantic understanding
+**Reflexive Development** - before writing, ask:
+- What social relations will code mediate?
+- Whose interests does implementation serve?
+- What becomes visible/invisible through design?
+- What power relations embedded?
 
-**Why more dangerous**: 
-- Code works, bugs get fixed, system appears to learn
-- Constant reinforcement that LLM "gets it"
-- Evidence appears to support anthropomorphism
-- Boundary between pattern-completion and understanding difficult to maintain
+**Programming as Critical Practice**: Choose technologies aligned with values, implement privacy-preserving architectures, design for accessibility, build federation over centralisation, prioritise user control.
 
-### Triadic Hermeneutics (Berry)
+**Comments as Argument**: Explain why not just what, acknowledge assumptions, document alternatives considered, make values explicit.
 
-Traditional hermeneutics: Dialogue between interpreter and text
+### Phase 2: LLM-Assisted Create
 
-**Triadic structure with AI**: Three-way exchange between human intention, machine generation, executable code
+**Co-Critique Methodology (Berry 2024)**: Use LLMs for explaining patterns, summarising codebases, generating boilerplate, translating languages, creating tests.
 
-**Hermeneutic spiral**: Each iteration produces not just refined understanding but new code becoming object of interpretation
+**Critical Caveats**:
+- Hallucination: LLMs generate plausible but incorrect explanations - always verify against behaviour
+- Context limits: Large codebases exceed processing - strategic chunking required
+- Affirmation bias: Tendency to affirm rather than critique - prompt for critical analysis
 
-**Implications**:
-- Code simultaneously authored and discovered, intentional and emergent
-- Whose intentions embedded in co-generated code?
-- Need frameworks for hybrid authorship, distributed intentionality
+**Three Modes of Cognitive Augmentation**:
+1. **Delegation** (risk): LLM autonomous, minimal oversight - competence effect danger
+2. **Productive Augmentation** (optimal): Human-LLM collaboration, iterative refinement, critical evaluation
+3. **Overhead** (cost): Verification exceeds benefits in specialised/novel/safety-critical domains
 
-## AI Sprints Methodology (Berry)
+**Triadic Hermeneutics**: Human ↔ LLM ↔ Code. Human interprets both code and LLM's interpretation. Form initial reading before consulting LLM, compare, identify tensions, verify through execution.
 
-### From Data Sprints to AI Sprints
+### Phase 3: Critical Augmentation
 
-**Continuity**:
-- Time-bounded intensive work
-- Iterative refinement through feedback loops
-- Production of intermediate mediating objects
-- Commitment to open, teachable processes
+**Synthetic Hermeneutics (Berry 2025)**: Understanding co-produced through human-LLM-code triad. Combines human critical capacity with LLM pattern recognition. Requires methodological reflexivity and transparency.
 
-**Rupture**:
-- Distribution shifts from human teams to individual-LLM dialogue
-- Potential "methods crisis" as LLMs perform tasks previously requiring bespoke tools
-- Risk of losing productive friction from differently positioned knowers
+**Critical Augmentation Principles**:
+- Use AI to extend critical capacity, not replace it
+- Maintain humanistic values and reflexive vigilance
+- Leverage computation whilst avoiding instrumental rationality
+- Distinguish from automation, optimisation, scalability
 
-### Six Key Principles
+**AI Sprints**: Define question, assemble team, use LLMs strategically, share interpretations collectively, synthesise whilst documenting process, reflect on methodology.
 
-**1. Architectural Control**: Researcher maintains strategic authority over questions, frameworks, interpretive claims. LLM generates elements but does not determine direction.
+---
 
-**2. Intermediate Objects** (most important): Do NOT assume LLMs can jump to comprehensive outputs. Create visualisations, summary tables, coded excerpts, thematic mappings, extracted JSON files. Make LLM processing legible and contestable.
+## ADVANCED CHALLENGES
 
-**3. Materialised Abstractions**: Intermediate objects emerge through grammatisation process that discretises and reorders materials. Remain critically aware of what processes of abstraction produced them, what becomes visible/invisible.
+**Machine Learning Systems**: Behaviour emerges from training, not explicit programming. Requires explainability techniques, training data analysis, behavioural testing, architectural analysis.
 
-**4. Hermeneutic-Computational Loop**: Tight feedback between human interpretation and AI processing. Attend to intermediate objects, identify patterns/anomalies, revise prompts introducing different approaches.
+**Distributed/Opaque Systems**: Microservices, cloud, proprietary platforms, real-time compilation. Use API analysis, behavioural reverse engineering, infrastructure mapping, insider collaboration.
 
-**5. Methodological Transparency**: Document prompts, LLM interactions, decision points, failures. Enable reproducibility, critique, collective methodological learning.
+---
 
-**6. Reflexive Critique**: Guard against competence effect. Direct critical attention to seductive effect of speed/scale potentially coming at cost of nuance, rigour, context.
+## KEY REFERENCES
 
-### Material Conditions and Political Economy
+Marino, M. C. (2020) *Critical Code Studies*. MIT Press.
 
-**Critical acknowledgement required**:
-- Access barriers: Institutional subscriptions, API credits, terms of service
-- Proprietary dependencies: Corporate platforms with priorities differing from scholarly values
-- Computational costs unevenly distributed across institutions/regions
-- Apparent democratisation conceals new infrastructural dependencies
+Berry, D. M. (2011) *The Philosophy of Software*. Palgrave.
 
-**Reflexive methodology considers**: How platform dependencies shape what research becomes possible and for whom, how AI methods emerge from/reinforce formations of power and capital.
+Berry, D. M. & Marino, M. C. (2024) 'Reading ELIZA', *Electronic Book Review*.
 
-## Integration with Critical Theory
+Montfort, N. et al. (2013) *10 PRINT*. MIT Press.
 
-### Frankfurt School
-- Adorno on reification and commodity fetishism applied to computational processes
-- Benjamin on mechanical reproduction extended to digital
-- Horkheimer on instrumental rationality in algorithmic governance
-- Dialectic of enlightenment: Reason's emancipatory promises become new domination
+Jerz, D. (2007) 'Colossal Cave', *DHQ* 1(2).
 
-### Marx
-- Machinery analysis applied to computational infrastructure
-- Commodity form and fetishism in code commodities
-- Alienation in computational labour
-- Industrial 'mysteries' parallel to code's technical obscurity
+Kirschenbaum, M. (2008) *Mechanisms*. MIT Press.
 
-### Stiegler
-- Grammatisation of knowledge through code
-- Exosomatisation and technical evolution
-- Proletarianisation of cognitive labour
-- Automatic society and computational governance
+Chun, W. H. K. (2011) *Programmed Visions*. MIT Press.
 
-### Foucault
-- Power/knowledge configurations in code
-- Disciplinary mechanisms in software systems
-- Discourse analysis applied to programming communities
+McPherson, T. (2012) 'Why Are the Digital Humanities So White?', *Debates in DH*.
 
-## Case Study Methods (Marino)
+---
 
-### Two-Part Structure
+## IMPLEMENTATION GUIDANCE
 
-**Part 1: Technical Explanation**
-- Present code excerpt
-- Explain context and functioning in detail
-- Define terms, explain programming structures
-- Render code legible for uninitiated
-- Annotate operations
+**Mode Detection**:
+- **CRITIQUE**: User has code to analyse - they've pasted, uploaded, or described specific code
+- **ARCHAEOLOGY**: User seeks historical/lost code - mentions dates, platforms, recovery, or "old" software
+- **INTERPRET**: User developing theoretical framework - asks about methods, concepts, or approaches without specific code
+- **CREATE**: User writing/generating code - wants to build, implement, or develop something new
 
-**Part 2: Interpretive Analysis**
-- Explore meaning beyond what code does
-- Analyse extrafunctional significance
-- Connect to social/political/cultural contexts
-- Consider rhetoric, ideology, power relations
+**Phase Progression**: Start at Phase 1, advance when foundational methods are mastered. Users can work at different phases across modes.
 
-### Why Include Large Portions of Code
-
-- Provide context for interpretation
-- Enable alternative readings by others
-- Show interrelationships within code
-- Make transparent what is being analysed
-
-## Multiple Audiences for Code (Marino)
-
-Code exists for and circulates among:
-1. The computer (executes operations)
-2. The programmer (writes and modifies)
-3. Other programmers (collaborate, maintain, extend)
-4. Managers (oversee development)
-5. Users (may access text in open source)
-6. Judges and lawyers (use in legal proceedings)
-7. Politicians and pundits (deploy in political debate)
-8. Poets and artists (incorporate into creative work)
-9. Humanities scholars (analyse culturally)
-
-**Implication**: Each audience reads with different assumptions, priorities, literacies. Code's meaning shifts across these readerships.
-
-## Warnings and Limitations
-
-### Avoid Screen Essentialism
-Do not reduce code analysis to interface or output. Must examine code's operational logic.
-
-### Avoid Pure Formalism
-Code not pure mathematics or logic. Always embedded in social, economic, political contexts.
-
-### Avoid Technological Determinism
-Code does not autonomously determine social outcomes. Analyse within broader configurations of power.
-
-### Recognise Epistemic Limits
-Code knowledge requires technical expertise. Cannot fully analyse without some programming literacy.
-
-### Maintain Critical Distance
-Neither technophilia nor technophobia. Critical engagement requires nuanced understanding.
-
-### Guard Against Competence Effect
-When using LLMs: Remember pattern-completion not comprehension, test outputs against behaviour, question plausible-sounding analyses, don't anthropomorphise capabilities.
-
-## Research Directions
-
-**Empirical investigation needed**:
-- Thresholds where cognitive augmentation transitions from benefit to burden
-- Comparative studies of LLM-assisted vs traditional code analysis
-- Effectiveness of AI sprints across research domains
-- Distribution of access and resulting inequalities
-
-**Theoretical development required**:
-- Formalising triadic hermeneutics for computational collaboration
-- Extending critical theory frameworks to synthetic hermeneutics
-- Political economy of cognitive augmentation
-- Computational ontology and politics of abstraction
-
-**Methodological innovation**:
-- Best practices for LLM-assisted CCS
-- Documentation standards for collaborative AI research
-- Frameworks for reflexive augmented hermeneutics
-- Protocols for managing cognitive overhead
-
-## Conclusion: Code as Contemporary Challenge
-
-Critical Code Studies positions code analysis as urgent intellectual and political task:
-
-**Challenges**:
-- **To humanities**: Develop digital intellect not just digital intelligence
-- **To social sciences**: Understand computational infrastructures shaping society
-- **To critical theory**: Extend critique to algorithmic governance and computational capitalism
-- **To practice**: Develop resistant alternatives and critical interventions
-- **For AI age**: Navigate cognitive augmentation whilst maintaining critical distance and political-economic awareness
-- **For methods**: Respond to AI-driven methods crisis through critical augmentation not abandonment
-
-**Core insight**: Code is neither purely technical nor purely social. It is material and symbolic, virtual and actual, constraining and enabling. Critical Code Studies provides method for rigorous analysis attending to this multiplicity whilst remaining grounded in concrete technical, social, and political realities.
-
-In the age of generative AI, this multiplicity expands. Code becomes co-created artefact, hermeneutic object, and site of human-machine collaboration. Critical Code Studies must now address not only what code is, where it comes from, and what it does, but also how it emerges from synthetic processes that trouble traditional categories of authorship, understanding, and meaning.
-
-The three modes of cognitive augmentation (delegation, productive augmentation, overhead) provide analytical tools for navigating this terrain. The concepts of competence effect, triadic hermeneutics, and synthetic hermeneutics offer theoretical frameworks for understanding what is fundamentally new about code in the age of AI. AI sprints extend this methodology into broader research practice, proposing critical augmentation as research ethos combining computational power with humanistic critique.
-
-The challenge ahead lies in developing methods that leverage AI capabilities without succumbing to instrumental rationality, that extend analytical reach without losing interpretive depth, and that democratise computational access without abandoning collective interpretive work. Critical Code Studies, grounded in both Berry's materialist-phenomenological and Marino's hermeneutic-rhetorical approaches, offers pathway forward maintaining reflexive vigilance, methodological transparency, and unwavering commitment to humanistic values in computational age.
-
-## Bibliography
-
-Berry, D. M. (2011) *The Philosophy of Software: Code and Mediation in the Digital Age*. Basingstoke: Palgrave Macmillan.
-
-Berry, D. M. (2014) *Critical Theory and the Digital*. London: Bloomsbury Publishing.
-
-Berry, D. M. (2016) 'The Postdigital Constellation'. In D. M. Berry and M. Dieter (eds), *Postdigital Aesthetics: Art, Computation and Design*, pp. 44–57. Basingstoke: Palgrave Macmillan.
-
-Berry, D. M. (2017) 'The Post-Archival Constellation: The Archive under the Technical Conditions of Computational Media'. In I. Blom, T. Lundemo and E. Røssaak (eds), *Memory in Motion*, pp. 103–126. Amsterdam: Amsterdam University Press.
-
-Berry, D. M. (2023) 'Critical Digital Humanities'. In J. O'Sullivan (ed.), *The Bloomsbury Handbook to the Digital Humanities*, pp. 125–135. London: Bloomsbury.
-
-Berry, D. M. and Marino, M. C. (2024) 'Reading ELIZA: Critical Code Studies in Action', *Electronic Book Review*. Available at: https://electronicbookreview.com/essay/reading-eliza-critical-code-studies-in-action/.
-
-Berry, D. M. (2025) 'Synthetic media and computational capitalism: towards a critical theory of artificial intelligence', *AI & SOCIETY*. https://doi.org/10.1007/s00146-025-02265-2.
-
-Berry, D. M. (2025b) 'Co-Writing with an LLM: Critical Code Studies and Building an Oxford TSA App', *Stunlaw: Philosophy and Critique for a Digital Age*. http://stunlaw.blogspot.com/2025/10/co-writing-with-llm-critical-code.html.
-
-Berry, D. M. (2025c) 'AI Sprints: A Method for Critical Augmentation in Digital Research', *Stunlaw: Philosophy and Critique for a Digital Age*. http://stunlaw.blogspot.com/2025/11/ai-sprints.html.
-
-Karpathy, A. (2025) 'Vibe coding' [X/Twitter post]. 2 February. https://x.com/karpathy/status/1886192184808149383.
-
-Marino, M. C. (2020) *Critical Code Studies*. Cambridge, MA: MIT Press.
-
-Weizenbaum, J. (1976) *Computer Power and Human Reason: From Judgment to Calculation*. San Francisco: W. H. Freeman.
+**Cross-Mode Navigation**: Modes interconnect - archaeology informs critique (historical context enriches reading), interpretation frames both (theory guides analysis), creation requires all three (building embeds values revealed through critique).

@@ -13,12 +13,13 @@ import type {
   SessionSettings,
   CodeVersion,
   CreateLanguage,
+  ExperienceLevel,
 } from "@/types";
 import { generateId, getCurrentTimestamp } from "@/lib/utils";
 
 // Action types
 type SessionAction =
-  | { type: "INIT_SESSION"; payload: { mode: EntryMode; domain?: string } }
+  | { type: "INIT_SESSION"; payload: { mode: EntryMode; experienceLevel?: ExperienceLevel } }
   | { type: "ADD_MESSAGE"; payload: Message }
   | { type: "ADD_CODE"; payload: CodeReference }
   | { type: "REMOVE_CODE"; payload: string }
@@ -66,7 +67,7 @@ function sessionReducer(state: Session, action: SessionAction): Session {
       return {
         ...createInitialSession(),
         mode: action.payload.mode,
-        domain: action.payload.domain,
+        experienceLevel: action.payload.experienceLevel,
       };
 
     case "ADD_MESSAGE":
@@ -286,7 +287,7 @@ function sessionReducer(state: Session, action: SessionAction): Session {
 // Context type
 interface SessionContextType {
   session: Session;
-  initSession: (mode: EntryMode, domain?: string) => void;
+  initSession: (mode: EntryMode, experienceLevel?: ExperienceLevel) => void;
   addMessage: (message: Omit<Message, "id" | "timestamp">) => void;
   addCode: (code: Omit<CodeReference, "id" | "uploadedAt">) => void;
   removeCode: (codeId: string) => void;
@@ -314,8 +315,8 @@ const SessionContext = createContext<SessionContextType | null>(null);
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [session, dispatch] = useReducer(sessionReducer, null, createInitialSession);
 
-  const initSession = useCallback((mode: EntryMode, domain?: string) => {
-    dispatch({ type: "INIT_SESSION", payload: { mode, domain } });
+  const initSession = useCallback((mode: EntryMode, experienceLevel?: ExperienceLevel) => {
+    dispatch({ type: "INIT_SESSION", payload: { mode, experienceLevel } });
   }, []);
 
   const addMessage = useCallback(

@@ -4,11 +4,12 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/context/SessionContext";
 import { useAISettings } from "@/context/AISettingsContext";
-import { CODE_DOMAINS, type EntryMode, type CodeDomain } from "@/types";
+import { CCS_EXPERIENCE_LEVELS, EXPERIENCE_LEVEL_LABELS, EXPERIENCE_LEVEL_DESCRIPTIONS, type EntryMode, type ExperienceLevel } from "@/types";
 import { cn } from "@/lib/utils";
-import { Code, Archive, BookOpen, Sparkles, ChevronDown, Upload, Download, Settings, HelpCircle, X, ExternalLink } from "lucide-react";
+import { Code, Archive, BookOpen, Sparkles, ChevronDown, Upload, Download, Settings, HelpCircle, X, ExternalLink, Info } from "lucide-react";
 import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
 import { PROVIDER_CONFIGS } from "@/lib/ai/config";
+import { APP_VERSION, APP_CREATOR } from "@/lib/config";
 
 interface EntryModeCard {
   mode: EntryMode;
@@ -52,17 +53,36 @@ export default function WelcomePage() {
   const router = useRouter();
   const { session, initSession, importSession } = useSession();
   const { settings: aiSettings, isConfigured: isAIConfigured } = useAISettings();
-  const [selectedDomain, setSelectedDomain] = useState<CodeDomain | "">("");
+  const [selectedLevel, setSelectedLevel] = useState<ExperienceLevel>("practitioner");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showLevelHelp, setShowLevelHelp] = useState(false);
   const [showAISettings, setShowAISettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showSkillDoc, setShowSkillDoc] = useState(false);
+  const [skillDocContent, setSkillDocContent] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // CCS Skill document version (matches Critical-Code-Studies-Skill.md)
+  const CCS_SKILL_VERSION = "2.3";
+
+  const handleViewSkillDoc = async () => {
+    try {
+      const response = await fetch("/api/skill-document");
+      if (response.ok) {
+        const data = await response.json();
+        setSkillDocContent(data.content);
+        setShowSkillDoc(true);
+      }
+    } catch (error) {
+      console.error("Failed to load skill document:", error);
+    }
+  };
 
   // Check if there's an existing session with content
   const hasExistingSession = session.messages.length > 0;
 
   const handleModeSelect = (mode: EntryMode) => {
-    initSession(mode, selectedDomain || undefined);
+    initSession(mode, selectedLevel);
     router.push("/conversation");
   };
 
@@ -178,6 +198,20 @@ export default function WelcomePage() {
               </button>
             </div>
             <div className="p-5 space-y-6">
+              {/* Version and Creator */}
+              <div className="font-mono text-[10px] text-slate-muted">
+                <p>v{APP_VERSION} · {APP_CREATOR}</p>
+                <p>
+                  CCS Methodology{" "}
+                  <button
+                    onClick={handleViewSkillDoc}
+                    className="text-burgundy hover:underline cursor-pointer"
+                  >
+                    v{CCS_SKILL_VERSION}
+                  </button>
+                </p>
+              </div>
+
               {/* About the Workbench */}
               <section>
                 <h4 className="font-display text-sm text-ink mb-2">About the Workbench</h4>
@@ -326,6 +360,34 @@ export default function WelcomePage() {
         </div>
       )}
 
+      {/* Skill Document Viewer Modal */}
+      {showSkillDoc && (
+        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-sm shadow-editorial-lg w-full max-w-4xl mx-4 border border-parchment max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-parchment">
+              <h3 className="font-display text-display-md text-ink">CCS Methodology Framework</h3>
+              <button
+                onClick={() => setShowSkillDoc(false)}
+                className="p-1 text-slate hover:text-ink transition-colors"
+              >
+                <X className="h-5 w-5" strokeWidth={1.5} />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto flex-1">
+              <div className="prose prose-sm max-w-none">
+                <pre className="whitespace-pre-wrap font-mono text-xs text-slate leading-relaxed bg-cream p-4 rounded-sm border border-parchment">
+                  {skillDocContent || "Loading..."}
+                </pre>
+              </div>
+              <p className="font-body text-xs text-slate-muted mt-4">
+                This methodology document is loaded from <code className="bg-parchment px-1 rounded">Critical-Code-Studies-Skill.md</code> in the project root.
+                You can edit this file to customise the CCS methodology used by the workbench.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main content - compact */}
       <div className="max-w-5xl mx-auto px-4 py-6 relative">
         {/* Welcome heading - compact */}
@@ -341,9 +403,9 @@ export default function WelcomePage() {
           </p>
         </div>
 
-        {/* Domain selector - compact */}
+        {/* Experience level selector - compact */}
         <div className="flex justify-center mb-6">
-          <div className="relative">
+          <div className="relative flex items-center gap-2">
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className={cn(
@@ -355,9 +417,9 @@ export default function WelcomePage() {
                 isDropdownOpen && "ring-1 ring-burgundy border-burgundy"
               )}
             >
-              <span className="text-slate-muted">Domain:</span>
+              <span className="text-slate-muted">Experience:</span>
               <span className="font-medium">
-                {selectedDomain || "All code"}
+                {EXPERIENCE_LEVEL_LABELS[selectedLevel]}
               </span>
               <ChevronDown
                 className={cn(
@@ -367,38 +429,62 @@ export default function WelcomePage() {
               />
             </button>
 
+            {/* Help icon for experience levels */}
+            <button
+              onClick={() => setShowLevelHelp(!showLevelHelp)}
+              className="p-1 rounded-sm text-slate-muted hover:text-ink hover:bg-cream transition-colors"
+              aria-label="What do experience levels do?"
+            >
+              <Info className="h-3.5 w-3.5" strokeWidth={1.5} />
+            </button>
+
+            {/* Experience level dropdown */}
             {isDropdownOpen && (
               <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-sm shadow-editorial-lg border border-parchment py-1 z-20 animate-fade-in">
-                <button
-                  onClick={() => {
-                    setSelectedDomain("");
-                    setIsDropdownOpen(false);
-                  }}
-                  className={cn(
-                    "w-full text-left px-3 py-1.5 font-sans text-xs",
-                    "hover:bg-cream transition-colors duration-200",
-                    !selectedDomain && "bg-burgundy/5 text-burgundy font-medium"
-                  )}
-                >
-                  All code
-                </button>
-                {CODE_DOMAINS.map((domain) => (
+                {CCS_EXPERIENCE_LEVELS.map((level) => (
                   <button
-                    key={domain}
+                    key={level}
                     onClick={() => {
-                      setSelectedDomain(domain);
+                      setSelectedLevel(level);
                       setIsDropdownOpen(false);
                     }}
                     className={cn(
                       "w-full text-left px-3 py-1.5 font-sans text-xs",
                       "hover:bg-cream transition-colors duration-200",
-                      selectedDomain === domain &&
+                      selectedLevel === level &&
                         "bg-burgundy/5 text-burgundy font-medium"
                     )}
                   >
-                    {domain}
+                    {EXPERIENCE_LEVEL_LABELS[level]}
                   </button>
                 ))}
+              </div>
+            )}
+
+            {/* Experience level help popup */}
+            {showLevelHelp && (
+              <div className="absolute top-full left-0 mt-1 w-72 bg-white rounded-sm shadow-editorial-lg border border-parchment p-4 z-20 animate-fade-in">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-display text-sm text-ink">Choose your experience</h4>
+                  <button
+                    onClick={() => setShowLevelHelp(false)}
+                    className="p-0.5 text-slate hover:text-ink transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {CCS_EXPERIENCE_LEVELS.map((level) => (
+                    <div key={level}>
+                      <p className="font-sans text-xs font-medium text-burgundy">
+                        {EXPERIENCE_LEVEL_LABELS[level]}
+                      </p>
+                      <p className="font-body text-xs text-slate leading-snug">
+                        {EXPERIENCE_LEVEL_DESCRIPTIONS[level]}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
