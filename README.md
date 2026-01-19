@@ -1,16 +1,17 @@
-# CCS-lab
+# Critical Code Studies Workbench
 
-Critical Code Studies Laboratory: A web application for close reading and hermeneutic analysis of software as cultural artefact.
+A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
 ## Overview
 
-CCS-lab facilitates rigorous interpretation of code through the lens of critical code studies methodology. It supports:
+The Critical Code Studies Workbench facilitates rigorous interpretation of code through the lens of critical code studies methodology. It supports:
 
 - **Code critique** - Close reading, annotation, and interpretation in the Marino tradition
 - **Hermeneutic analysis** - Navigating the triadic structure of human intention, computational generation, and executable code
 - **Code archaeology** - Analysing historical software in its original context
+- **Vibe coding** - Creating code to understand algorithms through building
 
-Software deserves the same close reading we give literature. CCS-lab helps scholars engage with code as meaningful text.
+Software deserves the same close reading we give literature. The Workbench helps scholars engage with code as meaningful text.
 
 ## Features
 
@@ -18,6 +19,7 @@ Software deserves the same close reading we give literature. CCS-lab helps schol
 - **I have code to critique**: Close reading of specific code with guided interpretation
 - **I'm doing code archaeology**: Exploring historical software with attention to context
 - **I want to interpret code**: Developing hermeneutic frameworks and approaches
+- **I want to create code**: Explore algorithms by building them (vibe coding)
 
 ### Core Capabilities
 - **Triadic hermeneutic structure**: Analysis navigating intention, generation, and execution
@@ -26,12 +28,34 @@ Software deserves the same close reading we give literature. CCS-lab helps schol
 - **Output generation**: Annotations, critiques, and close readings
 
 ### Conversation Phases
+
+**Critique/Archaeology/Interpret modes:**
 1. **Opening**: Initial code presentation and context gathering
 2. **Surface**: Syntax, structure, naming conventions
 3. **Context**: Historical, cultural, platform context
 4. **Interpretation**: Deep hermeneutic analysis
 5. **Synthesis**: Drawing together interpretive threads
 6. **Output**: Generating critique artefacts
+
+**Create mode (vibe coding):**
+1. **Concept**: Exploring what algorithm to create
+2. **Scaffolding**: Setting up basic structure
+3. **Iteration**: Refining and developing the code
+4. **Reflection**: Understanding what was created
+5. **Transfer**: Moving created code to critique mode
+
+### Create Mode: Vibe Coding
+
+Create mode helps you understand algorithms by building simple implementations:
+
+- **ELIZA**: Pattern matching and response generation (Weizenbaum, 1966)
+- **Love Letter Generator**: Combinatorial text generation (Strachey, 1952)
+- **Poetry generators**: Inspired by Nick Montfort's ppg256
+- **Sorting algorithms**: Bubble sort, selection sort
+- **Cellular automata**: Simple rule-based generation
+- **Markov chains**: Text generation from patterns
+
+Choose your preferred language: Python, JavaScript, BASIC, Lisp, Pseudocode, or specify your own.
 
 ### Multi-Provider AI Support
 Choose your preferred AI provider in browser settings:
@@ -48,7 +72,7 @@ Choose your preferred AI provider in browser settings:
 
 ## Code Domains
 
-CCS-lab supports analysis across domains:
+The Workbench supports analysis across domains:
 - Games & Demos
 - System Software
 - Web & Network
@@ -80,8 +104,8 @@ CCS-lab supports analysis across domains:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/ccs-lab.git
-   cd ccs-lab
+   git clone https://github.com/dmberry/CCS-WB.git
+   cd CCS-WB
    ```
 
 2. Install dependencies:
@@ -123,7 +147,7 @@ For a completely free setup using local AI:
    ollama serve
    ```
 
-4. In CCS-lab settings, select "Ollama (Local)" as your provider.
+4. In the Workbench settings, select "Ollama (Local)" as your provider.
 
 ## Project Structure
 
@@ -149,7 +173,7 @@ ccs-lab/
 
 ## Critical Code Studies Methodology
 
-CCS-lab is grounded in critical code studies scholarship:
+The Workbench is grounded in critical code studies scholarship:
 
 ### The Triadic Structure
 - **Human intention**: What did the author(s) mean to accomplish?
