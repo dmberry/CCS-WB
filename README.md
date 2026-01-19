@@ -283,4 +283,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 - Critical code studies methodology inspired by Mark Marino, David M. Berry, and the CCS community
 - Built with [Next.js](https://nextjs.org/) and [Tailwind CSS](https://tailwindcss.com/)
+- Developed with [Claude Code](https://claude.ai/claude-code) (Anthropic)
 - Co-created at CCSWG 2026
