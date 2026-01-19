@@ -14,6 +14,7 @@ import type {
   CodeVersion,
   CreateLanguage,
   ExperienceLevel,
+  LineAnnotation,
 } from "@/types";
 import { generateId, getCurrentTimestamp } from "@/lib/utils";
 
@@ -37,7 +38,12 @@ type SessionAction =
   | { type: "ADD_CODE_VERSION"; payload: Omit<CodeVersion, "id" | "createdAt" | "version"> }
   | { type: "SET_CURRENT_VERSION"; payload: string }
   | { type: "SET_CREATE_LANGUAGE"; payload: CreateLanguage }
-  | { type: "TRANSFER_TO_CRITIQUE"; payload: string }; // version id to transfer
+  | { type: "TRANSFER_TO_CRITIQUE"; payload: string } // version id to transfer
+  // Line annotation actions
+  | { type: "ADD_LINE_ANNOTATION"; payload: LineAnnotation }
+  | { type: "UPDATE_LINE_ANNOTATION"; payload: { id: string; content: string } }
+  | { type: "REMOVE_LINE_ANNOTATION"; payload: string }
+  | { type: "CLEAR_LINE_ANNOTATIONS"; payload?: string }; // optional codeFileId to clear only that file's annotations
 
 // Initial state
 const createInitialSession = (): Session => ({
@@ -45,6 +51,7 @@ const createInitialSession = (): Session => ({
   mode: "critique",
   messages: [],
   codeFiles: [],
+  lineAnnotations: [],
   analysisResults: [],
   references: [],
   critiqueArtifacts: [],
@@ -279,6 +286,43 @@ function sessionReducer(state: Session, action: SessionAction): Session {
         lastModified: now,
       };
 
+    // Line annotation actions
+    case "ADD_LINE_ANNOTATION":
+      return {
+        ...state,
+        lineAnnotations: [...state.lineAnnotations, action.payload],
+        lastModified: now,
+      };
+
+    case "UPDATE_LINE_ANNOTATION":
+      return {
+        ...state,
+        lineAnnotations: state.lineAnnotations.map((ann) =>
+          ann.id === action.payload.id
+            ? { ...ann, content: action.payload.content }
+            : ann
+        ),
+        lastModified: now,
+      };
+
+    case "REMOVE_LINE_ANNOTATION":
+      return {
+        ...state,
+        lineAnnotations: state.lineAnnotations.filter(
+          (ann) => ann.id !== action.payload
+        ),
+        lastModified: now,
+      };
+
+    case "CLEAR_LINE_ANNOTATIONS":
+      return {
+        ...state,
+        lineAnnotations: action.payload
+          ? state.lineAnnotations.filter((ann) => ann.codeFileId !== action.payload)
+          : [],
+        lastModified: now,
+      };
+
     default:
       return state;
   }
@@ -289,7 +333,7 @@ interface SessionContextType {
   session: Session;
   initSession: (mode: EntryMode, experienceLevel?: ExperienceLevel) => void;
   addMessage: (message: Omit<Message, "id" | "timestamp">) => void;
-  addCode: (code: Omit<CodeReference, "id" | "uploadedAt">) => void;
+  addCode: (code: Omit<CodeReference, "id" | "uploadedAt">) => string;
   removeCode: (codeId: string) => void;
   addAnalysis: (analysis: Omit<AnalysisResult, "id" | "createdAt">) => void;
   addReferences: (refs: ReferenceResult[]) => void;
@@ -307,6 +351,11 @@ interface SessionContextType {
   setCurrentVersion: (versionId: string) => void;
   setCreateLanguage: (language: CreateLanguage) => void;
   transferToCritique: (versionId: string) => void;
+  // Line annotation functions
+  addLineAnnotation: (annotation: Omit<LineAnnotation, "id" | "createdAt">) => void;
+  updateLineAnnotation: (id: string, content: string) => void;
+  removeLineAnnotation: (id: string) => void;
+  clearLineAnnotations: (codeFileId?: string) => void;
 }
 
 const SessionContext = createContext<SessionContextType | null>(null);
@@ -332,13 +381,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addCode = useCallback(
-    (code: Omit<CodeReference, "id" | "uploadedAt">) => {
+    (code: Omit<CodeReference, "id" | "uploadedAt">): string => {
+      const id = generateId();
       const fullCode: CodeReference = {
         ...code,
-        id: generateId(),
+        id,
         uploadedAt: getCurrentTimestamp(),
       };
       dispatch({ type: "ADD_CODE", payload: fullCode });
+      return id;
     },
     []
   );
@@ -433,6 +484,31 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "TRANSFER_TO_CRITIQUE", payload: versionId });
   }, []);
 
+  // Line annotation functions
+  const addLineAnnotation = useCallback(
+    (annotation: Omit<LineAnnotation, "id" | "createdAt">) => {
+      const fullAnnotation: LineAnnotation = {
+        ...annotation,
+        id: generateId(),
+        createdAt: getCurrentTimestamp(),
+      };
+      dispatch({ type: "ADD_LINE_ANNOTATION", payload: fullAnnotation });
+    },
+    []
+  );
+
+  const updateLineAnnotation = useCallback((id: string, content: string) => {
+    dispatch({ type: "UPDATE_LINE_ANNOTATION", payload: { id, content } });
+  }, []);
+
+  const removeLineAnnotation = useCallback((id: string) => {
+    dispatch({ type: "REMOVE_LINE_ANNOTATION", payload: id });
+  }, []);
+
+  const clearLineAnnotations = useCallback((codeFileId?: string) => {
+    dispatch({ type: "CLEAR_LINE_ANNOTATIONS", payload: codeFileId });
+  }, []);
+
   const value: SessionContextType = {
     session,
     initSession,
@@ -455,6 +531,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setCurrentVersion,
     setCreateLanguage,
     transferToCritique,
+    // Line annotations
+    addLineAnnotation,
+    updateLineAnnotation,
+    removeLineAnnotation,
+    clearLineAnnotations,
   };
 
   return (

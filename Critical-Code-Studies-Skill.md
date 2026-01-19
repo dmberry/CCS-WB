@@ -1,6 +1,6 @@
 # Critical Code Studies: Methodology Framework
 
-**Version**: 2.3 - Four-Mode Progressive Architecture with Examples
+**Version**: 2.4 - Four-Mode Progressive Architecture with Examples
 **Authors**: Based on methodologies by David M. Berry, Mark C. Marino, and collaborative CCS community
 
 ---
@@ -134,6 +134,8 @@ Levels operate dialectically, not hierarchically - technical shapes but doesn't 
 
 **Use when**: Exploring hermeneutic frameworks without a fixed code object, developing interpretive approaches, or building theoretical vocabulary for code analysis.
 
+**Example**: Developing a Foucauldian reading of API documentation. How do REST API conventions (`GET`, `POST`, `DELETE`) encode assumptions about data as resource to be retrieved, created, destroyed? The imperative verb structure positions the caller as sovereign subject acting upon passive objects, naturalising extractive relations with information.
+
 ### Phase 1: Framework Exploration
 
 **Hermeneutic Traditions**: Explore interpretive frameworks applicable to code:
@@ -243,6 +245,22 @@ Kirschenbaum, M. (2008) *Mechanisms*. MIT Press.
 Chun, W. H. K. (2011) *Programmed Visions*. MIT Press.
 
 McPherson, T. (2012) 'Why Are the Digital Humanities So White?', *Debates in DH*.
+
+---
+
+## COMMON PITFALLS
+
+**Over-reading**: Finding meaning that isn't supported by the code. Not every variable name is a cultural statement. Ground interpretations in textual evidence; distinguish between what the code demonstrates and what you bring to it.
+
+**Under-reading**: Treating code as purely technical, missing cultural dimensions. The choice of language, naming conventions, architectural patterns, and comment style all carry meaning beyond function.
+
+**Anachronism**: Applying contemporary frameworks to historical code without care. A 1960s program cannot be critiqued for failing to anticipate modern concerns. Situate code in its moment whilst remaining alert to how past choices shape present conditions.
+
+**Intentional Fallacy**: Assuming programmer intent determines meaning. Code means more than authors intended; reception, reuse, and recontextualisation generate new significance. Author intent is one input, not the final word.
+
+**Functional Reduction**: Explaining only what code does, not what it means. Technical explanation is necessary but insufficient. The hermeneutic task begins where functional description ends.
+
+**Context Neglect**: Reading code in isolation from platform, institution, historical moment. Code exists within ecosystems; meaning emerges from relationships between code, infrastructure, community, and culture.
 
 ---
 

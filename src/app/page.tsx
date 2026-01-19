@@ -63,7 +63,7 @@ export default function WelcomePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // CCS Skill document version (matches Critical-Code-Studies-Skill.md)
-  const CCS_SKILL_VERSION = "2.3";
+  const CCS_SKILL_VERSION = "2.4";
 
   const handleViewSkillDoc = async () => {
     try {

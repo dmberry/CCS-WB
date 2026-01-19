@@ -99,6 +99,46 @@ export interface InterpretationNote {
   lineReference?: string; // e.g., "lines 15-20"
 }
 
+// Line-anchored annotation for close reading
+export interface LineAnnotation {
+  id: string;
+  codeFileId: string;       // Which code file this annotation belongs to
+  lineNumber: number;       // The line number being annotated
+  lineContent: string;      // The actual content of the line (for reference)
+  type: 'observation' | 'question' | 'metaphor' | 'pattern' | 'context' | 'critique';
+  content: string;          // The annotation text
+  createdAt: string;
+}
+
+export type LineAnnotationType = LineAnnotation['type'];
+
+export const LINE_ANNOTATION_TYPES: LineAnnotationType[] = [
+  'observation',
+  'question',
+  'metaphor',
+  'pattern',
+  'context',
+  'critique',
+];
+
+export const LINE_ANNOTATION_LABELS: Record<LineAnnotationType, string> = {
+  observation: 'Observation',
+  question: 'Question',
+  metaphor: 'Metaphor',
+  pattern: 'Pattern',
+  context: 'Context',
+  critique: 'Critique',
+};
+
+export const LINE_ANNOTATION_COLORS: Record<LineAnnotationType, string> = {
+  observation: 'bg-blue-100 border-blue-300 text-blue-800',
+  question: 'bg-amber-100 border-amber-300 text-amber-800',
+  metaphor: 'bg-purple-100 border-purple-300 text-purple-800',
+  pattern: 'bg-green-100 border-green-300 text-green-800',
+  context: 'bg-slate-100 border-slate-300 text-slate-800',
+  critique: 'bg-burgundy/10 border-burgundy/30 text-burgundy',
+};
+
 export interface AnalysisResult {
   id: string;
   type: AnalysisType;
@@ -146,6 +186,7 @@ export interface Session {
   experienceLevel?: ExperienceLevel;  // CCS experience level (learning, practitioner, research)
   messages: Message[];
   codeFiles: CodeReference[];   // Code being analysed
+  lineAnnotations: LineAnnotation[];  // Line-anchored annotations for close reading
   analysisResults: AnalysisResult[];
   references: ReferenceResult[]; // Related code, scholarship
   critiqueArtifacts: CritiqueArtifact[];
@@ -205,3 +246,105 @@ export const EXPERIENCE_LEVEL_DESCRIPTIONS: Record<ExperienceLevel, string> = {
 // Legacy aliases for compatibility during migration
 export const CODE_DOMAINS = CCS_EXPERIENCE_LEVELS;
 export type CodeDomain = ExperienceLevel;
+
+// Guided prompts for each phase - helps users know what questions to ask
+export const GUIDED_PROMPTS: Record<EntryMode, Partial<Record<ConversationPhase, string[]>>> = {
+  critique: {
+    opening: [
+      "What drew your attention to this code?",
+      "Who wrote this and when?",
+      "What problem does this code solve?",
+    ],
+    surface: [
+      "What naming conventions stand out?",
+      "What metaphors appear in variable names?",
+      "How is the code structured?",
+      "What do the comments reveal?",
+    ],
+    context: [
+      "What platform was this written for?",
+      "What constraints shaped this code?",
+      "What was happening in computing history?",
+    ],
+    interpretation: [
+      "What values are embedded in this code?",
+      "What does the code make visible or invisible?",
+      "Whose interests does this serve?",
+      "What power relations are encoded?",
+    ],
+    synthesis: [
+      "What larger argument emerges?",
+      "How do different readings complement each other?",
+      "What remains ambiguous or unresolved?",
+    ],
+    output: [
+      "Generate a code critique",
+      "Create line-by-line annotations",
+      "Write a close reading essay",
+    ],
+  },
+  archaeology: {
+    opening: [
+      "When was this code written?",
+      "What platform or system was it for?",
+      "How was this code recovered?",
+    ],
+    surface: [
+      "What language or dialect is this?",
+      "What historical idioms appear?",
+      "How does the structure reflect its era?",
+    ],
+    context: [
+      "What were the technical constraints of the time?",
+      "Who was the intended audience?",
+      "What contemporary software influenced this?",
+    ],
+    interpretation: [
+      "How does this differ from modern approaches?",
+      "What assumptions reveal its historical moment?",
+      "What has been lost or gained since?",
+    ],
+    synthesis: [
+      "What does this code reveal about its era?",
+      "How does historical context change our reading?",
+    ],
+  },
+  interpret: {
+    opening: [
+      "What hermeneutic approach interests you?",
+      "What aspect of code interpretation are you exploring?",
+    ],
+    surface: [
+      "How does close reading apply to code?",
+      "What is extrafunctional significance?",
+    ],
+    context: [
+      "How do platform studies inform interpretation?",
+      "What role does execution context play?",
+    ],
+    interpretation: [
+      "How do we navigate intention vs reception?",
+      "What is the triadic hermeneutic structure?",
+      "How do we avoid over-reading or under-reading?",
+    ],
+  },
+  create: {
+    concept: [
+      "What classic algorithm inspires you?",
+      "What would you like to learn by building?",
+    ],
+    scaffolding: [
+      "What's the simplest working version?",
+      "What data structures do we need?",
+    ],
+    iteration: [
+      "What feature should we add next?",
+      "How can we make this more readable?",
+    ],
+    reflection: [
+      "What design choices did we make?",
+      "What values are embedded in our code?",
+      "Ready to analyse what we built?",
+    ],
+  },
+};

@@ -23,14 +23,21 @@ import {
   FileDown,
   Cpu,
   Code,
+  MessageSquarePlus,
+  GitCompare,
+  Lightbulb,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
+import { AnnotatedCodeViewer } from "@/components/code";
+import { GuidedPrompts } from "@/components/prompts";
+import { CritiqueLayout } from "@/components/layouts";
 import { PROVIDER_CONFIGS } from "@/lib/ai/config";
 import { APP_VERSION, APP_NAME } from "@/lib/config";
+import { GUIDED_PROMPTS } from "@/types";
 
 // CCS Skill document version (should match Critical-Code-Studies-Skill.md)
-const CCS_SKILL_VERSION = "2.3";
+const CCS_SKILL_VERSION = "2.4";
 
 // Opening prompts based on mode
 const openingPrompts: Record<string, string> = {
@@ -88,6 +95,8 @@ export default function ConversationPage() {
   const [customLanguage, setCustomLanguage] = useState("");
   const [showCustomLanguageInput, setShowCustomLanguageInput] = useState(false);
   const [showExperienceHelp, setShowExperienceHelp] = useState(false);
+  const [showCodeAnnotator, setShowCodeAnnotator] = useState<{ code: string; fileId: string; fileName?: string; language?: string } | null>(null);
+  const [showGuidedPrompts, setShowGuidedPrompts] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -148,8 +157,9 @@ export default function ConversationPage() {
   }, [session.messages]);
 
   // Add opening prompt if no messages (only once)
+  // Note: critique mode is handled by CritiqueLayout, so skip here
   useEffect(() => {
-    if (session.messages.length === 0 && session.mode && !hasAddedOpeningMessage.current) {
+    if (session.messages.length === 0 && session.mode && session.mode !== "critique" && !hasAddedOpeningMessage.current) {
       hasAddedOpeningMessage.current = true;
       let openingContent = openingPrompts[session.mode] || openingPrompts.idea;
 
@@ -322,6 +332,54 @@ export default function ConversationPage() {
     setShowCodeInput(false);
   };
 
+  // Extract code from a message content (looks for code blocks)
+  const extractCodeFromMessage = useCallback((messageContent: string): string | null => {
+    // Match code blocks with or without language specifier
+    const codeBlockRegex = /```(?:\w+)?\n?([\s\S]*?)```/g;
+    const matches = [...messageContent.matchAll(codeBlockRegex)];
+    if (matches.length > 0) {
+      // Return the first code block found
+      return matches[0][1].trim();
+    }
+    return null;
+  }, []);
+
+  // Find code content for a code file by searching through messages
+  const findCodeContentForFile = useCallback((codeFile: CodeReference): string | null => {
+    // Search messages for code that matches this file
+    for (const message of session.messages) {
+      if (message.content.includes(codeFile.name) ||
+          (codeFile.language && message.content.includes(`\`\`\`${codeFile.language}`))) {
+        const code = extractCodeFromMessage(message.content);
+        if (code) return code;
+      }
+    }
+    return null;
+  }, [session.messages, extractCodeFromMessage]);
+
+  // Handle opening code annotator for a specific code file
+  const handleOpenCodeAnnotator = useCallback((codeFile: CodeReference) => {
+    const code = findCodeContentForFile(codeFile);
+    if (code) {
+      setShowCodeAnnotator({
+        code,
+        fileId: codeFile.id,
+        fileName: codeFile.name,
+        language: codeFile.language,
+      });
+    } else {
+      // If no code found, show an error message
+      setSuccessMessage("Could not find code content for this file in the conversation.");
+    }
+  }, [findCodeContentForFile]);
+
+  // Handle guided prompt selection - insert into input
+  const handleSelectGuidedPrompt = useCallback((prompt: string) => {
+    setInput(prompt);
+    inputRef.current?.focus();
+    setShowGuidedPrompts(false);
+  }, []);
+
   // Simple language detection from code content
   const detectLanguage = (code: string): string => {
     if (code.includes("def ") && code.includes(":")) return "python";
@@ -460,7 +518,6 @@ export default function ConversationPage() {
         headers: { "Content-Type": "application/json", ...getRequestHeaders() },
         body: JSON.stringify({
           query: query.trim(),
-          subfield: session.domain,
           limit: 5,
         }),
       });
@@ -921,6 +978,17 @@ export default function ConversationPage() {
     event.target.value = "";
   };
 
+  // Use the new IDE-style layout for critique mode
+  if (session.mode === "critique") {
+    return (
+      <CritiqueLayout
+        onNavigateHome={handleNavigateHome}
+        onExport={() => setShowExportModal(true)}
+        onImport={() => setShowImportModal(true)}
+      />
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col bg-ivory">
       {/* Success Toast - Editorial style */}
@@ -941,30 +1009,34 @@ export default function ConversationPage() {
         </div>
       )}
 
-      {/* Header - Compact editorial style */}
-      <header className="border-b border-parchment bg-ivory px-4 py-2.5 flex items-center justify-between relative z-10">
+      {/* Header - Matching CritiqueLayout toolbar style */}
+      <header className="border-b border-parchment bg-ivory px-4 py-2 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-4">
           <button
             onClick={handleNavigateHome}
             className="font-display text-sm text-ink hover:text-burgundy transition-colors"
           >
-            Critical Code Studies Workbench
+            CCS Workbench
           </button>
+          {session.mode && (
+            <span className="font-sans text-[10px] text-burgundy bg-burgundy/5 px-2 py-0.5 border border-burgundy/10 rounded-sm">
+              {session.mode.charAt(0).toUpperCase() + session.mode.slice(1)} Mode
+            </span>
+          )}
           {session.experienceLevel && (
             <div className="relative">
               <button
                 onClick={() => setShowExperienceHelp(!showExperienceHelp)}
-                className="font-sans text-[8px] uppercase tracking-wide text-burgundy/70 bg-burgundy/5 px-1.5 py-0.5 border border-burgundy/10 rounded-sm hover:bg-burgundy/10 hover:border-burgundy/20 transition-colors cursor-help"
-                title="Click for info"
+                className="font-sans text-[8px] uppercase tracking-wide text-slate-muted hover:text-ink transition-colors"
               >
-                {EXPERIENCE_LEVEL_LABELS[session.experienceLevel as ExperienceLevel] || session.experienceLevel}
+                {EXPERIENCE_LEVEL_LABELS[session.experienceLevel as ExperienceLevel]}
               </button>
 
               {/* Experience level help popup */}
               {showExperienceHelp && (
                 <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-sm shadow-editorial-lg border border-parchment p-3 z-50 animate-fade-in">
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-display text-xs text-ink">Current Experience Level</h4>
+                    <h4 className="font-display text-xs text-ink">Experience Level</h4>
                     <button
                       onClick={() => setShowExperienceHelp(false)}
                       className="p-0.5 text-slate hover:text-ink transition-colors"
@@ -1760,6 +1832,21 @@ export default function ConversationPage() {
       )}
 
       {/* Artifact Details Modal - Editorial style */}
+      {/* Code Annotator Modal */}
+      {showCodeAnnotator && (
+        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-sm shadow-editorial-lg w-full max-w-4xl h-[80vh] overflow-hidden border border-parchment">
+            <AnnotatedCodeViewer
+              code={showCodeAnnotator.code}
+              codeFileId={showCodeAnnotator.fileId}
+              fileName={showCodeAnnotator.fileName}
+              language={showCodeAnnotator.language}
+              onClose={() => setShowCodeAnnotator(null)}
+            />
+          </div>
+        </div>
+      )}
+
       {selectedArtifactDetails && (
         <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-sm shadow-editorial-lg max-w-2xl w-full mx-4 p-6 max-h-[80vh] overflow-y-auto border border-parchment">
@@ -1914,7 +2001,34 @@ export default function ConversationPage() {
                 <FileOutput className="h-3.5 w-3.5" strokeWidth={1.5} />
                 Generate
               </button>
+              {/* Guided prompts button - only show if prompts exist for current mode/phase */}
+              {session.mode && (GUIDED_PROMPTS[session.mode]?.[session.currentPhase]?.length ?? 0) > 0 && (
+                <button
+                  onClick={() => setShowGuidedPrompts(!showGuidedPrompts)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1.5 font-sans text-xs rounded-sm transition-colors",
+                    showGuidedPrompts
+                      ? "bg-burgundy/10 text-burgundy"
+                      : "text-slate hover:bg-cream hover:text-ink"
+                  )}
+                  title="Show guided questions for this phase"
+                >
+                  <Lightbulb className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  Prompts
+                </button>
+              )}
             </div>
+
+            {/* Guided prompts panel */}
+            {showGuidedPrompts && session.mode && (
+              <div className="mb-3 animate-fade-in">
+                <GuidedPrompts
+                  mode={session.mode}
+                  currentPhase={session.currentPhase}
+                  onSelectPrompt={handleSelectGuidedPrompt}
+                />
+              </div>
+            )}
 
             {/* Message input - Editorial style */}
             <div className="flex gap-4">
@@ -2141,7 +2255,7 @@ export default function ConversationPage() {
             {/* Uploaded files */}
             <section>
               <h3 className="font-sans text-[10px] uppercase tracking-widest text-slate-muted mb-2">
-                Uploaded Files
+                Code Files
               </h3>
               {session.codeFiles.length === 0 ? (
                 <p className="font-body text-xs text-slate-muted italic">No files uploaded</p>
@@ -2150,21 +2264,35 @@ export default function ConversationPage() {
                   {session.codeFiles.map((file) => (
                     <li
                       key={file.id}
-                      className="font-body text-xs bg-white border border-parchment rounded-sm p-2 cursor-pointer hover:border-burgundy/50 transition-colors"
-                      onClick={() => setSelectedCodeDetails(file)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setSelectedCodeDetails(file);
-                        }
-                      }}
+                      className="font-body text-xs bg-white border border-parchment rounded-sm p-2"
                     >
-                      <div className="font-medium text-ink truncate">
-                        {file.name}
+                      <div
+                        className="cursor-pointer hover:text-burgundy transition-colors"
+                        onClick={() => setSelectedCodeDetails(file)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedCodeDetails(file);
+                          }
+                        }}
+                      >
+                        <div className="font-medium text-ink truncate">
+                          {file.name}
+                        </div>
+                        <div className="text-[10px] text-slate-muted">{file.language || file.source || "code"}</div>
                       </div>
-                      <div className="text-[10px] text-slate-muted">{file.language || file.source || "code"}</div>
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={() => handleOpenCodeAnnotator(file)}
+                          className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-sans text-burgundy bg-burgundy/5 border border-burgundy/20 rounded-sm hover:bg-burgundy/10 transition-colors"
+                          title="Annotate this code for close reading"
+                        >
+                          <MessageSquarePlus className="h-3 w-3" strokeWidth={1.5} />
+                          Annotate
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>

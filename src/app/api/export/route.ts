@@ -3,7 +3,7 @@ import jsPDF from "jspdf";
 import { APP_VERSION, APP_NAME } from "@/lib/config";
 
 // CCS Skill document version (should match Critical-Code-Studies-Skill.md)
-const CCS_SKILL_VERSION = "2.3";
+const CCS_SKILL_VERSION = "2.4";
 
 // Type definitions for session data
 interface Message {
