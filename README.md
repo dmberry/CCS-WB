@@ -1,5 +1,7 @@
 # Critical Code Studies Workbench
 
+**Version 0.2.0** | CCS Methodology v2.4
+
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
 ## Overview
@@ -16,16 +18,43 @@ Software deserves the same close reading we give literature. The Workbench helps
 ## Features
 
 ### Entry Modes
-- **I have code to critique**: Close reading of specific code with guided interpretation
+- **I have code to critique**: IDE-style three-panel layout for close reading with inline annotations
 - **I'm doing code archaeology**: Exploring historical software with attention to context
 - **I want to interpret code**: Developing hermeneutic frameworks and approaches
 - **I want to create code**: Explore algorithms by building them (vibe coding)
 
-### Core Capabilities
-- **Triadic hermeneutic structure**: Analysis navigating intention, generation, and execution
-- **Layered reading**: Lexical, syntactic, semantic, pragmatic, and cultural interpretation
-- **Code input**: Paste code directly or upload files for analysis
-- **Output generation**: Annotations, critiques, and close readings
+### Experience Levels
+The assistant adapts its engagement style based on your experience:
+- **Learning**: Explains CCS concepts, offers scaffolding, suggests readings
+- **Practitioner**: Uses vocabulary freely, focuses on analysis
+- **Research**: Engages as peer, challenges interpretations, technical depth
+
+### IDE-Style Critique Layout (v0.2)
+The critique mode features a three-panel layout for focused code analysis:
+
+1. **Left panel**: File tree with colour-coded filenames by type
+   - Blue: Code files (Python, JavaScript, etc.)
+   - Orange: Web files (HTML, CSS, JSX)
+   - Green: Data files (JSON, YAML, XML)
+   - Amber: Shell scripts
+   - Grey: Text and other files
+
+2. **Centre panel**: Code editor with line numbers
+   - Click any line to add an annotation
+   - Six annotation types: Observation, Question, Metaphor, Pattern, Context, Critique
+   - Annotations display inline as `// An:Type: content`
+   - Download annotated code with annotations preserved
+
+3. **Right panel**: Chat interface with guided prompts
+   - Context preview shows what the LLM sees
+   - Phase-appropriate questions guide analysis
+   - "Help Annotate" asks the LLM to suggest annotations
+
+### Project Management
+- **Save/Load projects** as `.ccs` files (JSON internally)
+- **Load Project** button on landing page auto-detects mode
+- **Export session logs** in JSON, Text, or PDF format for research documentation
+- Session logs include metadata, annotated code, full conversation, and statistics
 
 ### Conversation Phases
 
@@ -62,43 +91,31 @@ Choose your preferred AI provider in browser settings:
 - **Anthropic Claude** (Claude Sonnet 4, Claude 3.5 Haiku)
 - **OpenAI** (GPT-4o, GPT-4o Mini, GPT-4 Turbo)
 - **Google Gemini** (Gemini 2.0 Flash, Gemini 1.5 Pro)
-- **Ollama** (Local models - Llama 3.2, Mistral, etc.)
+- **Ollama** (Local models - Llama 3.2, Mistral, CodeLlama, etc.)
 
 ### Data Privacy
-- All data processed transiently—never stored on servers
+- All data processed transiently, never stored on servers
 - API keys stored only in your browser's localStorage
-- Export/import sessions for your own records
+- Save projects locally as `.ccs` files
+- Export session logs for research documentation
 - No user accounts or authentication required
-
-## Code Domains
-
-The Workbench supports analysis across domains:
-- Games & Demos
-- System Software
-- Web & Network
-- AI & Machine Learning
-- Creative & Artistic
-- Scientific & Research
-- Business & Enterprise
-- Historical (pre-1990)
 
 ## Technology Stack
 
 ### Frontend
 - **Framework**: Next.js 14 with TypeScript
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS with editorial design system
 - **State**: React Context + useReducer
-- **AI Integration**: Vercel AI SDK
+- **PDF Export**: jsPDF
 
 ### Backend
 - **API Routes**: Next.js API routes (Node.js)
-- **Analysis Service**: Python FastAPI microservice (optional)
+- **AI Integration**: Multi-provider support (Anthropic, OpenAI, Google, Ollama)
 
 ## Getting Started
 
 ### Prerequisites
 - Node.js 18+
-- Python 3.10+ (optional, for code analysis features)
 
 ### Quick Start
 
@@ -121,8 +138,8 @@ The Workbench supports analysis across domains:
 4. Open [http://localhost:3000](http://localhost:3000)
 
 5. Click the **Settings** icon and configure your AI provider:
-   - Select your provider (Anthropic, OpenAI, Google, etc.)
-   - Enter your API key
+   - Select your provider (Anthropic, OpenAI, Google, or Ollama)
+   - Enter your API key (not needed for Ollama)
    - Click "Test Connection" to verify
 
 ### Using Ollama (Free, Local AI)
@@ -131,7 +148,7 @@ For a completely free setup using local AI:
 
 1. Install [Ollama](https://ollama.ai/):
    ```bash
-   # macOS - download from ollama.ai
+   # macOS - download from ollama.ai and drag to Applications
 
    # Linux
    curl -fsSL https://ollama.ai/install.sh | sh
@@ -142,33 +159,41 @@ For a completely free setup using local AI:
    ollama pull llama3.2
    ```
 
-3. Start Ollama:
+3. Start Ollama (runs automatically on macOS):
    ```bash
    ollama serve
    ```
 
 4. In the Workbench settings, select "Ollama (Local)" as your provider.
 
+Recommended models for code analysis: `llama3.2`, `mistral`, `codellama`
+
 ## Project Structure
 
 ```
-ccs-wb/
+CCS-lab/
 ├── src/
-│   ├── app/                 # Next.js app router
-│   │   ├── api/            # API routes
-│   │   │   ├── chat/       # Dialogue API
-│   │   │   ├── export/     # Export API
-│   │   │   └── generate/   # Output generation
-│   │   ├── conversation/   # Analysis interface
-│   │   └── page.tsx        # Welcome screen
-│   ├── components/         # React components
-│   │   └── settings/       # AI provider settings
-│   ├── context/            # React context providers
+│   ├── app/                    # Next.js app router
+│   │   ├── api/               # API routes
+│   │   │   ├── chat/          # Main dialogue API
+│   │   │   ├── literature/    # Literature search
+│   │   │   ├── generate/      # Output generation
+│   │   │   └── skill-document/ # CCS methodology
+│   │   ├── conversation/      # Main conversation page
+│   │   └── page.tsx           # Landing page
+│   ├── components/
+│   │   ├── layouts/           # CritiqueLayout (IDE-style)
+│   │   ├── code/              # CodeEditorPanel, annotations
+│   │   ├── chat/              # ContextPreview
+│   │   ├── prompts/           # GuidedPrompts
+│   │   └── settings/          # AIProviderSettings
+│   ├── context/               # SessionContext, AISettingsContext
 │   ├── lib/
-│   │   └── ai/            # AI provider abstraction
-│   └── types/              # TypeScript types
-├── analysis-service/       # Python FastAPI service (optional)
-└── public/                 # Static assets
+│   │   ├── ai/               # Multi-provider AI client
+│   │   └── prompts/          # CCS methodology loader
+│   └── types/                 # TypeScript types
+├── Critical-Code-Studies-Skill.md  # CCS methodology v2.4
+└── public/                    # Static assets
 ```
 
 ## Critical Code Studies Methodology
@@ -186,6 +211,22 @@ The Workbench is grounded in critical code studies scholarship:
 - **Semantic**: What the code means, its logic and purpose
 - **Pragmatic**: How the code functions in context, its effects
 - **Cultural**: Historical moment, platform constraints, community conventions
+
+### Annotation Types
+When analysing code, use these annotation types:
+- **Obs** (Observation): Notable features, patterns, or details
+- **Q** (Question): Something to explore or understand better
+- **Met** (Metaphor): Figurative interpretations of the code
+- **Pat** (Pattern): Recurring structures, idioms, or conventions
+- **Ctx** (Context): Historical, cultural, or situational context
+- **Crit** (Critique): Critical observations or interpretive claims
+
+## Version History
+
+| Version | Changes |
+|---------|---------|
+| 0.2.0 | IDE-style critique layout, inline annotations, session log export, experience levels, Load Project |
+| 0.1.0 | Initial release with four modes, multi-provider AI, create mode |
 
 ## Development
 
@@ -206,6 +247,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Acknowledgments
 
-- Critical code studies methodology inspired by Mark Marino and the CCS community
-- Built with [Next.js](https://nextjs.org/), [Tailwind CSS](https://tailwindcss.com/), and [Vercel AI SDK](https://sdk.vercel.ai/)
-- Codebase adapted from Scholarly Ideas (Matthew Grimes)
+- Critical code studies methodology inspired by Mark Marino, David M. Berry, and the CCS community
+- Built with [Next.js](https://nextjs.org/) and [Tailwind CSS](https://tailwindcss.com/)
+- Co-created at CCSWG 2026

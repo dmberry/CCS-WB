@@ -5,7 +5,7 @@
  */
 
 /** Application version - update when adding new functionality */
-export const APP_VERSION = "0.1.0";
+export const APP_VERSION = "0.2.0";
 
 /** Application name */
 export const APP_NAME = "Critical Code Studies Workbench";

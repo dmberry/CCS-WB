@@ -6,7 +6,7 @@ import { useSession } from "@/context/SessionContext";
 import { useAISettings } from "@/context/AISettingsContext";
 import { CCS_EXPERIENCE_LEVELS, EXPERIENCE_LEVEL_LABELS, EXPERIENCE_LEVEL_DESCRIPTIONS, type EntryMode, type ExperienceLevel } from "@/types";
 import { cn } from "@/lib/utils";
-import { Code, Archive, BookOpen, Sparkles, ChevronDown, Upload, Download, Settings, HelpCircle, X, ExternalLink, Info } from "lucide-react";
+import { Code, Archive, BookOpen, Sparkles, ChevronDown, FolderOpen, Settings, HelpCircle, X, ExternalLink, Info } from "lucide-react";
 import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
 import { PROVIDER_CONFIGS } from "@/lib/ai/config";
 import { APP_VERSION, APP_CREATOR } from "@/lib/config";
@@ -86,22 +86,14 @@ export default function WelcomePage() {
     router.push("/conversation");
   };
 
-  const handleImportClick = () => {
+  const handleLoadProjectClick = () => {
     fileInputRef.current?.click();
   };
 
-  const handleExportSession = () => {
-    const dataStr = JSON.stringify(session, null, 2);
-    const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(dataStr)}`;
-    const exportName = `ccs-wb-${new Date().toISOString().split("T")[0]}.json`;
+  // Valid modes for the workbench
+  const VALID_MODES: EntryMode[] = ["critique", "archaeology", "interpret", "create"];
 
-    const linkElement = document.createElement("a");
-    linkElement.setAttribute("href", dataUri);
-    linkElement.setAttribute("download", exportName);
-    linkElement.click();
-  };
-
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLoadProjectFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -109,14 +101,26 @@ export default function WelcomePage() {
       const text = await file.text();
       const data = JSON.parse(text);
 
-      if (data.messages && Array.isArray(data.messages)) {
-        importSession(data);
-        router.push("/conversation");
-      } else {
-        alert("Invalid session file format. Please select a valid CCS-WB export file.");
+      // Validate that it's a valid session file
+      if (!data.messages || !Array.isArray(data.messages)) {
+        alert("Invalid project file format. Please select a valid .ccs file.");
+        return;
       }
+
+      // Detect and validate mode from file
+      const fileMode = data.mode as EntryMode;
+      if (!fileMode || !VALID_MODES.includes(fileMode)) {
+        alert(`Invalid or missing mode in project file. Expected one of: ${VALID_MODES.join(", ")}`);
+        return;
+      }
+
+      // Import the session (this will restore the mode and all data)
+      importSession(data);
+
+      // Navigate to conversation - the mode is already set in the session
+      router.push("/conversation");
     } catch {
-      alert("Failed to import session. Please check the file format.");
+      alert("Failed to load project. Please check the file format.");
     }
 
     // Reset the file input
@@ -535,28 +539,13 @@ export default function WelcomePage() {
           <div className="h-px w-24 bg-burgundy/20 mx-auto mb-4" />
           <p className="font-body text-xs text-slate-muted mb-3 max-w-md mx-auto">
             Data processed transiently.{" "}
-            <span className="font-medium text-slate">Export sessions to save progress.</span>
+            <span className="font-medium text-slate">Save projects from within sessions.</span>
           </p>
 
-          {/* Session buttons - compact */}
+          {/* Load Project button */}
           <div className="flex items-center justify-center gap-2 flex-wrap">
-            {hasExistingSession && (
-              <button
-                onClick={handleExportSession}
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5",
-                  "font-sans text-xs text-ivory bg-burgundy",
-                  "border border-burgundy rounded-sm",
-                  "hover:bg-burgundy-dark",
-                  "transition-all duration-300"
-                )}
-              >
-                <Download className="h-3 w-3" strokeWidth={1.5} />
-                Export
-              </button>
-            )}
             <button
-              onClick={handleImportClick}
+              onClick={handleLoadProjectClick}
               className={cn(
                 "inline-flex items-center gap-1.5 px-3 py-1.5",
                 "font-sans text-xs text-burgundy",
@@ -565,17 +554,17 @@ export default function WelcomePage() {
                 "transition-all duration-300"
               )}
             >
-              <Upload className="h-3 w-3" strokeWidth={1.5} />
-              Import
+              <FolderOpen className="h-3 w-3" strokeWidth={1.5} />
+              Load Project
             </button>
           </div>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".json"
-            onChange={handleImportFile}
+            accept=".ccs,.json"
+            onChange={handleLoadProjectFile}
             className="hidden"
-            aria-label="Import session file"
+            aria-label="Load project file"
           />
 
           {hasExistingSession && (

@@ -14,6 +14,7 @@ import {
   Trash2,
   Pencil,
   Copy,
+  Upload,
 } from "lucide-react";
 import type { LineAnnotation, LineAnnotationType, CodeReference } from "@/types";
 import {
@@ -28,6 +29,7 @@ interface CodeEditorPanelProps {
   onDeleteFile?: (fileId: string) => void;
   onRenameFile?: (fileId: string, newName: string) => void;
   onDuplicateFile?: (fileId: string) => void;
+  onLoadCode?: () => void; // Trigger file upload from sidebar
 }
 
 // Annotation type prefixes for inline display
@@ -47,6 +49,39 @@ const ANNOTATION_COLORS: Record<LineAnnotationType, string> = {
   pattern: "text-green-600",
   context: "text-slate-500",
   critique: "text-burgundy",
+};
+
+// File type categories for colour coding
+type FileCategory = "code" | "web" | "data" | "text" | "shell" | "other";
+
+const LANGUAGE_CATEGORIES: Record<string, FileCategory> = {
+  // Code languages
+  python: "code", javascript: "code", typescript: "code", java: "code",
+  c: "code", "c++": "code", cpp: "code", "c#": "code", csharp: "code",
+  go: "code", rust: "code", ruby: "code", php: "code", swift: "code",
+  kotlin: "code", scala: "code", perl: "code", r: "code",
+  basic: "code", fortran: "code", cobol: "code", pascal: "code",
+  lisp: "code", scheme: "code", prolog: "code", haskell: "code",
+  erlang: "code", elixir: "code", clojure: "code", lua: "code",
+  matlab: "code", julia: "code", dart: "code", groovy: "code",
+  assembly: "code", asm: "code",
+  // Web
+  html: "web", css: "web", jsx: "web", tsx: "web", vue: "web",
+  // Shell/scripting
+  bash: "shell", shell: "shell", zsh: "shell", powershell: "shell",
+  // Data/config
+  json: "data", yaml: "data", yml: "data", xml: "data", toml: "data", sql: "data",
+  // Text
+  pseudocode: "text", other: "text", markdown: "text", md: "text", txt: "text",
+};
+
+const FILE_CATEGORY_COLORS: Record<FileCategory, string> = {
+  code: "text-blue-600",      // Blue for code
+  web: "text-orange-600",     // Orange for web
+  data: "text-green-600",     // Green for data/config
+  shell: "text-amber-600",    // Amber for shell scripts
+  text: "text-slate-500",     // Grey for text/other
+  other: "text-slate-500",
 };
 
 // Language to file extension mapping
@@ -120,6 +155,7 @@ export function CodeEditorPanel({
   onDeleteFile,
   onRenameFile,
   onDuplicateFile,
+  onLoadCode,
 }: CodeEditorPanelProps) {
   const {
     session,
@@ -249,6 +285,14 @@ export function CodeEditorPanel({
     return LANGUAGE_EXTENSIONS[normalised] || ".txt";
   }, []);
 
+  // Get colour class for file based on language category
+  const getFileColourClass = useCallback((language?: string): string => {
+    if (!language) return FILE_CATEGORY_COLORS.other;
+    const normalised = language.toLowerCase().trim();
+    const category = LANGUAGE_CATEGORIES[normalised] || "other";
+    return FILE_CATEGORY_COLORS[category];
+  }, []);
+
   // Download annotated code
   const handleDownloadCode = useCallback(() => {
     if (!selectedFileId || !currentCode) return;
@@ -286,10 +330,19 @@ export function CodeEditorPanel({
     <div className="flex h-full bg-white border-r border-parchment">
       {/* File tree sidebar */}
       <div className="w-36 border-r border-parchment bg-cream/30 flex flex-col">
-        <div className="px-3 py-2 border-b border-parchment">
+        <div className="px-3 py-2 border-b border-parchment flex items-center justify-between">
           <h3 className="font-sans text-[10px] uppercase tracking-widest text-slate-muted">
             Code Files
           </h3>
+          {onLoadCode && (
+            <button
+              onClick={onLoadCode}
+              className="p-1 text-slate-muted hover:text-burgundy transition-colors"
+              title="Load code file"
+            >
+              <Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
+            </button>
+          )}
         </div>
         <div className="flex-1 overflow-y-auto py-1">
           {codeFiles.length === 0 ? (
@@ -398,17 +451,10 @@ export function CodeEditorPanel({
                         ) : (
                           <ChevronRight className="h-3 w-3 flex-shrink-0" strokeWidth={1.5} />
                         )}
-                        <span className="font-mono text-[10px] truncate">
+                        <span className={cn("font-mono text-[10px] truncate", getFileColourClass(file.language))}>
                           {file.name}
                         </span>
                       </button>
-                    </div>
-                  )}
-                  {expandedFiles.has(file.id) && file.language && !renamingFileId && (
-                    <div className="ml-5 px-2 py-0.5">
-                      <span className="font-mono text-[9px] text-slate-muted">
-                        {file.language}
-                      </span>
                     </div>
                   )}
                 </li>
