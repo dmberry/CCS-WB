@@ -50,6 +50,7 @@ export interface Message {
   content: string;
   timestamp: string;
   metadata?: MessageMetadata;
+  isFavourite?: boolean;  // Heart-marked messages for export
 }
 
 export interface CodeReference {

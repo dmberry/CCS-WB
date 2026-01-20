@@ -68,7 +68,7 @@ const openingPrompts: Record<string, string> = {
 
 export default function ConversationPage() {
   const router = useRouter();
-  const { session, addMessage, updateSettings, addCode, removeCode, addReferences, clearReferences, addArtifact, importSession, setCreateLanguage } = useSession();
+  const { session, addMessage, updateMessage, updateSettings, addCode, removeCode, addReferences, clearReferences, addArtifact, importSession, setCreateLanguage } = useSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured } = useAISettings();
   const [input, setInput] = useState("");
   const [showAISettings, setShowAISettings] = useState(false);
@@ -222,8 +222,9 @@ export default function ConversationPage() {
     }
   }, []);
 
-  // Handle toggle favourite message
+  // Handle toggle favourite message - persists to session for export
   const handleToggleFavourite = useCallback((messageId: string) => {
+    // Update local UI state
     setFavouriteMessages(prev => {
       const next = new Set(prev);
       if (next.has(messageId)) {
@@ -233,7 +234,12 @@ export default function ConversationPage() {
       }
       return next;
     });
-  }, []);
+    // Persist to session for export
+    const message = session.messages.find(m => m.id === messageId);
+    if (message) {
+      updateMessage(messageId, { isFavourite: !message.isFavourite });
+    }
+  }, [session.messages, updateMessage]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -890,6 +896,12 @@ export default function ConversationPage() {
         if (importedData.projectName) {
           setProjectName(importedData.projectName);
         }
+
+        // Restore favourite messages from session
+        const favourites = new Set<string>(
+          importedData.messages?.filter((m: { isFavourite?: boolean }) => m.isFavourite).map((m: { id: string }) => m.id) || []
+        );
+        setFavouriteMessages(favourites);
 
         // Add welcome message
         addMessage({
@@ -2857,10 +2869,10 @@ function MessageBubble({
           {formatTimestamp(message.timestamp)}
         </span>
         {!isUser && onCopy && onToggleFavourite && (
-          <div className="flex items-center gap-0.5 opacity-0 group-hover/message:opacity-100 transition-opacity">
+          <div className="flex items-center gap-0.5">
             <button
               onClick={() => onCopy(message.id, message.content)}
-              className="p-1 text-slate-muted hover:text-ink rounded-sm transition-colors"
+              className="p-1 text-slate-muted hover:text-ink rounded-sm transition-colors opacity-0 group-hover/message:opacity-100"
               title="Copy response"
             >
               {isCopied ? (
@@ -2875,7 +2887,7 @@ function MessageBubble({
                 "p-1 rounded-sm transition-colors",
                 isFavourite
                   ? "text-burgundy"
-                  : "text-slate-muted hover:text-ink"
+                  : "text-slate-muted hover:text-ink opacity-0 group-hover/message:opacity-100"
               )}
               title={isFavourite ? "Liked" : "Like"}
             >

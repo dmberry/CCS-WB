@@ -101,6 +101,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const {
     session,
     addMessage,
+    updateMessage,
     addCode,
     removeCode,
     updateCode,
@@ -244,8 +245,9 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     }
   }, []);
 
-  // Handle toggle favourite message
+  // Handle toggle favourite message - persists to session for export
   const handleToggleFavourite = useCallback((messageId: string) => {
+    // Update local UI state
     setFavouriteMessages(prev => {
       const next = new Set(prev);
       if (next.has(messageId)) {
@@ -255,7 +257,12 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
       }
       return next;
     });
-  }, []);
+    // Persist to session for export
+    const message = session.messages.find(m => m.id === messageId);
+    if (message) {
+      updateMessage(messageId, { isFavourite: !message.isFavourite });
+    }
+  }, [session.messages, updateMessage]);
 
   // Handle send message
   const handleSend = useCallback(async () => {
@@ -629,6 +636,12 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           setCodeContents(new Map(Object.entries(importedData.codeContentsMap)));
         }
 
+        // Restore favourite messages from session
+        const favourites = new Set<string>(
+          importedData.messages?.filter((m: { isFavourite?: boolean }) => m.isFavourite).map((m: { id: string }) => m.id) || []
+        );
+        setFavouriteMessages(favourites);
+
         // Add welcome message
         addMessage({
           role: "assistant",
@@ -832,10 +845,10 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                     {formatTimestamp(message.timestamp)}
                   </span>
                   {message.role === "assistant" && (
-                    <div className="flex items-center gap-0.5 opacity-0 group-hover/message:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-0.5">
                       <button
                         onClick={() => handleCopyMessage(message.id, message.content)}
-                        className="p-1 text-slate-muted hover:text-ink rounded-sm transition-colors"
+                        className="p-1 text-slate-muted hover:text-ink rounded-sm transition-colors opacity-0 group-hover/message:opacity-100"
                         title="Copy response"
                       >
                         {copiedMessageId === message.id ? (
@@ -850,7 +863,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                           "p-1 rounded-sm transition-colors",
                           favouriteMessages.has(message.id)
                             ? "text-burgundy"
-                            : "text-slate-muted hover:text-ink"
+                            : "text-slate-muted hover:text-ink opacity-0 group-hover/message:opacity-100"
                         )}
                         title={favouriteMessages.has(message.id) ? "Liked" : "Like"}
                       >

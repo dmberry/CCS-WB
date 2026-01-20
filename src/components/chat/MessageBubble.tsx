@@ -56,10 +56,10 @@ export function MessageBubble({
           {formatTimestamp(message.timestamp)}
         </span>
         {!isUser && onCopy && onToggleFavourite && (
-          <div className="flex items-center gap-0.5 opacity-0 group-hover/message:opacity-100 transition-opacity">
+          <div className="flex items-center gap-0.5">
             <button
               onClick={() => onCopy(message.id, message.content)}
-              className="p-1 text-slate-muted hover:text-ink rounded-sm transition-colors"
+              className="p-1 text-slate-muted hover:text-ink rounded-sm transition-colors opacity-0 group-hover/message:opacity-100"
               title="Copy response"
             >
               {isCopied ? (
@@ -74,7 +74,7 @@ export function MessageBubble({
                 "p-1 rounded-sm transition-colors",
                 isFavourite
                   ? "text-burgundy"
-                  : "text-slate-muted hover:text-ink"
+                  : "text-slate-muted hover:text-ink opacity-0 group-hover/message:opacity-100"
               )}
               title={isFavourite ? "Liked" : "Like"}
             >

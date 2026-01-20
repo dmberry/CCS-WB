@@ -22,6 +22,7 @@ import { generateId, getCurrentTimestamp } from "@/lib/utils";
 type SessionAction =
   | { type: "INIT_SESSION"; payload: { mode: EntryMode; experienceLevel?: ExperienceLevel } }
   | { type: "ADD_MESSAGE"; payload: Message }
+  | { type: "UPDATE_MESSAGE"; payload: { id: string; updates: Partial<Message> } }
   | { type: "ADD_CODE"; payload: CodeReference }
   | { type: "REMOVE_CODE"; payload: string }
   | { type: "UPDATE_CODE"; payload: { id: string; updates: Partial<CodeReference> } }
@@ -82,6 +83,15 @@ function sessionReducer(state: Session, action: SessionAction): Session {
       return {
         ...state,
         messages: [...state.messages, action.payload],
+        lastModified: now,
+      };
+
+    case "UPDATE_MESSAGE":
+      return {
+        ...state,
+        messages: state.messages.map((msg) =>
+          msg.id === action.payload.id ? { ...msg, ...action.payload.updates } : msg
+        ),
         lastModified: now,
       };
 
@@ -350,6 +360,7 @@ interface SessionContextType {
   session: Session;
   initSession: (mode: EntryMode, experienceLevel?: ExperienceLevel) => void;
   addMessage: (message: Omit<Message, "id" | "timestamp">) => void;
+  updateMessage: (id: string, updates: Partial<Message>) => void;
   addCode: (code: Omit<CodeReference, "id" | "uploadedAt">) => string;
   removeCode: (codeId: string) => void;
   updateCode: (codeId: string, updates: Partial<CodeReference>) => void;
@@ -397,6 +408,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     },
     []
   );
+
+  const updateMessage = useCallback((id: string, updates: Partial<Message>) => {
+    dispatch({ type: "UPDATE_MESSAGE", payload: { id, updates } });
+  }, []);
 
   const addCode = useCallback(
     (code: Omit<CodeReference, "id" | "uploadedAt">): string => {
@@ -535,6 +550,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     session,
     initSession,
     addMessage,
+    updateMessage,
     addCode,
     removeCode,
     updateCode,

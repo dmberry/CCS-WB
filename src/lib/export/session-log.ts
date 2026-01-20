@@ -9,7 +9,7 @@ import { APP_VERSION } from "@/lib/config";
 import type { Session, LineAnnotation } from "@/types";
 
 // CCS Skill document version
-export const CCS_SKILL_VERSION = "2.4";
+export const CCS_SKILL_VERSION = "2.5";
 
 // Mode codes for file naming
 export const MODE_CODES: Record<string, string> = {
@@ -82,6 +82,7 @@ export interface SessionLogData {
     timestamp: string;
     phase?: string;
     feedbackLevel?: string;
+    isFavourite?: boolean;
   }>;
   analysisContext: unknown[];
   literatureReferences: Array<{
@@ -189,6 +190,7 @@ export function generateSessionLog(
       timestamp: msg.timestamp,
       phase: msg.metadata?.phase,
       feedbackLevel: msg.metadata?.feedbackLevel,
+      isFavourite: msg.isFavourite,
     })),
     analysisContext: session.analysisResults,
     literatureReferences: session.references,
@@ -334,7 +336,8 @@ export function exportSessionLogText(
     const timestamp = new Date(msg.timestamp).toLocaleString();
     const role = msg.role.toUpperCase();
     const phase = msg.phase ? ` [${msg.phase}]` : "";
-    lines.push(`[${timestamp}] ${role}${phase}`);
+    const favourite = msg.isFavourite ? " ♥" : "";
+    lines.push(`[${timestamp}] ${role}${phase}${favourite}`);
     lines.push("─".repeat(40));
     lines.push(msg.content);
     lines.push("");
@@ -398,6 +401,23 @@ export function exportSessionLogText(
 }
 
 /**
+ * Sanitise text for PDF output (jsPDF doesn't handle unicode well)
+ */
+function sanitiseForPDF(text: string): string {
+  return text
+    // Replace common unicode characters with ASCII equivalents
+    .replace(/♥/g, "[*]")
+    .replace(/[""]/g, '"')
+    .replace(/['']/g, "'")
+    .replace(/…/g, "...")
+    .replace(/—/g, "-")
+    .replace(/–/g, "-")
+    .replace(/•/g, "*")
+    // Remove any other problematic unicode that could cause spacing issues
+    .replace(/[\u2000-\u200F\u2028-\u202F\u205F-\u206F]/g, " ");
+}
+
+/**
  * Export session log as PDF file
  */
 export function exportSessionLogPDF(
@@ -413,11 +433,12 @@ export function exportSessionLogPDF(
   const contentWidth = pageWidth - 2 * margin;
   let yPos = margin;
 
-  // Helper to add wrapped text
+  // Helper to add wrapped text (sanitises unicode for PDF compatibility)
   const addWrappedText = (text: string, fontSize: number, isBold = false) => {
+    const safeText = sanitiseForPDF(text);
     doc.setFontSize(fontSize);
     doc.setFont("helvetica", isBold ? "bold" : "normal");
-    const lines = doc.splitTextToSize(text, contentWidth);
+    const lines = doc.splitTextToSize(safeText, contentWidth);
     const lineHeight = fontSize * 0.4;
 
     for (const line of lines) {
@@ -467,7 +488,7 @@ export function exportSessionLogPDF(
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(50, 50, 50);
-  doc.text(log.metadata.projectName, margin, yPos);
+  doc.text(sanitiseForPDF(log.metadata.projectName), margin, yPos);
   yPos += 8;
 
   // Mode badge
@@ -537,7 +558,8 @@ export function exportSessionLogPDF(
             doc.addPage();
             yPos = margin;
           }
-          doc.text(line.substring(0, 100), margin, yPos);
+          // Sanitise code line for PDF compatibility
+          doc.text(sanitiseForPDF(line.substring(0, 100)), margin, yPos);
           yPos += 3;
         });
         if (file.annotatedContent.split("\n").length > 50) {
@@ -557,6 +579,21 @@ export function exportSessionLogPDF(
   log.conversationLog.forEach((msg) => {
     const timestamp = new Date(msg.timestamp).toLocaleString();
     const role = msg.role === "user" ? "User" : "Assistant";
+    const headerText = `[${timestamp}] ${role}${msg.phase ? ` (${msg.phase})` : ""}`;
+
+    // Check if we need a new page
+    if (yPos + 4 > pageHeight - margin) {
+      doc.addPage();
+      yPos = margin;
+    }
+
+    const messageStartY = yPos;
+
+    // For favourited messages, add a gold left margin bar
+    if (msg.isFavourite) {
+      // We'll draw the bar after rendering the message to know its height
+    }
+
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(
@@ -564,19 +601,51 @@ export function exportSessionLogPDF(
       msg.role === "user" ? 0 : 45,
       msg.role === "user" ? 0 : 54
     );
-    addWrappedText(
-      `[${timestamp}] ${role}${msg.phase ? ` (${msg.phase})` : ""}`,
-      9,
-      true
-    );
+
+    // Write header text
+    doc.text(sanitiseForPDF(headerText), margin + (msg.isFavourite ? 3 : 0), yPos);
+
+    // Add [MARKED] label in gold for favourites
+    if (msg.isFavourite) {
+      const headerWidth = doc.getTextWidth(sanitiseForPDF(headerText));
+      doc.setTextColor(218, 165, 32); // Gold colour
+      doc.text(" [MARKED]", margin + 3 + headerWidth, yPos);
+    }
+
+    yPos += 4;
     doc.setTextColor(0, 0, 0);
     doc.setFont("helvetica", "normal");
-    // Truncate long messages
-    const content =
-      msg.content.length > 500
-        ? msg.content.substring(0, 500) + "..."
-        : msg.content;
-    addWrappedText(content, 9);
+
+    // Include full message content (no truncation)
+    // For favourited messages, indent slightly for the margin bar
+    const safeContent = sanitiseForPDF(msg.content);
+    const lines = doc.splitTextToSize(safeContent, contentWidth - (msg.isFavourite ? 3 : 0));
+    const lineHeight = 9 * 0.4;
+
+    for (const line of lines) {
+      if (yPos + lineHeight > pageHeight - margin) {
+        // Draw bar up to page break if favourited
+        if (msg.isFavourite) {
+          doc.setDrawColor(218, 165, 32); // Gold
+          doc.setLineWidth(0.5);
+          doc.line(margin, messageStartY - 2, margin, pageHeight - margin);
+        }
+        doc.addPage();
+        yPos = margin;
+        // Continue bar on new page - will be drawn at end
+      }
+      doc.text(line, margin + (msg.isFavourite ? 3 : 0), yPos);
+      yPos += lineHeight;
+    }
+    yPos += 2;
+
+    // Draw thin gold left margin bar for favourited messages
+    if (msg.isFavourite) {
+      doc.setDrawColor(218, 165, 32); // Gold colour
+      doc.setLineWidth(0.5);
+      doc.line(margin, messageStartY - 2, margin, yPos - 2);
+    }
+
     yPos += 2;
   });
 
@@ -587,7 +656,7 @@ export function exportSessionLogPDF(
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
     doc.text(
-      `Page ${i} of ${pageCount} | Critical Code Studies Session Log | ${log.metadata.projectName}`,
+      sanitiseForPDF(`Page ${i} of ${pageCount} | Critical Code Studies Session Log | ${log.metadata.projectName}`),
       pageWidth / 2,
       pageHeight - 10,
       { align: "center" }
