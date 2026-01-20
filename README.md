@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 1.1.0** | CCS Methodology v2.4
+**Version 1.2.0** | CCS Methodology v2.4
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -269,6 +269,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 1.2.0 | Version sourced from package.json via environment variable, Cmd+S saves without exiting session |
 | 1.1.0 | Compact toolbar with reduced height, Claude-style auto-expanding input, centered input area (80% width), font size popover control, keyboard shortcuts (Cmd+S/O/E), improved mobile/desktop viewport handling |
 | 1.0.0 | Next.js 16 with Turbopack, React 19, unified font size controls, resizable panels, edit/annotate mode toggle, improved UI consistency |
 | 0.2.0 | IDE-style critique layout, inline annotations, session log export, experience levels, Load Project |

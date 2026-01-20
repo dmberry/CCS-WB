@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/context/SessionContext";
 import { useAISettings } from "@/context/AISettingsContext";
@@ -60,10 +60,19 @@ export default function WelcomePage() {
   const [showHelp, setShowHelp] = useState(false);
   const [showSkillDoc, setShowSkillDoc] = useState(false);
   const [skillDocContent, setSkillDocContent] = useState<string>("");
+  const [appVersion, setAppVersion] = useState(APP_VERSION);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // CCS Skill document version (matches Critical-Code-Studies-Skill.md)
   const CCS_SKILL_VERSION = "2.4";
+
+  // Fetch latest version from API (ensures it updates without server restart)
+  useEffect(() => {
+    fetch("/api/version")
+      .then(res => res.json())
+      .then(data => setAppVersion(data.version))
+      .catch(() => {}); // Fall back to imported version
+  }, []);
 
   const handleViewSkillDoc = async () => {
     try {
@@ -204,7 +213,7 @@ export default function WelcomePage() {
             <div className="p-5 space-y-6">
               {/* Version and Creator */}
               <div className="font-mono text-[10px] text-slate-muted">
-                <p>v{APP_VERSION} · {APP_CREATOR}</p>
+                <p>v{appVersion} · {APP_CREATOR}</p>
                 <p>
                   CCS Methodology{" "}
                   <button
