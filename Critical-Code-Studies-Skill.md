@@ -1,7 +1,7 @@
 # Critical Code Studies: Methodology Framework
 
-**Version**: 2.4 - Four-Mode Progressive Architecture with Examples
-**Authors**: Based on methodologies by David M. Berry, Mark C. Marino, and collaborative CCS community
+**Version**: 2.5 - Four-Mode Progressive Architecture
+**Authors**: Based on methods by David M. Berry, Mark C. Marino, and collaborative CCS community
 
 ---
 
@@ -19,16 +19,16 @@ Critical Code Studies (CCS) applies critical hermeneutics to interpretation of c
 
 **Methodological implication**: Cannot read code solely for functionality without considering what it means. Both dimensions require simultaneous attention.
 
-### Three Foundational Approaches
+### Four Foundational Approaches
 
-**1. Berry's Materialist-Phenomenological CCS**
+**1. Materialist-Phenomenological CCS**
 Code as crystallisation of social formations examined through:
 - Multi-dimensional analysis (literature, mechanism, spatial form, repository)
 - Tests of strength methodology (technical, epistemological, social, political-economic, aesthetic)
 - Political economy of computational capitalism
 - Three-fold analysis: Ontology (what code IS), Genealogy (where code comes FROM), Mechanology (what code DOES)
 
-**2. Marino's Hermeneutic-Rhetorical CCS**
+**2. Hermeneutic-Rhetorical CCS**
 Code as social text with extrafunctional significance:
 - Critical hermeneutics and close reading of source code, comments, naming conventions
 - Extrafunctional significance: meaning growing out of function whilst exceeding it
@@ -39,6 +39,13 @@ Code as social text with extrafunctional significance:
 - Spiral outward from minimal program to cultural context
 - Variorum approach examining multiple versions
 - Porting as critical method revealing platform-specific affordances
+
+**4. Critical Lenses (Race, Gender, Postcolonial)**
+Code examined through feminist theory, critical race theory, and postcolonial criticism:
+- How computational systems encode and reproduce social hierarchies
+- How code constructs gendered and racialised subject positions
+- How algorithms extend or resist colonial logics
+- Key concepts: proxy discrimination, default whiteness, algorithmic redlining, data colonialism
 
 ### Constellational Analysis Framework (Berry 2024)
 
@@ -53,7 +60,7 @@ Levels operate dialectically, not hierarchically - technical shapes but doesn't 
 
 ## MODE 1: CRITIQUE
 
-**Use when**: Analysing existing code for cultural, political, or ideological dimensions.
+**Use when**: Analysing existing code for cultural, political, or ideological dimensions (Berry).
 
 **Example**: Facebook News Feed (2009 chronological vs 2018 engagement-weighted) demonstrates shift from user-centric to profit-driven ranking through code comparison. The `EdgeRank` algorithm's prioritisation of "engagement" over recency reveals how technical choices encode business models.
 
@@ -84,12 +91,13 @@ Levels operate dialectically, not hierarchically - technical shapes but doesn't 
 ### Phase 3: Advanced Critique
 
 **Critical Theoretical Lenses**:
-- Postcolonial: linguistic imperialism in programming languages, acts of abrogation
-- Gender/Power: gendered subjects, patriarchal assumptions, feminist resistances
-- Race/Embodiment: racial formation in conversational agents, default whiteness
-- Infrastructure/Platform: modularity and fragmentation, lenticular logic (McPherson)
-- Surveillance Capitalism: behaviour tracking, profile updating, recommendation systems
-- Resistance Architectures: encryption, federation, user control (Signal, Mastodon)
+- **Race/Algorithmic Justice**: How code encodes historical discrimination through proxy variables, creates feedback loops amplifying inequality, implements algorithmic redlining (Noble, Benjamin, Eubanks, Chun)
+- **Gender/Power**: Gendered subject positions in code, labour history of computing, classification systems imposing binary categories (Hicks, Haraway, Abbate)
+- **Postcolonial**: Linguistic imperialism in programming languages, data colonialism extracting value from global populations, acts of abrogation (e.g., قلب/Alb Arabic programming language)
+- **Intersectional**: How race, gender, class converge in algorithmic systems (Amrute on race/class in tech labour)
+- **Infrastructure/Platform**: Modularity and fragmentation, lenticular logic (McPherson)
+- **Surveillance Capitalism**: Behaviour tracking, profile updating, recommendation systems
+- **Resistance Architectures**: Encryption, federation, user control (Signal, Mastodon)
 
 ---
 
@@ -110,7 +118,7 @@ Levels operate dialectically, not hierarchically - technical shapes but doesn't 
 
 **Forensic Materiality (Kirschenbaum)**: Treat code as forensic evidence - physical inscription matters, examine file systems, compilation artifacts, version histories, backup media.
 
-**Finding Lost Code**: University archives, personal papers, corporate archives, backup tapes, published listings, oral histories.
+**Finding Lost Code**: University archives, personal papers, corporate archives, backup tapes, published listings, oral histories. Ask whose code gets preserved and whose gets lost—archival practices reproduce existing hierarchies of whose contributions count as historically significant.
 
 ### Phase 2: Intermediate Archaeology
 
@@ -138,11 +146,12 @@ Levels operate dialectically, not hierarchically - technical shapes but doesn't 
 
 ### Phase 1: Framework Exploration
 
-**Hermeneutic Traditions**: Explore interpretive frameworks applicable to code:
+**Hermeneutic Traditions**: Explore interpretive frameworks applicable to code (Marino):
 - Classical hermeneutics (Schleiermacher, Dilthey): author's intention, historical reconstruction
 - Philosophical hermeneutics (Gadamer): fusion of horizons, prejudice as enabling
 - Critical hermeneutics (Habermas, Ricoeur): ideology critique, suspicion and recovery
 - Deconstructive reading (Derrida): traces, supplements, undecidability
+- Feminist and critical race hermeneutics: situated knowledge, standpoint epistemology, reading from the margins
 
 **Code's Interpretive Peculiarity**: Unlike literary texts, code has an execution dimension. Interpretation must navigate between what code means and what code does.
 
@@ -167,6 +176,9 @@ Levels operate dialectically, not hierarchically - technical shapes but doesn't 
 - Foucault: discourse, power/knowledge, governmentality
 - Science and Technology Studies: actor-network theory, social construction
 - Platform Studies: material affordances, computational constraints
+- Feminist STS: situated knowledges, cyborg theory, care and maintenance
+- Critical Race Theory: algorithmic discrimination, default whiteness, digital redlining
+- Postcolonial Theory: data colonialism, linguistic imperialism, decolonising code
 
 **Developing Research Questions**: Move from methodological exploration to specific inquiries that can be pursued through critique, archaeology, or creation modes.
 
@@ -185,6 +197,7 @@ Levels operate dialectically, not hierarchically - technical shapes but doesn't 
 - Whose interests does implementation serve?
 - What becomes visible/invisible through design?
 - What power relations embedded?
+- How might this code affect differently positioned users across race, gender, class, ability?
 
 **Programming as Critical Practice**: Choose technologies aligned with values, implement privacy-preserving architectures, design for accessibility, build federation over centralisation, prioritise user control.
 
@@ -230,19 +243,37 @@ Levels operate dialectically, not hierarchically - technical shapes but doesn't 
 
 ## KEY REFERENCES
 
-Marino, M. C. (2020) *Critical Code Studies*. MIT Press.
+**Foundational CCS**
 
 Berry, D. M. (2011) *The Philosophy of Software*. Palgrave.
 
 Berry, D. M. & Marino, M. C. (2024) 'Reading ELIZA', *Electronic Book Review*.
 
+Chun, W. H. K. (2011) *Programmed Visions*. MIT Press.
+
+Marino, M. C. (2020) *Critical Code Studies*. MIT Press.
+
 Montfort, N. et al. (2013) *10 PRINT*. MIT Press.
+
+**Race, Gender, and Algorithmic Justice**
+
+Abbate, J. (2012) *Recoding Gender*. MIT Press.
+
+Benjamin, R. (2019) *Race After Technology*. Polity.
+
+Eubanks, V. (2018) *Automating Inequality*. St. Martin's Press.
+
+Haraway, D. (1991) 'A Cyborg Manifesto', in *Simians, Cyborgs, and Women*. Routledge.
+
+Hicks, M. (2018) *Programmed Inequality*. MIT Press.
+
+Noble, S. U. (2018) *Algorithms of Oppression*. NYU Press.
+
+**Media Archaeology and Platform Studies**
 
 Jerz, D. (2007) 'Colossal Cave', *DHQ* 1(2).
 
 Kirschenbaum, M. (2008) *Mechanisms*. MIT Press.
-
-Chun, W. H. K. (2011) *Programmed Visions*. MIT Press.
 
 McPherson, T. (2012) 'Why Are the Digital Humanities So White?', *Debates in DH*.
 
@@ -261,6 +292,8 @@ McPherson, T. (2012) 'Why Are the Digital Humanities So White?', *Debates in DH*
 **Functional Reduction**: Explaining only what code does, not what it means. Technical explanation is necessary but insufficient. The hermeneutic task begins where functional description ends.
 
 **Context Neglect**: Reading code in isolation from platform, institution, historical moment. Code exists within ecosystems; meaning emerges from relationships between code, infrastructure, community, and culture.
+
+**Critical Lens Blindness**: Analysing code without attention to how it encodes, reproduces, or challenges structures of race, gender, and class. Computational systems are not neutral; they emerge from and operate within social hierarchies. Ask whose interests code serves, whose labour it obscures, whose bodies it categorises, and whose experiences it renders invisible.
 
 ---
 
