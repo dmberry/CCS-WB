@@ -16,8 +16,8 @@ interface MessageBubbleProps {
 /**
  * Chat message bubble component with editorial styling.
  * User messages appear on the right, assistant messages on the left with a border.
- * Timestamp appears below the bubble in small text.
- * Assistant messages include copy and favourite buttons on hover.
+ * Timestamp and action buttons appear inline below the bubble.
+ * Copy and favourite buttons available for all messages on hover.
  */
 export function MessageBubble({
   message,
@@ -51,16 +51,20 @@ export function MessageBubble({
           {message.content}
         </p>
       </div>
-      <div className="mt-1 px-1 flex items-center justify-between w-full max-w-[80%]">
+      {/* Timestamp and actions inline */}
+      <div className={cn(
+        "mt-0.5 px-1 flex items-center gap-2",
+        isUser ? "flex-row-reverse" : "flex-row"
+      )}>
         <span className="font-sans text-[9px] text-slate-muted">
           {formatTimestamp(message.timestamp)}
         </span>
-        {!isUser && onCopy && onToggleFavourite && (
+        {onCopy && onToggleFavourite && (
           <div className="flex items-center gap-0.5">
             <button
               onClick={() => onCopy(message.id, message.content)}
-              className="p-1 text-slate-muted hover:text-ink rounded-sm transition-colors opacity-0 group-hover/message:opacity-100"
-              title="Copy response"
+              className="p-0.5 text-slate-muted hover:text-ink rounded-sm transition-colors opacity-0 group-hover/message:opacity-100"
+              title="Copy"
             >
               {isCopied ? (
                 <Check className="h-3 w-3 text-green-600" strokeWidth={1.5} />
@@ -71,12 +75,12 @@ export function MessageBubble({
             <button
               onClick={() => onToggleFavourite(message.id)}
               className={cn(
-                "p-1 rounded-sm transition-colors",
+                "p-0.5 rounded-sm transition-colors",
                 isFavourite
                   ? "text-burgundy"
                   : "text-slate-muted hover:text-ink opacity-0 group-hover/message:opacity-100"
               )}
-              title={isFavourite ? "Liked" : "Like"}
+              title={isFavourite ? "Marked" : "Mark"}
             >
               <Heart
                 className="h-3 w-3"

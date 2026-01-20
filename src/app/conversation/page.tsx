@@ -185,10 +185,16 @@ export default function ConversationPage() {
     }
   }, [successMessage]);
 
-  // Scroll to bottom on new messages
+  // Track message count to only scroll on new messages, not updates
+  const prevMessageCount = useRef(session.messages.length);
+
+  // Scroll to bottom only when new messages are added
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [session.messages]);
+    if (session.messages.length > prevMessageCount.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    prevMessageCount.current = session.messages.length;
+  }, [session.messages.length]);
 
   // Add opening prompt if no messages (only once)
   // Note: critique mode is handled by CritiqueLayout, so skip here
@@ -2864,16 +2870,20 @@ function MessageBubble({
           {message.content}
         </p>
       </div>
-      <div className="mt-1 px-1 flex items-center justify-between w-full max-w-[80%]">
+      {/* Timestamp and actions inline */}
+      <div className={cn(
+        "mt-0.5 px-1 flex items-center gap-2",
+        isUser ? "flex-row-reverse" : "flex-row"
+      )}>
         <span className="font-sans text-[9px] text-slate-muted">
           {formatTimestamp(message.timestamp)}
         </span>
-        {!isUser && onCopy && onToggleFavourite && (
+        {onCopy && onToggleFavourite && (
           <div className="flex items-center gap-0.5">
             <button
               onClick={() => onCopy(message.id, message.content)}
-              className="p-1 text-slate-muted hover:text-ink rounded-sm transition-colors opacity-0 group-hover/message:opacity-100"
-              title="Copy response"
+              className="p-0.5 text-slate-muted hover:text-ink rounded-sm transition-colors opacity-0 group-hover/message:opacity-100"
+              title="Copy"
             >
               {isCopied ? (
                 <Check className="h-3 w-3 text-green-600" strokeWidth={1.5} />
@@ -2884,12 +2894,12 @@ function MessageBubble({
             <button
               onClick={() => onToggleFavourite(message.id)}
               className={cn(
-                "p-1 rounded-sm transition-colors",
+                "p-0.5 rounded-sm transition-colors",
                 isFavourite
                   ? "text-burgundy"
                   : "text-slate-muted hover:text-ink opacity-0 group-hover/message:opacity-100"
               )}
-              title={isFavourite ? "Liked" : "Like"}
+              title={isFavourite ? "Marked" : "Mark"}
             >
               <Heart
                 className="h-3 w-3"
