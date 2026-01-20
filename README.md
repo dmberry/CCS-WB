@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 1.2.0** | CCS Methodology v2.4
+**Version 1.2.4** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -235,7 +235,7 @@ CCS-WB/
 │       ├── ai-settings.ts
 │       ├── api.ts
 │       └── index.ts
-├── Critical-Code-Studies-Skill.md    # CCS methodology v2.4
+├── Critical-Code-Studies-Skill.md    # CCS methodology v2.5
 ├── CCS-Bibliography.md               # Reference bibliography
 └── public/                           # Static assets
 ```
@@ -269,6 +269,10 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 1.2.4 | Fixed scroll jump when marking messages, inline timestamp/actions layout |
+| 1.2.3 | Compact message layout with inline timestamp and action buttons, copy/mark available for all messages |
+| 1.2.2 | PDF export improvements: gold margin bar and [MARKED] label for favourited messages, unicode sanitisation |
+| 1.2.1 | Heart icon stays visible when message is marked/liked |
 | 1.2.0 | Version sourced from package.json via environment variable, Cmd+S saves without exiting session |
 | 1.1.0 | Compact toolbar with reduced height, Claude-style auto-expanding input, centered input area (80% width), font size popover control, keyboard shortcuts (Cmd+S/O/E), improved mobile/desktop viewport handling |
 | 1.0.0 | Next.js 16 with Turbopack, React 19, unified font size controls, resizable panels, edit/annotate mode toggle, improved UI consistency |
