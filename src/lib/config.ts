@@ -4,8 +4,8 @@
  * Central configuration values for the Critical Code Studies Workbench
  */
 
-/** Application version - update when adding new functionality */
-export const APP_VERSION = "0.2.0";
+/** Application version - sourced from next.config.js env at build time */
+export const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "1.1.0";
 
 /** Application name */
 export const APP_NAME = "Critical Code Studies Workbench";

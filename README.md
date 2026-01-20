@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 1.0.0** | CCS Methodology v2.4
+**Version 1.1.0** | CCS Methodology v2.4
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -97,6 +97,17 @@ Choose your preferred AI provider in browser settings:
 - **OpenAI** (GPT-4o, GPT-4o Mini, GPT-4 Turbo)
 - **Google Gemini** (Gemini 2.0 Flash, Gemini 1.5 Pro)
 - **Ollama** (Local models - Llama 3.2, Mistral, CodeLlama, etc.)
+
+### Keyboard Shortcuts
+| Shortcut | Action |
+|----------|--------|
+| `Cmd/Ctrl + S` | Save project |
+| `Cmd/Ctrl + O` | Open/Load project |
+| `Cmd/Ctrl + E` | Export session log |
+| `Cmd/Ctrl + /` | Focus chat input |
+| `Enter` | Send message |
+| `Shift + Enter` | New line in message |
+| `Escape` | Close popovers and modals |
 
 ### Data Privacy
 - All data processed transiently, never stored on servers
@@ -258,6 +269,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 1.1.0 | Compact toolbar with reduced height, Claude-style auto-expanding input, centered input area (80% width), font size popover control, keyboard shortcuts (Cmd+S/O/E), improved mobile/desktop viewport handling |
 | 1.0.0 | Next.js 16 with Turbopack, React 19, unified font size controls, resizable panels, edit/annotate mode toggle, improved UI consistency |
 | 0.2.0 | IDE-style critique layout, inline annotations, session log export, experience levels, Load Project |
 | 0.1.0 | Initial release with four modes, multi-provider AI, create mode |

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/context/SessionContext";
 import { useAISettings } from "@/context/AISettingsContext";
@@ -27,15 +27,20 @@ import {
   Lightbulb,
   Save,
   FolderOpen,
-  Settings2,
   Minus,
   Plus,
+  Eye,
+  Copy,
+  Check,
+  Heart,
+  ArrowUp,
+  SlidersHorizontal,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
-import { AnnotatedCodeViewer } from "@/components/code";
+import { AnnotatedCodeViewer, generateAnnotatedCode } from "@/components/code";
 import { GuidedPrompts } from "@/components/prompts";
-import { CritiqueLayout } from "@/components/layouts";
+import { CritiqueLayout, type CritiqueLayoutRef } from "@/components/layouts";
 import { PROVIDER_CONFIGS } from "@/lib/ai/config";
 import { APP_VERSION, APP_NAME } from "@/lib/config";
 import { GUIDED_PROMPTS } from "@/types";
@@ -63,7 +68,7 @@ const openingPrompts: Record<string, string> = {
 
 export default function ConversationPage() {
   const router = useRouter();
-  const { session, addMessage, updateSettings, addCode, removeCode, addAnalysis, addReferences, clearReferences, addArtifact, importSession, setCreateLanguage } = useSession();
+  const { session, addMessage, updateSettings, addCode, removeCode, addReferences, clearReferences, addArtifact, importSession, setCreateLanguage } = useSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured } = useAISettings();
   const [input, setInput] = useState("");
   const [showAISettings, setShowAISettings] = useState(false);
@@ -73,17 +78,24 @@ export default function ConversationPage() {
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(false); // Default closed on mobile
   const [isMobile, setIsMobile] = useState(false);
 
-  // Check if mobile viewport
+  // Check if mobile viewport - only toggle panel when crossing threshold
   useEffect(() => {
+    let wasMobile = window.innerWidth < 768;
+
+    // Set initial state
+    setIsMobile(wasMobile);
+    setIsContextPanelOpen(!wasMobile);
+
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-      // Auto-open panel on desktop, keep closed on mobile
-      if (window.innerWidth >= 768) {
-        setIsContextPanelOpen(true);
+      const nowMobile = window.innerWidth < 768;
+      // Only update when crossing the mobile/desktop threshold
+      if (nowMobile !== wasMobile) {
+        setIsMobile(nowMobile);
+        setIsContextPanelOpen(!nowMobile);
+        wasMobile = nowMobile;
       }
     };
 
-    checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
@@ -97,6 +109,7 @@ export default function ConversationPage() {
   const [selectedOutputType, setSelectedOutputType] = useState<"annotation" | "critique" | "reading">("critique");
   const [showExportModal, setShowExportModal] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
+  const [triggerCritiqueSave, setTriggerCritiqueSave] = useState(false);
   const [selectedCodeDetails, setSelectedCodeDetails] = useState<CodeReference | null>(null);
   const [selectedRefDetails, setSelectedRefDetails] = useState<ReferenceResult | null>(null);
   const [selectedArtifactDetails, setSelectedArtifactDetails] = useState<{ id: string; type: string; content: string; version: number; createdAt: string } | null>(null);
@@ -112,12 +125,16 @@ export default function ConversationPage() {
   const [showGuidedPrompts, setShowGuidedPrompts] = useState(false);
   const [projectName, setProjectName] = useState<string>("");
   const [chatFontSize, setChatFontSize] = useState<number>(14);
-  const [showChatFontSettings, setShowChatFontSettings] = useState(false);
+  const [showFontSizePopover, setShowFontSizePopover] = useState(false);
+  const [showContextPreview, setShowContextPreview] = useState(false);
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [favouriteMessages, setFavouriteMessages] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sessionLoadInputRef = useRef<HTMLInputElement>(null);
   const hasAddedOpeningMessage = useRef(false);
+  const critiqueLayoutRef = useRef<CritiqueLayoutRef>(null);
 
   // Check if there are unsaved changes (more than just the initial assistant message)
   const hasUnsavedChanges = useCallback(() => {
@@ -194,6 +211,30 @@ export default function ConversationPage() {
     }
   }, [session.mode, session.messages.length, session.createState?.language, addMessage]);
 
+  // Handle copy message
+  const handleCopyMessage = useCallback(async (messageId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessageId(messageId);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  }, []);
+
+  // Handle toggle favourite message
+  const handleToggleFavourite = useCallback((messageId: string) => {
+    setFavouriteMessages(prev => {
+      const next = new Set(prev);
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+      return next;
+    });
+  }, []);
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -223,7 +264,10 @@ export default function ConversationPage() {
               createLanguage: session.createState?.language,
               analysisContext: session.analysisResults,
               literatureContext: session.references,
-              codeContext: session.codeFiles,
+              // Include annotations for archaeology and interpret modes
+              codeContext: (session.mode === "archaeology" || session.mode === "interpret")
+                ? buildAnnotatedCodeContext()
+                : session.codeFiles,
             }),
             timeout: 60000, // 60 second timeout for LLM calls
           });
@@ -318,6 +362,20 @@ export default function ConversationPage() {
     }
   };
 
+  // Auto-resize textarea as content grows
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (textarea) {
+      // Reset height to auto to get correct scrollHeight
+      textarea.style.height = 'auto';
+      // Set to scrollHeight, with a max of ~200px (about 10 lines)
+      const maxHeight = 200;
+      textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+      // Add overflow if exceeds max
+      textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+    }
+  }, [input]);
+
   const handleUpload = () => {
     fileInputRef.current?.click();
   };
@@ -396,6 +454,51 @@ export default function ConversationPage() {
     inputRef.current?.focus();
     setShowGuidedPrompts(false);
   }, []);
+
+  // Build code context with annotations for LLM (for archaeology/interpret modes)
+  const buildAnnotatedCodeContext = useCallback((): (CodeReference & { content?: string })[] => {
+    if (session.codeFiles.length === 0) return session.codeFiles;
+
+    return session.codeFiles.map((file) => {
+      const code = findCodeContentForFile(file);
+      if (!code) return file;
+
+      const fileAnnotations = session.lineAnnotations.filter(
+        (a) => a.codeFileId === file.id
+      );
+
+      return {
+        ...file,
+        content: fileAnnotations.length > 0
+          ? generateAnnotatedCode(code, fileAnnotations)
+          : code,
+      };
+    });
+  }, [session.codeFiles, session.lineAnnotations, findCodeContentForFile]);
+
+  // Generate context preview string for modal (archaeology/interpret modes)
+  const contextPreviewText = useMemo(() => {
+    if (session.codeFiles.length === 0) return "";
+
+    const parts: string[] = ["## Code Under Analysis\n"];
+    const annotatedContext = buildAnnotatedCodeContext();
+
+    annotatedContext.forEach((file) => {
+      parts.push(`### ${file.name}${file.language ? ` (${file.language})` : ""}`);
+      if (file.author) parts.push(`Author: ${file.author}`);
+      if (file.date) parts.push(`Date: ${file.date}`);
+      if (file.platform) parts.push(`Platform: ${file.platform}`);
+      parts.push("\n```" + (file.language || ""));
+      parts.push(file.content || "(No code content found)");
+      parts.push("```\n");
+    });
+
+    if (session.lineAnnotations.length > 0) {
+      parts.push("\n*Note: Lines marked with `// An:` are analyst annotations for close reading.*");
+    }
+
+    return parts.join("\n");
+  }, [session.codeFiles, session.lineAnnotations, buildAnnotatedCodeContext]);
 
   // Simple language detection from code content
   const detectLanguage = (code: string): string => {
@@ -610,7 +713,10 @@ export default function ConversationPage() {
           references: session.references,
           analysisResults: session.analysisResults,
           experienceLevel: session.experienceLevel,
-          codeContext: session.codeFiles,
+          // Include annotations for archaeology and interpret modes
+          codeContext: (session.mode === "archaeology" || session.mode === "interpret")
+            ? buildAnnotatedCodeContext()
+            : session.codeFiles,
         }),
       });
 
@@ -683,8 +789,72 @@ export default function ConversationPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    setSuccessMessage("Session saved successfully!");
   }, [session, projectName, MODE_CODES]);
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey;
+
+      // Cmd/Ctrl + S - Save project
+      if (isMod && e.key === 's') {
+        e.preventDefault();
+        if (session.mode === 'critique') {
+          setTriggerCritiqueSave(true);
+        } else {
+          handleSaveSession();
+        }
+        return;
+      }
+
+      // Cmd/Ctrl + O - Open/Load project
+      if (isMod && e.key === 'o') {
+        e.preventDefault();
+        sessionLoadInputRef.current?.click();
+        return;
+      }
+
+      // Cmd/Ctrl + E - Export
+      if (isMod && e.key === 'e') {
+        e.preventDefault();
+        setShowExportModal(true);
+        return;
+      }
+
+      // Cmd/Ctrl + / - Focus input
+      if (isMod && e.key === '/') {
+        e.preventDefault();
+        inputRef.current?.focus();
+        return;
+      }
+
+      // Cmd/Ctrl + - - Decrease font size
+      if (isMod && e.key === '-') {
+        e.preventDefault();
+        setChatFontSize(prev => Math.max(MIN_CHAT_FONT_SIZE, prev - 1));
+        return;
+      }
+
+      // Cmd/Ctrl + = or + - Increase font size
+      if (isMod && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        setChatFontSize(prev => Math.min(MAX_CHAT_FONT_SIZE, prev + 1));
+        return;
+      }
+
+      // Escape - Close popovers/modals
+      if (e.key === 'Escape') {
+        setShowFontSizePopover(false);
+        setShowGuidedPrompts(false);
+        setShowContextPreview(false);
+        setShowExperienceHelp(false);
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [session.mode, handleSaveSession]);
 
   // Load session with mode validation
   const handleLoadSession = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1075,7 +1245,10 @@ export default function ConversationPage() {
     return (
       <>
         <CritiqueLayout
+          ref={critiqueLayoutRef}
           onNavigateHome={handleNavigateHome}
+          triggerSave={triggerCritiqueSave}
+          onSaveTriggered={() => setTriggerCritiqueSave(false)}
         />
         {/* Unsaved Changes Warning Modal for Critique Mode */}
         {showUnsavedWarning && (
@@ -1097,13 +1270,12 @@ export default function ConversationPage() {
                 <button
                   onClick={() => {
                     setShowUnsavedWarning(false);
-                    // For critique mode, the save functionality is in CritiqueLayout
-                    // Just close the modal and let the user save manually
-                    alert("Please use the Save button (💾) in the toolbar to save your project first.");
+                    // Trigger save via prop (more reliable than ref)
+                    setTriggerCritiqueSave(true);
                   }}
                   className="w-full btn-editorial-primary py-3"
                 >
-                  Go Back to Save
+                  Save First
                 </button>
                 <button
                   onClick={() => {
@@ -1149,7 +1321,7 @@ export default function ConversationPage() {
       )}
 
       {/* Header - Matching CritiqueLayout toolbar style */}
-      <header className="border-b border-parchment bg-ivory px-4 py-2 flex items-center justify-between relative z-10">
+      <header className="border-b border-parchment bg-ivory px-4 py-1 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-4">
           <button
             onClick={handleNavigateHome}
@@ -1403,6 +1575,7 @@ export default function ConversationPage() {
                     onChange={(e) => setCodeInputName(e.target.value)}
                     placeholder="e.g., Strachey Love Letter Generator"
                     className="input-editorial w-full"
+                    style={{ fontSize: `${chatFontSize}px` }}
                   />
                 </div>
                 <div>
@@ -1413,6 +1586,7 @@ export default function ConversationPage() {
                     onChange={(e) => setCodeInputLanguage(e.target.value)}
                     placeholder="e.g., BASIC, Python, C"
                     className="input-editorial w-full"
+                    style={{ fontSize: `${chatFontSize}px` }}
                   />
                 </div>
               </div>
@@ -1422,7 +1596,8 @@ export default function ConversationPage() {
                   value={codeInputText}
                   onChange={(e) => setCodeInputText(e.target.value)}
                   placeholder="Paste or type your code here..."
-                  className="input-editorial w-full h-64 font-mono text-sm"
+                  className="input-editorial w-full h-64 font-mono"
+                  style={{ fontSize: `${chatFontSize}px` }}
                   autoFocus
                 />
               </div>
@@ -1715,17 +1890,17 @@ export default function ConversationPage() {
               </button>
             </div>
             <p className="font-body text-body-sm text-slate mb-6">
-              You have unsaved work in this session. Would you like to export your session before leaving?
+              You have unsaved work in this session. Would you like to save your project before leaving?
             </p>
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => {
                   setShowUnsavedWarning(false);
-                  setShowExportModal(true);
+                  handleSaveSession();
                 }}
                 className="w-full btn-editorial-primary py-3"
               >
-                Export First
+                Save First
               </button>
               <button
                 onClick={() => {
@@ -2004,6 +2179,63 @@ export default function ConversationPage() {
         </div>
       )}
 
+      {/* Context Preview Modal - Shows what gets sent to the LLM */}
+      {showContextPreview && (
+        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-sm shadow-lg w-full max-w-2xl mx-4 border border-parchment max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-parchment">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-burgundy" strokeWidth={1.5} />
+                <h3 className="font-display text-lg text-ink">LLM Context Preview</h3>
+              </div>
+              <button
+                onClick={() => setShowContextPreview(false)}
+                className="text-slate-muted hover:text-ink transition-colors"
+              >
+                <X className="h-5 w-5" strokeWidth={1.5} />
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-y-auto">
+              <p className="font-body text-sm text-slate mb-4">
+                This is the code context that gets sent to the LLM with each message.
+                {session.lineAnnotations.length > 0 && (
+                  <> Your annotations are embedded as <code className="bg-cream px-1 rounded text-xs">// An:Type:</code> comments.</>
+                )}
+              </p>
+              <div className="mb-4 p-3 bg-cream/50 rounded-sm border border-parchment">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-sans text-xs font-medium text-ink">Summary</span>
+                </div>
+                <ul className="font-body text-xs text-slate space-y-1">
+                  <li>• {session.codeFiles.length} code file{session.codeFiles.length !== 1 ? "s" : ""}</li>
+                  <li>• {session.lineAnnotations.length} annotation{session.lineAnnotations.length !== 1 ? "s" : ""}</li>
+                  <li>• {contextPreviewText.length.toLocaleString()} characters total</li>
+                </ul>
+              </div>
+              <div className="border border-parchment rounded-sm">
+                <div className="px-3 py-2 bg-cream/30 border-b border-parchment">
+                  <span className="font-sans text-xs text-slate-muted uppercase tracking-wider">Context Sent to LLM</span>
+                </div>
+                <pre className="p-3 text-xs font-mono text-ink whitespace-pre-wrap overflow-x-auto max-h-64 overflow-y-auto bg-white">
+                  {contextPreviewText || "(No code loaded yet)"}
+                </pre>
+              </div>
+            </div>
+            <div className="p-4 border-t border-parchment flex justify-between items-center">
+              <p className="font-body text-xs text-slate-muted">
+                Use the code annotator to add annotations that enrich the context.
+              </p>
+              <button
+                onClick={() => setShowContextPreview(false)}
+                className="px-4 py-2 text-sm text-slate hover:text-ink border border-parchment rounded-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden relative z-0">
         {/* Conversation area */}
@@ -2015,82 +2247,26 @@ export default function ConversationPage() {
             !isMobile && isContextPanelOpen ? "md:mr-80" : ""
           )}
         >
-          {/* Chat header with font size controls */}
-          <div className="px-6 py-2 border-b border-parchment bg-cream/30 flex items-center justify-between">
-            <span className="font-sans text-[10px] uppercase tracking-widest text-slate-muted">
-              Conversation
-            </span>
-            <div className="relative">
-              <button
-                onClick={() => setShowChatFontSettings(!showChatFontSettings)}
-                className={cn(
-                  "p-1 transition-colors",
-                  showChatFontSettings ? "text-burgundy" : "text-slate-muted hover:text-ink"
-                )}
-                title="Font size settings"
-              >
-                <Settings2 className="h-3.5 w-3.5" strokeWidth={1.5} />
-              </button>
-              {showChatFontSettings && (
-                <div className="absolute top-full right-0 mt-1 w-36 bg-white rounded-sm shadow-lg border border-parchment p-3 z-50">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-display text-xs text-ink">Font Size</h4>
-                    <button
-                      onClick={() => setShowChatFontSettings(false)}
-                      className="p-0.5 text-slate hover:text-ink"
-                    >
-                      <X className="h-3 w-3" strokeWidth={1.5} />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setChatFontSize(prev => Math.max(MIN_CHAT_FONT_SIZE, prev - 1))}
-                      disabled={chatFontSize <= MIN_CHAT_FONT_SIZE}
-                      className="p-1 rounded-sm border border-parchment hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <Minus className="h-3 w-3" strokeWidth={1.5} />
-                    </button>
-                    <input
-                      type="number"
-                      min={MIN_CHAT_FONT_SIZE}
-                      max={MAX_CHAT_FONT_SIZE}
-                      value={chatFontSize}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val)) {
-                          setChatFontSize(Math.min(MAX_CHAT_FONT_SIZE, Math.max(MIN_CHAT_FONT_SIZE, val)));
-                        }
-                      }}
-                      className="w-12 px-1 py-0.5 text-center text-[11px] font-mono border border-parchment rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy"
-                    />
-                    <button
-                      onClick={() => setChatFontSize(prev => Math.min(MAX_CHAT_FONT_SIZE, prev + 1))}
-                      disabled={chatFontSize >= MAX_CHAT_FONT_SIZE}
-                      className="p-1 rounded-sm border border-parchment hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <Plus className="h-3 w-3" strokeWidth={1.5} />
-                    </button>
-                    <span className="text-[9px] text-slate-muted">px</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-5">
             {session.messages.map((message) => (
-              <MessageBubble key={message.id} message={message} fontSize={chatFontSize} />
+              <MessageBubble
+                key={message.id}
+                message={message}
+                fontSize={chatFontSize}
+                isCopied={copiedMessageId === message.id}
+                isFavourite={favouriteMessages.has(message.id)}
+                onCopy={handleCopyMessage}
+                onToggleFavourite={handleToggleFavourite}
+              />
             ))}
 
             {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-white border border-parchment rounded-sm px-5 py-4 shadow-editorial">
-                  <div className="flex space-x-2">
-                    <div className="w-2 h-2 bg-slate-muted rounded-full typing-dot" />
-                    <div className="w-2 h-2 bg-slate-muted rounded-full typing-dot" />
-                    <div className="w-2 h-2 bg-slate-muted rounded-full typing-dot" />
-                  </div>
+              <div className="flex justify-start pl-2 py-3">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-burgundy/70 thinking-dot" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-burgundy/70 thinking-dot" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-burgundy/70 thinking-dot" />
                 </div>
               </div>
             )}
@@ -2098,94 +2274,27 @@ export default function ConversationPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input area - Editorial style */}
-          <div className="border-t border-parchment bg-ivory p-5">
+          {/* Input area - Claude style */}
+          <div className="p-4 bg-ivory flex justify-center">
+          <div className="w-full md:w-[80%]">
             {/* Hidden file input */}
             <input
               ref={fileInputRef}
               type="file"
               onChange={handleFileChange}
-              accept=".csv,.xlsx,.xls,.dta,.sav,.rds,.rda,.rdata,.txt,.pdf"
+              accept=".js,.jsx,.ts,.tsx,.py,.rb,.c,.cpp,.h,.hpp,.java,.go,.rs,.lisp,.scm,.el,.bas,.txt,.md,.json,.yaml,.yml,.xml,.html,.css,.scss,.sh,.bash,.zsh,.pl,.php,.swift,.kt,.scala,.clj,.hs,.ml,.fs,.lua,.r,.jl,.m,.sql,.asm,.s"
               className="hidden"
             />
 
             {/* Upload error message */}
             {uploadError && (
-              <div className="mb-4 p-4 bg-error/5 border border-error/20 rounded-sm font-body text-body-sm text-error flex items-center justify-between">
+              <div className="mb-3 p-3 bg-error/5 border border-error/20 rounded-lg font-body text-body-sm text-error flex items-center justify-between">
                 <span>{uploadError}</span>
                 <button onClick={() => setUploadError(null)} className="text-error/70 hover:text-error">
                   <X className="h-4 w-4" strokeWidth={1.5} />
                 </button>
               </div>
             )}
-
-            {/* Action buttons - Compact style */}
-            <div className="flex gap-1.5 mb-3">
-              <button
-                onClick={() => setShowCodeInput(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 font-sans text-xs text-slate hover:bg-cream hover:text-ink rounded-sm transition-colors"
-              >
-                <Code className="h-3.5 w-3.5" strokeWidth={1.5} />
-                Add Code
-              </button>
-              <button
-                onClick={handleUpload}
-                disabled={isUploading}
-                className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1.5 font-sans text-xs rounded-sm transition-colors",
-                  isUploading
-                    ? "bg-parchment text-slate-muted cursor-not-allowed"
-                    : "text-slate hover:bg-cream hover:text-ink"
-                )}
-              >
-                {isUploading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
-                )}
-                {isUploading ? "Uploading..." : "Load Code"}
-              </button>
-              <button
-                onClick={handleSearchLiterature}
-                disabled={isSearchingLiterature}
-                className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1.5 font-sans text-xs rounded-sm transition-colors",
-                  isSearchingLiterature
-                    ? "bg-parchment text-slate-muted cursor-not-allowed"
-                    : "text-slate hover:bg-cream hover:text-ink"
-                )}
-              >
-                {isSearchingLiterature ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <BookOpen className="h-3.5 w-3.5" strokeWidth={1.5} />
-                )}
-                {isSearchingLiterature ? "Searching..." : "References"}
-              </button>
-              <button
-                onClick={handleGenerateOutput}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 font-sans text-xs text-slate hover:bg-cream hover:text-ink rounded-sm transition-colors"
-              >
-                <FileOutput className="h-3.5 w-3.5" strokeWidth={1.5} />
-                Generate
-              </button>
-              {/* Guided prompts button - only show if prompts exist for current mode/phase */}
-              {session.mode && (GUIDED_PROMPTS[session.mode]?.[session.currentPhase]?.length ?? 0) > 0 && (
-                <button
-                  onClick={() => setShowGuidedPrompts(!showGuidedPrompts)}
-                  className={cn(
-                    "flex items-center gap-1.5 px-2.5 py-1.5 font-sans text-xs rounded-sm transition-colors",
-                    showGuidedPrompts
-                      ? "bg-burgundy/10 text-burgundy"
-                      : "text-slate hover:bg-cream hover:text-ink"
-                  )}
-                  title="Show guided questions for this phase"
-                >
-                  <Lightbulb className="h-3.5 w-3.5" strokeWidth={1.5} />
-                  Prompts
-                </button>
-              )}
-            </div>
 
             {/* Guided prompts panel */}
             {showGuidedPrompts && session.mode && (
@@ -2198,42 +2307,160 @@ export default function ConversationPage() {
               </div>
             )}
 
-            {/* Message input - Editorial style */}
-            <div className="flex gap-4">
+            {/* Claude-style input container */}
+            <div className="bg-white rounded-2xl border border-parchment shadow-sm">
+              {/* Textarea */}
               <textarea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type your message..."
-                className={cn(
-                  "flex-1 resize-none rounded-sm border border-parchment-dark px-4 py-3",
-                  "font-body text-body-md text-ink bg-white",
-                  "focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy",
-                  "placeholder:text-slate-muted",
-                  "shadow-editorial-inner"
-                )}
+                placeholder="Reply..."
+                className="w-full resize-none rounded-t-2xl px-4 py-3 font-body bg-transparent focus:outline-none placeholder:text-slate-muted overflow-hidden"
+                style={{ fontSize: `${chatFontSize}px`, minHeight: '44px' }}
                 rows={1}
               />
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() || isLoading}
-                className={cn(
-                  "px-5 py-3 rounded-sm transition-all duration-300",
-                  "flex items-center justify-center",
-                  input.trim() && !isLoading
-                    ? "bg-burgundy text-ivory hover:bg-burgundy-900"
-                    : "bg-parchment text-slate-muted cursor-not-allowed"
-                )}
-                aria-label="Send message"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Send className="h-5 w-5" strokeWidth={1.5} />
-                )}
-              </button>
+
+              {/* Bottom toolbar */}
+              <div className="flex items-center justify-between px-3 pb-2">
+                {/* Left side icons */}
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => setShowCodeInput(true)}
+                    className="p-1.5 text-slate hover:text-ink rounded-md transition-colors"
+                    title="Add code"
+                  >
+                    <Code className="h-4 w-4" strokeWidth={1.5} />
+                  </button>
+                  <button
+                    onClick={handleUpload}
+                    disabled={isUploading}
+                    className={cn(
+                      "p-1.5 rounded-md transition-colors",
+                      isUploading
+                        ? "text-slate-muted cursor-not-allowed"
+                        : "text-slate hover:text-ink"
+                    )}
+                    title={isUploading ? "Uploading..." : "Load code from file"}
+                  >
+                    {isUploading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4" strokeWidth={1.5} />
+                    )}
+                  </button>
+                  <button
+                    onClick={handleSearchLiterature}
+                    disabled={isSearchingLiterature}
+                    className={cn(
+                      "p-1.5 rounded-md transition-colors",
+                      isSearchingLiterature
+                        ? "text-slate-muted cursor-not-allowed"
+                        : "text-slate hover:text-ink"
+                    )}
+                    title={isSearchingLiterature ? "Searching..." : "Search references"}
+                  >
+                    {isSearchingLiterature ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <BookOpen className="h-4 w-4" strokeWidth={1.5} />
+                    )}
+                  </button>
+                  <button
+                    onClick={handleGenerateOutput}
+                    className="p-1.5 text-slate hover:text-ink rounded-md transition-colors"
+                    title="Generate output"
+                  >
+                    <FileOutput className="h-4 w-4" strokeWidth={1.5} />
+                  </button>
+                  {/* View Context button - show for archaeology and interpret modes when code exists */}
+                  {(session.mode === "archaeology" || session.mode === "interpret") && session.codeFiles.length > 0 && (
+                    <button
+                      onClick={() => setShowContextPreview(true)}
+                      className="p-1.5 text-slate hover:text-ink rounded-md transition-colors"
+                      title="View context sent to LLM"
+                    >
+                      <Eye className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
+                  )}
+                  {/* Guided prompts button - only show if prompts exist for current mode/phase */}
+                  {session.mode && (GUIDED_PROMPTS[session.mode]?.[session.currentPhase]?.length ?? 0) > 0 && (
+                    <button
+                      onClick={() => setShowGuidedPrompts(!showGuidedPrompts)}
+                      className={cn(
+                        "p-1.5 rounded-md transition-colors",
+                        showGuidedPrompts
+                          ? "text-burgundy"
+                          : "text-slate hover:text-ink"
+                      )}
+                      title="Guided prompts"
+                    >
+                      <Lightbulb className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Right side: font size + send button */}
+                <div className="flex items-center gap-1">
+                  {/* Font size popover */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowFontSizePopover(!showFontSizePopover)}
+                      className={cn(
+                        "p-1.5 rounded-md transition-colors",
+                        showFontSizePopover ? "text-burgundy" : "text-slate hover:text-ink"
+                      )}
+                      title="Font size"
+                    >
+                      <SlidersHorizontal className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
+                    {showFontSizePopover && (
+                      <div className="absolute bottom-full right-0 mb-2 bg-white rounded-lg border border-parchment shadow-lg p-2 z-50">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setChatFontSize(prev => Math.max(MIN_CHAT_FONT_SIZE, prev - 1))}
+                            disabled={chatFontSize <= MIN_CHAT_FONT_SIZE}
+                            className="p-1.5 text-slate hover:text-ink hover:bg-cream rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Decrease"
+                          >
+                            <Minus className="h-3 w-3" strokeWidth={1.5} />
+                          </button>
+                          <span className="text-xs text-ink font-mono w-6 text-center">{chatFontSize}</span>
+                          <button
+                            onClick={() => setChatFontSize(prev => Math.min(MAX_CHAT_FONT_SIZE, prev + 1))}
+                            disabled={chatFontSize >= MAX_CHAT_FONT_SIZE}
+                            className="p-1.5 text-slate hover:text-ink hover:bg-cream rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Increase"
+                          >
+                            <Plus className="h-3 w-3" strokeWidth={1.5} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Send button */}
+                  <button
+                    onClick={handleSend}
+                    disabled={!input.trim() || isLoading}
+                    className={cn(
+                      "p-2 rounded-lg flex items-center justify-center transition-colors",
+                      input.trim() && !isLoading
+                        ? "bg-burgundy text-ivory hover:bg-burgundy-dark"
+                        : "bg-parchment text-slate-muted cursor-not-allowed"
+                    )}
+                    aria-label="Send message"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowUp className="h-4 w-4" strokeWidth={2} />
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
+          </div>
           </div>
         </div>
 
@@ -2467,37 +2694,6 @@ export default function ConversationPage() {
               )}
             </section>
 
-            {/* Analysis results */}
-            <section>
-              <h3 className="font-sans text-[10px] uppercase tracking-widest text-slate-muted mb-2">
-                Analysis Results
-              </h3>
-              {session.analysisResults.length === 0 ? (
-                <p className="font-body text-xs text-slate-muted italic">No analysis run</p>
-              ) : (
-                <ul className="space-y-1.5">
-                  {session.analysisResults.map((result) => (
-                    <li
-                      key={result.id}
-                      className="font-body text-xs bg-white border border-parchment rounded-sm p-2"
-                    >
-                      <div className="font-medium text-ink capitalize">
-                        {result.type}
-                      </div>
-                      <p className="text-[10px] text-slate mt-0.5">
-                        {result.summary}
-                      </p>
-                      {result.notes && result.notes.length > 0 && (
-                        <div className="mt-1 text-[10px] text-slate-muted">
-                          {result.notes.length} note(s) attached
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-
             {/* References */}
             <section>
               <div className="flex items-center justify-between mb-2">
@@ -2615,13 +2811,29 @@ export default function ConversationPage() {
 }
 
 // Message bubble component - Editorial style (matching critique mode)
-function MessageBubble({ message, fontSize = 14 }: { message: Message; fontSize?: number }) {
+interface MessageBubbleProps {
+  message: Message;
+  fontSize?: number;
+  isCopied?: boolean;
+  isFavourite?: boolean;
+  onCopy?: (messageId: string, content: string) => void;
+  onToggleFavourite?: (messageId: string) => void;
+}
+
+function MessageBubble({
+  message,
+  fontSize = 14,
+  isCopied = false,
+  isFavourite = false,
+  onCopy,
+  onToggleFavourite,
+}: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   return (
     <div
       className={cn(
-        "message-enter",
+        "message-enter group/message",
         isUser ? "flex flex-col items-end" : "flex flex-col items-start"
       )}
     >
@@ -2640,10 +2852,41 @@ function MessageBubble({ message, fontSize = 14 }: { message: Message; fontSize?
           {message.content}
         </p>
       </div>
-      <div className="mt-1 px-1">
+      <div className="mt-1 px-1 flex items-center justify-between w-full max-w-[80%]">
         <span className="font-sans text-[9px] text-slate-muted">
           {formatTimestamp(message.timestamp)}
         </span>
+        {!isUser && onCopy && onToggleFavourite && (
+          <div className="flex items-center gap-0.5 opacity-0 group-hover/message:opacity-100 transition-opacity">
+            <button
+              onClick={() => onCopy(message.id, message.content)}
+              className="p-1 text-slate-muted hover:text-ink rounded-sm transition-colors"
+              title="Copy response"
+            >
+              {isCopied ? (
+                <Check className="h-3 w-3 text-green-600" strokeWidth={1.5} />
+              ) : (
+                <Copy className="h-3 w-3" strokeWidth={1.5} />
+              )}
+            </button>
+            <button
+              onClick={() => onToggleFavourite(message.id)}
+              className={cn(
+                "p-1 rounded-sm transition-colors",
+                isFavourite
+                  ? "text-burgundy"
+                  : "text-slate-muted hover:text-ink"
+              )}
+              title={isFavourite ? "Liked" : "Like"}
+            >
+              <Heart
+                className="h-3 w-3"
+                strokeWidth={1.5}
+                fill={isFavourite ? "currentColor" : "none"}
+              />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

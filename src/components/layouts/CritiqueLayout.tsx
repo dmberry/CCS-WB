@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, useImperativeHandle, forwardRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/context/SessionContext";
 import { useAISettings } from "@/context/AISettingsContext";
@@ -22,9 +22,15 @@ import {
   FolderOpen,
   FileText,
   FileDown,
-  Settings2,
   Minus,
   Plus,
+  Eye,
+  MessageSquare,
+  Copy,
+  Check,
+  Heart,
+  ArrowUp,
+  SlidersHorizontal,
 } from "lucide-react";
 import { CodeEditorPanel, generateAnnotatedCode } from "@/components/code";
 import { ContextPreview } from "@/components/chat";
@@ -43,6 +49,12 @@ import ReactMarkdown from "react-markdown";
 
 interface CritiqueLayoutProps {
   onNavigateHome: () => void;
+  triggerSave?: boolean;
+  onSaveTriggered?: () => void;
+}
+
+export interface CritiqueLayoutRef {
+  save: () => void;
 }
 
 // Font size constants for chat
@@ -81,9 +93,11 @@ const CRITIQUE_LANGUAGES = [
   "Other",
 ] as const;
 
-export function CritiqueLayout({
+export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>(function CritiqueLayout({
   onNavigateHome,
-}: CritiqueLayoutProps) {
+  triggerSave = false,
+  onSaveTriggered,
+}, ref) {
   const {
     session,
     addMessage,
@@ -94,6 +108,7 @@ export function CritiqueLayout({
     importSession,
   } = useSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured } = useAISettings();
+  const router = useRouter();
 
   // State
   const [input, setInput] = useState("");
@@ -108,15 +123,20 @@ export function CritiqueLayout({
   const [codeInputLanguage, setCodeInputLanguage] = useState("");
   const [projectName, setProjectName] = useState<string>("");
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showSendContextModal, setShowSendContextModal] = useState(false);
+  const [showFontSizePopover, setShowFontSizePopover] = useState(false);
+
+  // Message interaction state
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [favouriteMessages, setFavouriteMessages] = useState<Set<string>>(new Set());
 
   // Resizable panel state (percentage width for code panel)
   const [codePanelWidth, setCodePanelWidth] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Chat font size (in points)
+  // Chat font size (in pixels)
   const [chatFontSize, setChatFontSize] = useState<number>(14);
-  const [showChatFontSettings, setShowChatFontSettings] = useState(false);
 
   // Code contents storage (fileId -> content)
   const [codeContents, setCodeContents] = useState<Map<string, string>>(new Map());
@@ -212,6 +232,30 @@ export function CritiqueLayout({
 
     return parts.join("\n");
   }, [session.codeFiles, session.lineAnnotations, codeContents]);
+
+  // Handle copy message
+  const handleCopyMessage = useCallback(async (messageId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedMessageId(messageId);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  }, []);
+
+  // Handle toggle favourite message
+  const handleToggleFavourite = useCallback((messageId: string) => {
+    setFavouriteMessages(prev => {
+      const next = new Set(prev);
+      if (next.has(messageId)) {
+        next.delete(messageId);
+      } else {
+        next.add(messageId);
+      }
+      return next;
+    });
+  }, []);
 
   // Handle send message
   const handleSend = useCallback(async () => {
@@ -311,6 +355,21 @@ export function CritiqueLayout({
     },
     [handleSend]
   );
+
+  // Global keyboard shortcuts
+  // Auto-resize textarea as content grows
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (textarea) {
+      // Reset height to auto to get correct scrollHeight
+      textarea.style.height = 'auto';
+      // Set to scrollHeight, with a max of ~200px (about 10 lines)
+      const maxHeight = 200;
+      textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+      // Add overflow if exceeds max
+      textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
+    }
+  }, [input]);
 
   // Handle file upload
   const handleFileChange = useCallback(
@@ -425,6 +484,84 @@ export function CritiqueLayout({
     URL.revokeObjectURL(url);
   }, [session, codeContents, projectName]);
 
+  // Expose save function to parent via ref
+  useImperativeHandle(ref, () => ({
+    save: handleSaveSession,
+  }), [handleSaveSession]);
+
+  // Handle save trigger from parent (prop-based approach as backup)
+  useEffect(() => {
+    if (triggerSave) {
+      handleSaveSession();
+      onSaveTriggered?.();
+    }
+  }, [triggerSave, handleSaveSession, onSaveTriggered]);
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey;
+
+      // Cmd/Ctrl + S - Save project
+      if (isMod && e.key === 's') {
+        e.preventDefault();
+        handleSaveSession();
+        return;
+      }
+
+      // Cmd/Ctrl + O - Open/Load project
+      if (isMod && e.key === 'o') {
+        e.preventDefault();
+        sessionLoadInputRef.current?.click();
+        return;
+      }
+
+      // Cmd/Ctrl + E - Export
+      if (isMod && e.key === 'e') {
+        e.preventDefault();
+        setShowExportModal(true);
+        return;
+      }
+
+      // Cmd/Ctrl + / - Focus input
+      if (isMod && e.key === '/') {
+        e.preventDefault();
+        inputRef.current?.focus();
+        return;
+      }
+
+      // Cmd/Ctrl + - - Decrease font size
+      if (isMod && e.key === '-') {
+        e.preventDefault();
+        setChatFontSize(prev => Math.max(MIN_CHAT_FONT_SIZE, prev - 1));
+        return;
+      }
+
+      // Cmd/Ctrl + = or + - Increase font size
+      if (isMod && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        setChatFontSize(prev => Math.min(MAX_CHAT_FONT_SIZE, prev + 1));
+        return;
+      }
+
+      // Escape - Close popovers/modals
+      if (e.key === 'Escape') {
+        setShowFontSizePopover(false);
+        setShowGuidedPrompts(false);
+        setShowSendContextModal(false);
+        setShowExperienceHelp(false);
+        setShowCodeInput(false);
+        setShowSettings(false);
+        setShowAISettings(false);
+        setShowExportModal(false);
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [handleSaveSession]);
+
   // File management handlers
   const handleDeleteFile = useCallback((fileId: string) => {
     removeCode(fileId);
@@ -531,7 +668,7 @@ export function CritiqueLayout({
   return (
     <div className="h-screen flex flex-col bg-ivory">
       {/* Header */}
-      <header className="border-b border-parchment bg-ivory px-4 py-2 flex items-center justify-between z-10 relative">
+      <header className="border-b border-parchment bg-ivory px-4 py-1 flex items-center justify-between z-10 relative">
         <div className="flex items-center gap-4">
           <button
             onClick={onNavigateHome}
@@ -665,75 +802,13 @@ export function CritiqueLayout({
 
         {/* Right: Chat Panel */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Chat header with font size controls */}
-          <div className="px-4 py-2 border-b border-parchment bg-cream/30 flex items-center justify-between">
-            <span className="font-sans text-[10px] uppercase tracking-widest text-slate-muted">
-              Conversation
-            </span>
-            <div className="relative">
-              <button
-                onClick={() => setShowChatFontSettings(!showChatFontSettings)}
-                className={cn(
-                  "p-1 transition-colors",
-                  showChatFontSettings ? "text-burgundy" : "text-slate-muted hover:text-ink"
-                )}
-                title="Font size settings"
-              >
-                <Settings2 className="h-3.5 w-3.5" strokeWidth={1.5} />
-              </button>
-              {showChatFontSettings && (
-                <div className="absolute top-full right-0 mt-1 w-36 bg-white rounded-sm shadow-lg border border-parchment p-3 z-50">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-display text-xs text-ink">Font Size</h4>
-                    <button
-                      onClick={() => setShowChatFontSettings(false)}
-                      className="p-0.5 text-slate hover:text-ink"
-                    >
-                      <X className="h-3 w-3" strokeWidth={1.5} />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setChatFontSize(prev => Math.max(MIN_CHAT_FONT_SIZE, prev - 1))}
-                      disabled={chatFontSize <= MIN_CHAT_FONT_SIZE}
-                      className="p-1 rounded-sm border border-parchment hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <Minus className="h-3 w-3" strokeWidth={1.5} />
-                    </button>
-                    <input
-                      type="number"
-                      min={MIN_CHAT_FONT_SIZE}
-                      max={MAX_CHAT_FONT_SIZE}
-                      value={chatFontSize}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val)) {
-                          setChatFontSize(Math.min(MAX_CHAT_FONT_SIZE, Math.max(MIN_CHAT_FONT_SIZE, val)));
-                        }
-                      }}
-                      className="w-12 px-1 py-0.5 text-center text-[11px] font-mono border border-parchment rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy"
-                    />
-                    <button
-                      onClick={() => setChatFontSize(prev => Math.min(MAX_CHAT_FONT_SIZE, prev + 1))}
-                      disabled={chatFontSize >= MAX_CHAT_FONT_SIZE}
-                      className="p-1 rounded-sm border border-parchment hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <Plus className="h-3 w-3" strokeWidth={1.5} />
-                    </button>
-                    <span className="text-[9px] text-slate-muted">px</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {session.messages.map((message) => (
               <div
                 key={message.id}
                 className={cn(
-                  "max-w-[90%]",
+                  "max-w-[90%] group/message",
                   message.role === "user" ? "ml-auto" : "mr-auto"
                 )}
               >
@@ -752,18 +827,51 @@ export function CritiqueLayout({
                     <ReactMarkdown>{message.content}</ReactMarkdown>
                   </div>
                 </div>
-                <div className="mt-1 px-1">
+                <div className="mt-1 px-1 flex items-center justify-between">
                   <span className="font-sans text-[9px] text-slate-muted">
                     {formatTimestamp(message.timestamp)}
                   </span>
+                  {message.role === "assistant" && (
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover/message:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleCopyMessage(message.id, message.content)}
+                        className="p-1 text-slate-muted hover:text-ink rounded-sm transition-colors"
+                        title="Copy response"
+                      >
+                        {copiedMessageId === message.id ? (
+                          <Check className="h-3 w-3 text-green-600" strokeWidth={1.5} />
+                        ) : (
+                          <Copy className="h-3 w-3" strokeWidth={1.5} />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleToggleFavourite(message.id)}
+                        className={cn(
+                          "p-1 rounded-sm transition-colors",
+                          favouriteMessages.has(message.id)
+                            ? "text-burgundy"
+                            : "text-slate-muted hover:text-ink"
+                        )}
+                        title={favouriteMessages.has(message.id) ? "Liked" : "Like"}
+                      >
+                        <Heart
+                          className="h-3 w-3"
+                          strokeWidth={1.5}
+                          fill={favouriteMessages.has(message.id) ? "currentColor" : "none"}
+                        />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
 
             {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-white border border-parchment rounded-sm px-4 py-3">
-                  <Loader2 className="h-4 w-4 animate-spin text-slate-muted" />
+              <div className="flex justify-start pl-2 py-2">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-burgundy/70 thinking-dot" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-burgundy/70 thinking-dot" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-burgundy/70 thinking-dot" />
                 </div>
               </div>
             )}
@@ -790,74 +898,34 @@ export function CritiqueLayout({
             </div>
           )}
 
-          {/* Input area */}
-          <div className="border-t border-parchment p-4">
-            {/* Action buttons */}
-            <div className="flex items-center gap-2 mb-3">
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={handleFileChange}
-                accept=".js,.ts,.py,.rb,.c,.cpp,.h,.java,.go,.rs,.lisp,.scm,.el,.bas,.txt"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 font-sans text-xs text-slate hover:bg-cream rounded-sm"
-              >
-                <Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
-                Load Code
-              </button>
-              <button
-                onClick={() => setShowCodeInput(!showCodeInput)}
-                className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1.5 font-sans text-xs rounded-sm",
-                  showCodeInput ? "bg-burgundy/10 text-burgundy" : "text-slate hover:bg-cream"
-                )}
-              >
-                Paste Code
-              </button>
-              {session.codeFiles.length > 0 && (
-                <button
-                  onClick={() => {
-                    setInput("Suggest 3-5 annotations I could add to this code. For each suggestion, specify the line number, annotation type (Obs, Q, Met, Pat, Ctx, or Crit), and the annotation text. Focus on interesting interpretive entry points for close reading.");
-                    inputRef.current?.focus();
-                  }}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 font-sans text-xs text-slate hover:bg-cream rounded-sm"
-                >
-                  <Sparkles className="h-3.5 w-3.5" strokeWidth={1.5} />
-                  Help Annotate
-                </button>
-              )}
-              {(GUIDED_PROMPTS[session.mode]?.[session.currentPhase]?.length ?? 0) > 0 && (
-                <button
-                  onClick={() => setShowGuidedPrompts(!showGuidedPrompts)}
-                  className={cn(
-                    "flex items-center gap-1.5 px-2.5 py-1.5 font-sans text-xs rounded-sm",
-                    showGuidedPrompts ? "bg-burgundy/10 text-burgundy" : "text-slate hover:bg-cream"
-                  )}
-                >
-                  <Lightbulb className="h-3.5 w-3.5" strokeWidth={1.5} />
-                  Prompts
-                </button>
-              )}
-            </div>
+          {/* Input area - Claude-style */}
+          <div className="p-3 flex justify-center">
+          <div className="w-full md:w-[80%]">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              onChange={handleFileChange}
+              accept=".js,.jsx,.ts,.tsx,.py,.rb,.c,.cpp,.h,.hpp,.java,.go,.rs,.lisp,.scm,.el,.bas,.txt,.md,.json,.yaml,.yml,.xml,.html,.css,.scss,.sh,.bash,.zsh,.pl,.php,.swift,.kt,.scala,.clj,.hs,.ml,.fs,.lua,.r,.jl,.m,.sql,.asm,.s"
+            />
 
             {/* Code paste input */}
             {showCodeInput && (
-              <div className="mb-3 p-3 bg-cream/50 border border-parchment rounded-sm">
+              <div className="mb-3 p-3 bg-cream/50 border border-parchment rounded-lg">
                 <div className="flex gap-2 mb-2">
                   <input
                     type="text"
                     value={codeInputName}
                     onChange={(e) => setCodeInputName(e.target.value)}
                     placeholder="File name"
-                    className="flex-1 px-2 py-1 text-xs border border-parchment rounded bg-white"
+                    className="flex-1 px-2 py-1 border border-parchment rounded bg-white"
+                    style={{ fontSize: `${chatFontSize}px` }}
                   />
                   <select
                     value={codeInputLanguage}
                     onChange={(e) => setCodeInputLanguage(e.target.value)}
-                    className="w-28 px-2 py-1 text-xs border border-parchment rounded bg-white"
+                    className="w-28 px-2 py-1 border border-parchment rounded bg-white"
+                    style={{ fontSize: `${chatFontSize}px` }}
                   >
                     {CRITIQUE_LANGUAGES.map((lang) => (
                       <option key={lang} value={lang}>
@@ -870,7 +938,8 @@ export function CritiqueLayout({
                   value={codeInputText}
                   onChange={(e) => setCodeInputText(e.target.value)}
                   placeholder="Paste your code here..."
-                  className="w-full h-32 px-2 py-1 text-xs font-mono border border-parchment rounded bg-white resize-none"
+                  className="w-full h-32 px-2 py-1 font-mono border border-parchment rounded bg-white resize-none"
+                  style={{ fontSize: `${chatFontSize}px` }}
                 />
                 <div className="flex justify-end gap-2 mt-2">
                   <button
@@ -890,34 +959,136 @@ export function CritiqueLayout({
               </div>
             )}
 
-            {/* Message input */}
-            <div className="flex gap-3">
+            {/* Claude-style input container */}
+            <div className="bg-white rounded-2xl border border-parchment shadow-sm">
+              {/* Textarea */}
               <textarea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about the code..."
-                className="flex-1 resize-none rounded-sm border border-parchment px-3 py-2 font-body text-sm bg-white focus:outline-none focus:ring-1 focus:ring-burgundy"
-                rows={2}
+                placeholder="Reply..."
+                className="w-full resize-none rounded-t-2xl px-4 py-3 font-body bg-transparent focus:outline-none overflow-hidden"
+                style={{ fontSize: `${chatFontSize}px`, minHeight: '44px' }}
+                rows={1}
               />
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() || isLoading}
-                className={cn(
-                  "px-4 rounded-sm flex items-center justify-center",
-                  input.trim() && !isLoading
-                    ? "bg-burgundy text-ivory hover:bg-burgundy-dark"
-                    : "bg-parchment text-slate-muted cursor-not-allowed"
-                )}
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" strokeWidth={1.5} />
-                )}
-              </button>
+
+              {/* Bottom toolbar */}
+              <div className="flex items-center justify-between px-3 pb-2">
+                {/* Left side icons */}
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-1.5 text-slate hover:text-ink rounded-md transition-colors"
+                    title="Load code from file"
+                  >
+                    <Upload className="h-4 w-4" strokeWidth={1.5} />
+                  </button>
+                  <button
+                    onClick={() => setShowCodeInput(!showCodeInput)}
+                    className={cn(
+                      "p-1.5 rounded-md transition-colors",
+                      showCodeInput ? "text-burgundy" : "text-slate hover:text-ink"
+                    )}
+                    title="Paste code"
+                  >
+                    <FileText className="h-4 w-4" strokeWidth={1.5} />
+                  </button>
+                  {session.codeFiles.length > 0 && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setInput("Suggest 3-5 annotations I could add to this code. For each suggestion, specify the line number, annotation type (Obs, Q, Met, Pat, Ctx, or Crit), and the annotation text. Focus on interesting interpretive entry points for close reading.");
+                          inputRef.current?.focus();
+                        }}
+                        className="p-1.5 text-slate hover:text-ink rounded-md transition-colors"
+                        title="Help annotate"
+                      >
+                        <Sparkles className="h-4 w-4" strokeWidth={1.5} />
+                      </button>
+                      <button
+                        onClick={() => setShowSendContextModal(true)}
+                        className="p-1.5 text-slate hover:text-ink rounded-md transition-colors"
+                        title="View context sent to LLM"
+                      >
+                        <Eye className="h-4 w-4" strokeWidth={1.5} />
+                      </button>
+                    </>
+                  )}
+                  {(GUIDED_PROMPTS[session.mode]?.[session.currentPhase]?.length ?? 0) > 0 && (
+                    <button
+                      onClick={() => setShowGuidedPrompts(!showGuidedPrompts)}
+                      className={cn(
+                        "p-1.5 rounded-md transition-colors",
+                        showGuidedPrompts ? "text-burgundy" : "text-slate hover:text-ink"
+                      )}
+                      title="Guided prompts"
+                    >
+                      <Lightbulb className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Right side: font size + send button */}
+                <div className="flex items-center gap-1">
+                  {/* Font size popover */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowFontSizePopover(!showFontSizePopover)}
+                      className={cn(
+                        "p-1.5 rounded-md transition-colors",
+                        showFontSizePopover ? "text-burgundy" : "text-slate hover:text-ink"
+                      )}
+                      title="Font size"
+                    >
+                      <SlidersHorizontal className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
+                    {showFontSizePopover && (
+                      <div className="absolute bottom-full right-0 mb-2 bg-white rounded-lg border border-parchment shadow-lg p-2 z-50">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setChatFontSize(prev => Math.max(MIN_CHAT_FONT_SIZE, prev - 1))}
+                            disabled={chatFontSize <= MIN_CHAT_FONT_SIZE}
+                            className="p-1.5 text-slate hover:text-ink hover:bg-cream rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Decrease"
+                          >
+                            <Minus className="h-3 w-3" strokeWidth={1.5} />
+                          </button>
+                          <span className="text-xs text-ink font-mono w-6 text-center">{chatFontSize}</span>
+                          <button
+                            onClick={() => setChatFontSize(prev => Math.min(MAX_CHAT_FONT_SIZE, prev + 1))}
+                            disabled={chatFontSize >= MAX_CHAT_FONT_SIZE}
+                            className="p-1.5 text-slate hover:text-ink hover:bg-cream rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                            title="Increase"
+                          >
+                            <Plus className="h-3 w-3" strokeWidth={1.5} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Send button */}
+                  <button
+                    onClick={handleSend}
+                    disabled={!input.trim() || isLoading}
+                    className={cn(
+                      "p-2 rounded-lg flex items-center justify-center transition-colors",
+                      input.trim() && !isLoading
+                        ? "bg-burgundy text-ivory hover:bg-burgundy-dark"
+                        : "bg-parchment text-slate-muted cursor-not-allowed"
+                    )}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <ArrowUp className="h-4 w-4" strokeWidth={2} />
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
+          </div>
           </div>
         </div>
       </div>
@@ -1059,6 +1230,61 @@ export function CritiqueLayout({
           </div>
         </div>
       )}
+
+      {/* Send Context Modal - Shows what gets sent to the LLM */}
+      {showSendContextModal && (
+        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-sm shadow-lg w-full max-w-2xl mx-4 border border-parchment max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-parchment">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-burgundy" strokeWidth={1.5} />
+                <h3 className="font-display text-lg text-ink">LLM Context Preview</h3>
+              </div>
+              <button
+                onClick={() => setShowSendContextModal(false)}
+                className="text-slate-muted hover:text-ink transition-colors"
+              >
+                <X className="h-5 w-5" strokeWidth={1.5} />
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-y-auto">
+              <p className="font-body text-sm text-slate mb-4">
+                This is the annotated code context that gets sent to the LLM with each message.
+                Your annotations are embedded as <code className="bg-cream px-1 rounded text-xs">// An:Type:</code> comments.
+              </p>
+              <div className="mb-4 p-3 bg-cream/50 rounded-sm border border-parchment">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-sans text-xs font-medium text-ink">Summary</span>
+                </div>
+                <ul className="font-body text-xs text-slate space-y-1">
+                  <li>• {session.codeFiles.length} code file{session.codeFiles.length !== 1 ? "s" : ""}</li>
+                  <li>• {session.lineAnnotations.length} annotation{session.lineAnnotations.length !== 1 ? "s" : ""}</li>
+                  <li>• {annotatedCodeContext.length.toLocaleString()} characters total</li>
+                </ul>
+              </div>
+              <div className="border border-parchment rounded-sm">
+                <div className="px-3 py-2 bg-cream/30 border-b border-parchment">
+                  <span className="font-sans text-xs text-slate-muted uppercase tracking-wider">Context Sent to LLM</span>
+                </div>
+                <pre className="p-3 text-xs font-mono text-ink whitespace-pre-wrap overflow-x-auto max-h-64 overflow-y-auto bg-white">
+                  {annotatedCodeContext || "(No code loaded yet)"}
+                </pre>
+              </div>
+            </div>
+            <div className="p-4 border-t border-parchment flex justify-between items-center">
+              <p className="font-body text-xs text-slate-muted">
+                Add annotations in the code panel to enrich the context.
+              </p>
+              <button
+                onClick={() => setShowSendContextModal(false)}
+                className="px-4 py-2 text-sm text-slate hover:text-ink border border-parchment rounded-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+});
