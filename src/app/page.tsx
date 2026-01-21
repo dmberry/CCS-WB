@@ -152,6 +152,26 @@ export default function WelcomePage() {
             </h1>
             <div className="flex items-center gap-1">
               <button
+                onClick={() => setShowAISettings(true)}
+                className={cn(
+                  "font-sans text-[10px] px-2 py-0.5 border rounded-sm transition-colors",
+                  !aiSettings.aiEnabled
+                    ? "text-red-700 bg-red-50 border-red-200 hover:border-red-400"
+                    : isAIConfigured
+                      ? "text-green-700 bg-green-50 border-green-200 hover:border-green-400"
+                      : "text-amber-700 bg-amber-50 border-amber-200 hover:border-amber-400"
+                )}
+                title={
+                  !aiSettings.aiEnabled
+                    ? "AI disabled - click to enable"
+                    : isAIConfigured
+                      ? "AI connected - click to configure"
+                      : "AI not configured - click to set up"
+                }
+              >
+                {!aiSettings.aiEnabled ? "AI: Off" : isAIConfigured ? "AI: On" : "AI: ??"}
+              </button>
+              <button
                 onClick={() => setShowHelp(true)}
                 className="p-1 rounded-sm transition-colors text-slate hover:text-ink hover:bg-cream"
                 aria-label="Help"

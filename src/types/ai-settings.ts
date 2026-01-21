@@ -32,6 +32,7 @@ export interface AISettings {
   apiKey?: string;
   baseUrl?: string; // For Ollama and OpenAI-compatible
   customModelId?: string; // For custom model names
+  aiEnabled: boolean; // Master toggle for AI functionality
 }
 
 export interface AISettingsStorage {
@@ -58,4 +59,5 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
   provider: "ollama",
   model: "llama3.2",
   baseUrl: "http://localhost:11434",
+  aiEnabled: true,
 };

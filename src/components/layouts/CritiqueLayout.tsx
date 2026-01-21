@@ -109,6 +109,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     importSession,
   } = useSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured } = useAISettings();
+  const aiEnabled = aiSettings.aiEnabled;
   const router = useRouter();
 
   // State
@@ -698,6 +699,26 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           <span className="font-sans text-[10px] text-burgundy bg-burgundy/5 px-2 py-0.5 border border-burgundy/10 rounded-sm">
             Critique Mode
           </span>
+          <button
+            onClick={() => setShowAISettings(true)}
+            className={cn(
+              "font-sans text-[10px] px-2 py-0.5 border rounded-sm transition-colors",
+              !aiEnabled
+                ? "text-red-700 bg-red-50 border-red-200 hover:border-red-400"
+                : isAIConfigured
+                  ? "text-green-700 bg-green-50 border-green-200 hover:border-green-400"
+                  : "text-amber-700 bg-amber-50 border-amber-200 hover:border-amber-400"
+            )}
+            title={
+              !aiEnabled
+                ? "AI disabled - click to enable"
+                : isAIConfigured
+                  ? "AI connected - click to configure"
+                  : "AI not configured - click to set up"
+            }
+          >
+            {!aiEnabled ? "AI: Off" : isAIConfigured ? "AI: On" : "AI: ??"}
+          </button>
           <div className="relative">
             <button
               onClick={() => setShowExperienceHelp(!showExperienceHelp)}
@@ -790,12 +811,12 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
         </div>
       </header>
 
-      {/* Main three-panel layout */}
+      {/* Main layout - two or three panels depending on AI enabled */}
       <div ref={containerRef} className="flex-1 flex overflow-hidden">
         {/* Left + Center: Code Editor Panel */}
         <div
-          className="border-r border-parchment"
-          style={{ width: `${codePanelWidth}%` }}
+          className={cn(!aiEnabled && "flex-1", aiEnabled && "border-r border-parchment")}
+          style={aiEnabled ? { width: `${codePanelWidth}%` } : undefined}
         >
           <CodeEditorPanel
             codeFiles={session.codeFiles}
@@ -810,16 +831,19 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           />
         </div>
 
-        {/* Resizable divider */}
-        <div
-          onMouseDown={handleMouseDown}
-          className={cn(
-            "w-1 cursor-col-resize hover:bg-burgundy/30 transition-colors flex-shrink-0",
-            isDragging && "bg-burgundy/30"
-          )}
-        />
+        {/* Resizable divider - only show when AI enabled */}
+        {aiEnabled && (
+          <div
+            onMouseDown={handleMouseDown}
+            className={cn(
+              "w-1 cursor-col-resize hover:bg-burgundy/30 transition-colors flex-shrink-0",
+              isDragging && "bg-burgundy/30"
+            )}
+          />
+        )}
 
-        {/* Right: Chat Panel */}
+        {/* Right: Chat Panel - only show when AI enabled */}
+        {aiEnabled && (
         <div className="flex-1 flex flex-col min-w-0">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -1112,6 +1136,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* AI Settings Modal */}

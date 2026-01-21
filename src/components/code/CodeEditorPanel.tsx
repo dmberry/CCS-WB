@@ -635,7 +635,7 @@ export function CodeEditorPanel({
                   <HelpCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
                 </button>
                 {showAnnotationHelp && (
-                  <div className="absolute top-full right-0 mt-1 w-64 bg-white rounded-sm shadow-lg border border-parchment p-3 z-50">
+                  <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-sm shadow-lg border border-parchment p-3 z-50">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-display text-xs text-ink">Annotation Types</h4>
                       <button

@@ -26,6 +26,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
     setApiKey,
     setBaseUrl,
     setCustomModelId,
+    setAiEnabled,
     isConfigured,
   } = useAISettings();
 
@@ -93,8 +94,34 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
 
   return (
     <div className="space-y-5">
+      {/* AI Enable/Disable Toggle */}
+      <div className="flex items-center justify-between pb-4 border-b border-parchment">
+        <div>
+          <label className="block font-sans text-body-sm font-medium text-ink">
+            Enable AI Assistant
+          </label>
+          <p className="font-sans text-caption text-slate-muted mt-0.5">
+            When disabled, you can still annotate code and manage references
+          </p>
+        </div>
+        <button
+          onClick={() => setAiEnabled(!settings.aiEnabled)}
+          className={cn(
+            "w-12 h-6 rounded-full transition-colors relative flex-shrink-0",
+            settings.aiEnabled ? "bg-burgundy" : "bg-parchment"
+          )}
+        >
+          <span
+            className={cn(
+              "absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform",
+              settings.aiEnabled ? "translate-x-6" : "translate-x-0"
+            )}
+          />
+        </button>
+      </div>
+
       {/* Provider Selection */}
-      <div>
+      <div className={cn(!settings.aiEnabled && "opacity-50 pointer-events-none")}>
         <label className="block font-sans text-caption uppercase tracking-widest text-slate-muted mb-2">
           AI Provider
         </label>
@@ -148,7 +175,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
       </div>
 
       {/* Model Selection */}
-      <div>
+      <div className={cn(!settings.aiEnabled && "opacity-50 pointer-events-none")}>
         <label className="block font-sans text-caption uppercase tracking-widest text-slate-muted mb-2">
           Model
         </label>
@@ -197,7 +224,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
 
       {/* Custom Model ID (for Ollama/OpenAI-compatible) */}
       {showCustomModel && (
-        <div>
+        <div className={cn(!settings.aiEnabled && "opacity-50 pointer-events-none")}>
           <label className="block font-sans text-caption uppercase tracking-widest text-slate-muted mb-2">
             Custom Model ID
           </label>
@@ -218,7 +245,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
 
       {/* API Key (if required) */}
       {currentProvider.requiresApiKey && (
-        <div>
+        <div className={cn(!settings.aiEnabled && "opacity-50 pointer-events-none")}>
           <label className="block font-sans text-caption uppercase tracking-widest text-slate-muted mb-2">
             API Key
           </label>
@@ -256,7 +283,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
 
       {/* Base URL (for Ollama and OpenAI-compatible) */}
       {showBaseUrl && (
-        <div>
+        <div className={cn(!settings.aiEnabled && "opacity-50 pointer-events-none")}>
           <label className="block font-sans text-caption uppercase tracking-widest text-slate-muted mb-2">
             Base URL
           </label>
@@ -287,10 +314,10 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
       )}
 
       {/* Test Connection Button */}
-      <div className="pt-2">
+      <div className={cn("pt-2", !settings.aiEnabled && "opacity-50 pointer-events-none")}>
         <button
           onClick={handleTestConnection}
-          disabled={testStatus === "testing" || !isConfigured}
+          disabled={testStatus === "testing" || !isConfigured || !settings.aiEnabled}
           className={cn(
             "w-full flex items-center justify-center gap-2 px-4 py-3",
             "font-sans text-body-sm rounded-sm transition-all",

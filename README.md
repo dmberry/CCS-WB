@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 1.2.4** | CCS Methodology v2.5
+**Version 1.3.0** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -269,6 +269,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 1.3.0 | AI enable/disable toggle with three-state status indicator (On/Off/Not Configured), annotation help popover fix |
 | 1.2.4 | Fixed scroll jump when marking messages, inline timestamp/actions layout |
 | 1.2.3 | Compact message layout with inline timestamp and action buttons, copy/mark available for all messages |
 | 1.2.2 | PDF export improvements: gold margin bar and [MARKED] label for favourited messages, unicode sanitisation |

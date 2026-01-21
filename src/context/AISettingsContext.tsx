@@ -28,6 +28,7 @@ interface AISettingsContextValue {
   setApiKey: (key: string) => void;
   setBaseUrl: (url: string) => void;
   setCustomModelId: (modelId: string) => void;
+  setAiEnabled: (enabled: boolean) => void;
   clearSettings: () => void;
   getRequestHeaders: () => Record<string, string>;
 }
@@ -49,7 +50,12 @@ export function AISettingsProvider({
       if (stored) {
         const parsed: AISettingsStorage = JSON.parse(stored);
         if (parsed.version === STORAGE_VERSION && parsed.settings) {
-          setSettings(parsed.settings);
+          // Migrate old settings that don't have aiEnabled (default to true)
+          const migratedSettings: AISettings = {
+            ...parsed.settings,
+            aiEnabled: parsed.settings.aiEnabled ?? true,
+          };
+          setSettings(migratedSettings);
         }
       }
     } catch (e) {
@@ -117,6 +123,10 @@ export function AISettingsProvider({
     setSettings((prev) => ({ ...prev, customModelId }));
   }, []);
 
+  const setAiEnabled = useCallback((aiEnabled: boolean) => {
+    setSettings((prev) => ({ ...prev, aiEnabled }));
+  }, []);
+
   const clearSettings = useCallback(() => {
     setSettings(DEFAULT_AI_SETTINGS);
     localStorage.removeItem(STORAGE_KEY);
@@ -156,6 +166,7 @@ export function AISettingsProvider({
         setApiKey,
         setBaseUrl,
         setCustomModelId,
+        setAiEnabled,
         clearSettings,
         getRequestHeaders,
       }}
