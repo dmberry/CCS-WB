@@ -1,6 +1,11 @@
 // Provider configurations and model definitions
 
-import type { AIProvider, ProviderConfig } from "@/types/ai-settings";
+import type { AIProvider, ProviderConfig, ModelConfig } from "@/types/ai-settings";
+import { loadModelsConfig, type LoadedModels } from "./load-models";
+
+// Cache for dynamically loaded models
+let loadedModels: LoadedModels | null = null;
+let modelsLoadPromise: Promise<LoadedModels | null> | null = null;
 
 export const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
   ollama: {
@@ -76,6 +81,14 @@ export const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
         supportsStreaming: true,
         recommendedFor: ["chat", "analysis"],
       },
+      {
+        id: "custom",
+        name: "Custom Model",
+        contextWindow: 200000,
+        maxOutputTokens: 8192,
+        supportsStreaming: true,
+        recommendedFor: ["chat", "generation", "analysis"],
+      },
     ],
   },
   openai: {
@@ -102,12 +115,28 @@ export const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
         recommendedFor: ["chat", "analysis"],
       },
       {
-        id: "gpt-4-turbo",
-        name: "GPT-4 Turbo",
+        id: "o1",
+        name: "o1",
+        contextWindow: 200000,
+        maxOutputTokens: 100000,
+        supportsStreaming: true,
+        recommendedFor: ["generation", "analysis"],
+      },
+      {
+        id: "o1-mini",
+        name: "o1-mini",
+        contextWindow: 128000,
+        maxOutputTokens: 65536,
+        supportsStreaming: true,
+        recommendedFor: ["chat", "analysis"],
+      },
+      {
+        id: "custom",
+        name: "Custom Model",
         contextWindow: 128000,
         maxOutputTokens: 4096,
         supportsStreaming: true,
-        recommendedFor: ["generation"],
+        recommendedFor: ["chat", "generation", "analysis"],
       },
     ],
   },
@@ -119,28 +148,36 @@ export const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
     baseUrlConfigurable: false,
     models: [
       {
-        id: "gemini-2.0-flash",
-        name: "Gemini 2.0 Flash",
-        contextWindow: 1000000,
-        maxOutputTokens: 8192,
+        id: "gemini-2.5-pro",
+        name: "Gemini 2.5 Pro",
+        contextWindow: 1048576,
+        maxOutputTokens: 65536,
+        supportsStreaming: true,
+        recommendedFor: ["generation", "analysis"],
+      },
+      {
+        id: "gemini-2.5-flash",
+        name: "Gemini 2.5 Flash",
+        contextWindow: 1048576,
+        maxOutputTokens: 65536,
         supportsStreaming: true,
         recommendedFor: ["chat", "generation", "analysis"],
       },
       {
-        id: "gemini-1.5-pro",
-        name: "Gemini 1.5 Pro",
-        contextWindow: 2000000,
-        maxOutputTokens: 8192,
+        id: "gemini-2.5-flash-lite",
+        name: "Gemini 2.5 Flash-Lite",
+        contextWindow: 1048576,
+        maxOutputTokens: 65536,
         supportsStreaming: true,
-        recommendedFor: ["generation"],
+        recommendedFor: ["chat"],
       },
       {
-        id: "gemini-1.5-flash",
-        name: "Gemini 1.5 Flash",
+        id: "custom",
+        name: "Custom Model",
         contextWindow: 1000000,
         maxOutputTokens: 8192,
         supportsStreaming: true,
-        recommendedFor: ["chat", "analysis"],
+        recommendedFor: ["chat", "generation", "analysis"],
       },
     ],
   },
@@ -163,15 +200,91 @@ export const PROVIDER_CONFIGS: Record<AIProvider, ProviderConfig> = {
   },
 };
 
+// Default model specs (used when models.md doesn't specify full details)
+const DEFAULT_MODEL_SPECS: Record<AIProvider, Partial<ModelConfig>> = {
+  ollama: { contextWindow: 128000, maxOutputTokens: 4096, supportsStreaming: true, recommendedFor: ["chat", "generation"] },
+  anthropic: { contextWindow: 200000, maxOutputTokens: 8192, supportsStreaming: true, recommendedFor: ["chat", "generation", "analysis"] },
+  openai: { contextWindow: 128000, maxOutputTokens: 4096, supportsStreaming: true, recommendedFor: ["chat", "generation", "analysis"] },
+  google: { contextWindow: 1048576, maxOutputTokens: 65536, supportsStreaming: true, recommendedFor: ["chat", "generation", "analysis"] },
+  "openai-compatible": { contextWindow: 32000, maxOutputTokens: 4096, supportsStreaming: true, recommendedFor: ["chat", "generation", "analysis"] },
+};
+
+/**
+ * Load models from models.md file (cached after first load)
+ */
+export async function initializeModels(): Promise<void> {
+  if (loadedModels !== null) return;
+
+  if (!modelsLoadPromise) {
+    modelsLoadPromise = loadModelsConfig();
+  }
+
+  loadedModels = await modelsLoadPromise;
+}
+
+/**
+ * Get models for a provider, merging loaded models with defaults
+ */
+export function getModelsForProvider(provider: AIProvider): ModelConfig[] {
+  const baseConfig = PROVIDER_CONFIGS[provider];
+
+  // If no loaded models or provider not in loaded models, use defaults
+  if (!loadedModels || !(provider in loadedModels) || provider === "openai-compatible") {
+    return baseConfig.models;
+  }
+
+  const loaded = loadedModels[provider as keyof LoadedModels];
+  if (!loaded || loaded.length === 0) {
+    return baseConfig.models;
+  }
+
+  // Convert loaded models to ModelConfig, using default specs
+  const specs = DEFAULT_MODEL_SPECS[provider];
+  const models: ModelConfig[] = loaded.map(m => ({
+    id: m.id,
+    name: m.name,
+    contextWindow: specs.contextWindow || 32000,
+    maxOutputTokens: specs.maxOutputTokens || 4096,
+    supportsStreaming: specs.supportsStreaming ?? true,
+    recommendedFor: specs.recommendedFor || ["chat"],
+  }));
+
+  // Always add the "custom" option at the end
+  const customModel = baseConfig.models.find(m => m.id === "custom");
+  if (customModel) {
+    models.push(customModel);
+  }
+
+  return models;
+}
+
 export function getDefaultModel(provider: AIProvider): string {
-  const config = PROVIDER_CONFIGS[provider];
-  return config.models[0]?.id || "custom";
+  const models = getModelsForProvider(provider);
+  return models[0]?.id || "custom";
 }
 
 export function getProviderConfig(provider: AIProvider): ProviderConfig {
   return PROVIDER_CONFIGS[provider];
 }
 
+/**
+ * Get provider config with dynamically loaded models
+ */
+export function getProviderConfigWithModels(provider: AIProvider): ProviderConfig {
+  const baseConfig = PROVIDER_CONFIGS[provider];
+  return {
+    ...baseConfig,
+    models: getModelsForProvider(provider),
+  };
+}
+
 export function getAllProviders(): ProviderConfig[] {
   return Object.values(PROVIDER_CONFIGS);
+}
+
+/**
+ * Get all providers with dynamically loaded models
+ */
+export function getAllProvidersWithModels(): ProviderConfig[] {
+  return (Object.keys(PROVIDER_CONFIGS) as AIProvider[]).map(getProviderConfigWithModels);
 }

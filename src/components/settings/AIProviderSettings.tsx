@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAISettings } from "@/context/AISettingsContext";
-import { PROVIDER_CONFIGS, getAllProviders } from "@/lib/ai/config";
+import { PROVIDER_CONFIGS, getAllProviders, initializeModels, getProviderConfigWithModels } from "@/lib/ai/config";
 import type { AIProvider } from "@/types/ai-settings";
 import { cn } from "@/lib/utils";
 import {
@@ -39,8 +39,17 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
     "idle" | "testing" | "success" | "error"
   >("idle");
   const [testError, setTestError] = useState<string | null>(null);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
 
-  const currentProvider = PROVIDER_CONFIGS[settings.provider];
+  // Load dynamic models from models.md on mount
+  useEffect(() => {
+    initializeModels().then(() => setModelsLoaded(true));
+  }, []);
+
+  // Use dynamic config that includes loaded models
+  const currentProvider = modelsLoaded
+    ? getProviderConfigWithModels(settings.provider)
+    : PROVIDER_CONFIGS[settings.provider];
   const providers = getAllProviders();
 
   const handleProviderChange = (provider: AIProvider) => {
@@ -91,8 +100,8 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
   const showBaseUrl =
     settings.provider === "ollama" ||
     settings.provider === "openai-compatible";
-  const showCustomModel =
-    settings.model === "custom" || settings.provider === "openai-compatible";
+  // Show custom model input whenever "custom" is selected for any provider
+  const showCustomModel = settings.model === "custom";
 
   return (
     <div className="space-y-4">
@@ -224,7 +233,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
         </div>
       </div>
 
-      {/* Custom Model ID (for Ollama/OpenAI-compatible) */}
+      {/* Custom Model ID (for any provider when "custom" is selected) */}
       {showCustomModel && (
         <div className={cn(!settings.aiEnabled && "opacity-50 pointer-events-none")}>
           <label className="block font-sans text-[10px] uppercase tracking-widest text-slate-muted mb-1.5">
@@ -234,7 +243,17 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
             type="text"
             value={settings.customModelId || ""}
             onChange={(e) => setCustomModelId(e.target.value)}
-            placeholder="e.g., llama3.2:latest or gpt-4"
+            placeholder={
+              settings.provider === "ollama"
+                ? "e.g., llama3.2:latest, mistral, codellama"
+                : settings.provider === "anthropic"
+                  ? "e.g., claude-opus-4-20250514, claude-3-opus-20240229"
+                  : settings.provider === "openai"
+                    ? "e.g., gpt-4-turbo, o1-preview"
+                    : settings.provider === "google"
+                      ? "e.g., gemini-1.5-pro-latest, gemini-exp-1206"
+                      : "Enter model identifier"
+            }
             className={cn(
               "w-full px-2.5 py-1.5 bg-card border border-parchment-dark rounded-sm",
               "font-sans text-[11px] text-ink",
@@ -242,6 +261,9 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
               "focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy"
             )}
           />
+          <p className="mt-1 font-sans text-[10px] text-slate-muted">
+            Enter the exact model identifier for your provider.
+          </p>
         </div>
       )}
 

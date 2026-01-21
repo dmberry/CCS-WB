@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Bot, Palette, Info, Minus, Plus, Code, Sun, Moon, Monitor } from "lucide-react";
+import { X, Bot, Palette, Info, Minus, Plus, Code } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIProviderSettings } from "./AIProviderSettings";
 import { useAppSettings } from "@/context/AppSettingsContext";
@@ -11,8 +11,10 @@ import {
   UI_FONT_SIZE_MIN,
   UI_FONT_SIZE_MAX,
   PROGRAMMING_LANGUAGES,
+  ACCENT_COLOURS,
   type ProgrammingLanguageId,
   type ThemeMode,
+  type AccentColourId,
 } from "@/types/app-settings";
 
 type SettingsTab = "code" | "appearance" | "ai" | "about";
@@ -36,6 +38,8 @@ export function SettingsModal({
     setUiFontSize,
     setDefaultLanguage,
     setTheme,
+    setAccentColour,
+    effectiveTheme,
   } = useAppSettings();
 
   if (!isOpen) return null;
@@ -256,33 +260,59 @@ export function SettingsModal({
                 </div>
               </div>
 
-              {/* Theme Selection */}
+              {/* Mode (Light/Dark/System) */}
               <div className="pt-3 border-t border-parchment">
-                <h3 className="font-display text-caption text-ink mb-1">Theme</h3>
-                <p className="font-sans text-[10px] text-slate-muted mb-3">
-                  Choose your preferred colour scheme.
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-display text-caption text-ink">Mode</h3>
+                    <p className="font-sans text-[10px] text-slate-muted">
+                      Light, dark, or match your system
+                    </p>
+                  </div>
+                  <select
+                    value={settings.theme}
+                    onChange={(e) => setTheme(e.target.value as ThemeMode)}
+                    className="px-3 py-1.5 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors"
+                  >
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="system">System</option>
+                  </select>
+                </div>
+              </div>
 
-                <div className="flex gap-2">
-                  {([
-                    { id: "light", label: "Light", icon: Sun },
-                    { id: "dark", label: "Dark", icon: Moon },
-                    { id: "system", label: "System", icon: Monitor },
-                  ] as const).map(({ id, label, icon: Icon }) => (
-                    <button
-                      key={id}
-                      onClick={() => setTheme(id)}
-                      className={cn(
-                        "flex-1 flex flex-col items-center gap-1.5 p-3 rounded-sm border transition-colors",
-                        settings.theme === id
-                          ? "border-burgundy bg-burgundy/5 text-burgundy"
-                          : "border-parchment-dark hover:border-slate-muted text-slate"
-                      )}
+              {/* Theme (Accent Colour) */}
+              <div className="pt-3 border-t border-parchment">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-display text-caption text-ink">Theme</h3>
+                    <p className="font-sans text-[10px] text-slate-muted">
+                      Accent colour for buttons and links
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-4 h-4 rounded-full flex-shrink-0"
+                      style={{
+                        backgroundColor: `hsl(${
+                          effectiveTheme === "dark"
+                            ? ACCENT_COLOURS.find((c) => c.id === settings.accentColour)?.hsl.dark
+                            : ACCENT_COLOURS.find((c) => c.id === settings.accentColour)?.hsl.light
+                        })`
+                      }}
+                    />
+                    <select
+                      value={settings.accentColour}
+                      onChange={(e) => setAccentColour(e.target.value as AccentColourId)}
+                      className="px-3 py-1.5 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors"
                     >
-                      <Icon className="h-5 w-5" strokeWidth={1.5} />
-                      <span className="font-sans text-[10px]">{label}</span>
-                    </button>
-                  ))}
+                      {ACCENT_COLOURS.map(({ id, name }) => (
+                        <option key={id} value={id}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>

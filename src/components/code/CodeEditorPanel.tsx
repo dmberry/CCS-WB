@@ -77,11 +77,11 @@ const PREFIX_TO_TYPE: Record<string, LineAnnotationType> = {
 const ANNOTATION_LINE_REGEX = /^\s*\/\/\s*An:(Obs|Q|Met|Pat|Ctx|Crit):\s*(.*)$/;
 
 const ANNOTATION_COLORS: Record<LineAnnotationType, string> = {
-  observation: "text-blue-600",
-  question: "text-amber-600",
-  metaphor: "text-purple-600",
-  pattern: "text-green-600",
-  context: "text-slate-500",
+  observation: "text-blue-600 dark:text-blue-400",
+  question: "text-amber-600 dark:text-amber-400",
+  metaphor: "text-purple-600 dark:text-purple-400",
+  pattern: "text-green-600 dark:text-green-400",
+  context: "text-slate-500 dark:text-slate-400",
   critique: "text-burgundy",
 };
 
@@ -866,9 +866,9 @@ export function CodeEditorPanel({
                     {lineAnnotations.map((annotation) => (
                       <div
                         key={annotation.id}
-                        className="flex border-l-2 border-amber-400 bg-amber-100/40"
+                        className="flex border-l-2 border-amber-400 dark:border-amber-500 bg-amber-100/40 dark:bg-amber-900/30"
                       >
-                        <div className="w-12 flex-shrink-0 border-r border-parchment/50 bg-amber-50/40" />
+                        <div className="w-12 flex-shrink-0 border-r border-parchment/50 bg-amber-50/40 dark:bg-amber-900/20" />
                         <div className="flex-1 px-4 py-1 flex items-start gap-2">
                           {editingAnnotationId === annotation.id ? (
                             <div className="flex-1 flex items-center gap-2">
@@ -904,7 +904,7 @@ export function CodeEditorPanel({
                               <span className={cn("font-sans text-[10px] font-semibold whitespace-nowrap", ANNOTATION_COLORS[annotation.type])}>
                                 // An:{ANNOTATION_PREFIXES[annotation.type]}:
                               </span>
-                              <span className="flex-1 text-[11px] text-slate-600 italic">
+                              <span className="flex-1 text-[11px] text-slate-600 dark:text-slate-300 italic">
                                 {annotation.content}
                               </span>
                               <button

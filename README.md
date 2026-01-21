@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 1.7.0** | CCS Methodology v2.5
+**Version 1.8.1** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -94,9 +94,16 @@ Choose your preferred language: Python, JavaScript, BASIC, Lisp, Pseudocode, or 
 ### Multi-Provider AI Support
 Choose your preferred AI provider in browser settings:
 - **Anthropic Claude** (Claude Sonnet 4, Claude 3.5 Haiku)
-- **OpenAI** (GPT-4o, GPT-4o Mini, GPT-4 Turbo)
-- **Google Gemini** (Gemini 2.0 Flash, Gemini 1.5 Pro)
-- **Ollama** (Local models - Llama 3.2, Mistral, CodeLlama, etc.)
+- **OpenAI** (GPT-4o, GPT-4o Mini, o1, o1-mini)
+- **Google Gemini** (Gemini 2.5 Pro, Gemini 2.5 Flash, Gemini 2.5 Flash-Lite)
+- **Ollama** (Local models: Llama 3.2, Mistral, Mixtral, etc.)
+
+Models can be customised by editing `public/models.md`. Add or remove models without changing code.
+
+### Appearance
+- **Dark mode**: Light, dark, or system-matched themes via Settings → Appearance
+- **Theme colours**: Six accent colour palettes (Burgundy, Forest, Navy, Plum, Rust, Slate) that tint both UI elements and backgrounds
+- **Customisable fonts**: Adjust code, chat, and UI font sizes independently
 
 ### Keyboard Shortcuts
 | Shortcut | Action |
@@ -237,7 +244,8 @@ CCS-WB/
 │       └── index.ts
 ├── Critical-Code-Studies-Skill.md    # CCS methodology v2.5
 ├── CCS-Bibliography.md               # Reference bibliography
-└── public/                           # Static assets
+└── public/
+    └── models.md                     # User-editable AI models config
 ```
 
 ## Critical Code Studies Methodology
@@ -269,6 +277,8 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 1.8.1 | User-editable AI models configuration via `public/models.md` file (add/remove models without code changes) |
+| 1.8.0 | Custom theme colours (6 accent colours via dropdown), fixed dark mode annotation colours, updated AI models (Gemini 2.5 Flash/Pro, OpenAI o1), custom model input for all providers |
 | 1.7.0 | Fixed unsaved changes detection (no more false warnings on fresh sessions), improved session state handling, default 70% code panel width in critique mode |
 | 1.6.0 | **🌙 Dark mode!** Light/dark/system theme options in Settings → Appearance, UI font size setting for modals and windows, code upload works when AI disabled |
 | 1.5.0 | Per-mode session persistence with localStorage auto-save, mode switcher preserves session state, click-outside-to-close for all modals, compact modal typography |

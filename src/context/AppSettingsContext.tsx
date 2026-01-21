@@ -14,6 +14,7 @@ import type {
   FontSizeSettings,
   ProgrammingLanguageId,
   ThemeMode,
+  AccentColourId,
 } from "@/types/app-settings";
 import {
   DEFAULT_APP_SETTINGS,
@@ -21,6 +22,7 @@ import {
   FONT_SIZE_MAX,
   UI_FONT_SIZE_MIN,
   UI_FONT_SIZE_MAX,
+  ACCENT_COLOURS,
 } from "@/types/app-settings";
 
 const STORAGE_KEY = "ccs-wb-app-settings";
@@ -55,6 +57,9 @@ interface AppSettingsContextValue {
 
   // Get effective theme (resolves "system" to actual theme)
   effectiveTheme: "light" | "dark";
+
+  // Set accent colour
+  setAccentColour: (colour: AccentColourId) => void;
 
   // Clear all settings
   clearSettings: () => void;
@@ -93,12 +98,13 @@ export function AppSettingsProvider({
       if (stored) {
         const parsed: AppSettingsStorage = JSON.parse(stored);
         if (parsed.version === STORAGE_VERSION && parsed.settings) {
-          // Migrate old settings that don't have defaultLanguage, uiFontSize, or theme
+          // Migrate old settings that don't have defaultLanguage, uiFontSize, theme, or accentColour
           const migratedSettings: AppSettings = {
             ...parsed.settings,
             defaultLanguage: parsed.settings.defaultLanguage ?? "",
             uiFontSize: parsed.settings.uiFontSize ?? DEFAULT_APP_SETTINGS.uiFontSize,
             theme: parsed.settings.theme ?? DEFAULT_APP_SETTINGS.theme,
+            accentColour: parsed.settings.accentColour ?? DEFAULT_APP_SETTINGS.accentColour,
           };
           setSettings(migratedSettings);
         }
@@ -259,6 +265,14 @@ export function AppSettingsProvider({
     }));
   }, []);
 
+  // Set accent colour
+  const setAccentColour = useCallback((colour: AccentColourId) => {
+    setSettings((prev) => ({
+      ...prev,
+      accentColour: colour,
+    }));
+  }, []);
+
   // Calculate effective theme (resolves "system" to actual theme)
   const effectiveTheme: "light" | "dark" =
     settings.theme === "system" ? systemTheme : settings.theme;
@@ -283,6 +297,31 @@ export function AppSettingsProvider({
     root.style.setProperty("--ui-font-size", `${settings.uiFontSize}px`);
   }, [settings.uiFontSize]);
 
+  // Apply accent colour and themed backgrounds as CSS variables
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const colourDef = ACCENT_COLOURS.find(c => c.id === settings.accentColour);
+    if (!colourDef) return;
+
+    const root = document.documentElement;
+    const isDark = effectiveTheme === "dark";
+
+    // Set accent colour
+    root.style.setProperty("--burgundy", isDark ? colourDef.hsl.dark : colourDef.hsl.light);
+
+    // Set themed background colours
+    root.style.setProperty("--background", isDark ? colourDef.bg.dark : colourDef.bg.light);
+    root.style.setProperty("--ivory", isDark ? colourDef.bg.dark : colourDef.bg.light);
+    root.style.setProperty("--cream", isDark ? colourDef.cream.dark : colourDef.cream.light);
+    root.style.setProperty("--muted", isDark ? colourDef.cream.dark : colourDef.cream.light);
+    root.style.setProperty("--parchment", isDark ? colourDef.parchment.dark : colourDef.parchment.light);
+
+    // Also update primary to match accent
+    root.style.setProperty("--primary", isDark ? colourDef.hsl.dark : colourDef.hsl.light);
+    root.style.setProperty("--ring", isDark ? colourDef.hsl.dark : colourDef.hsl.light);
+  }, [settings.accentColour, effectiveTheme]);
+
   // Clear all settings
   const clearSettings = useCallback(() => {
     setSettings(DEFAULT_APP_SETTINGS);
@@ -304,6 +343,7 @@ export function AppSettingsProvider({
         setUiFontSize,
         setTheme,
         effectiveTheme,
+        setAccentColour,
         clearSettings,
       }}
     >
