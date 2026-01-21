@@ -120,6 +120,8 @@ export default function ConversationPage() {
   const [generatedOutput, setGeneratedOutput] = useState<{ content: string; type: string } | null>(null);
   const [selectedOutputType, setSelectedOutputType] = useState<"annotation" | "critique" | "reading">("critique");
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveModalName, setSaveModalName] = useState("");
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const [triggerCritiqueSave, setTriggerCritiqueSave] = useState(false);
   const [selectedCodeDetails, setSelectedCodeDetails] = useState<CodeReference | null>(null);
@@ -151,21 +153,32 @@ export default function ConversationPage() {
   const hasAddedOpeningMessage = useRef(false);
   const critiqueLayoutRef = useRef<CritiqueLayoutRef>(null);
 
+  // Use ref for session to avoid stale closure issues in hasUnsavedChanges
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+
   // Check if there are unsaved changes (more than just the initial assistant message)
   const hasUnsavedChanges = useCallback(() => {
+    // For critique mode, use the ref method if available
+    if (sessionRef.current.mode === "critique" && critiqueLayoutRef.current) {
+      return critiqueLayoutRef.current.hasUnsavedChanges();
+    }
+
+    // For other modes, check directly using ref to get latest session data
+    const currentSession = sessionRef.current;
     // User has sent at least one message
-    const hasUserMessages = session.messages.some(m => m.role === 'user');
+    const hasUserMessages = currentSession.messages.some(m => m.role === 'user');
     // Has code files
-    const hasCode = session.codeFiles.length > 0;
+    const hasCode = currentSession.codeFiles.length > 0;
     // Has analysis results
-    const hasAnalysis = session.analysisResults.length > 0;
+    const hasAnalysis = currentSession.analysisResults.length > 0;
     // Has references
-    const hasRefs = session.references.length > 0;
+    const hasRefs = currentSession.references.length > 0;
     // Has generated outputs
-    const hasOutputs = session.critiqueArtifacts.length > 0;
+    const hasOutputs = currentSession.critiqueArtifacts.length > 0;
 
     return hasUserMessages || hasCode || hasAnalysis || hasRefs || hasOutputs;
-  }, [session.messages, session.codeFiles, session.analysisResults, session.references, session.critiqueArtifacts]);
+  }, []); // No dependencies needed - we use ref to access latest session
 
   // Warn user before closing tab/window if there are unsaved changes
   useEffect(() => {
@@ -808,10 +821,15 @@ export default function ConversationPage() {
 
   // Save session with .ccs extension and mode code
   const handleSaveSession = useCallback(() => {
-    // Prompt for project name
-    const defaultName = projectName || "Untitled";
-    const name = prompt("Save session as:", defaultName);
-    if (!name) return; // User cancelled
+    // Open save modal instead of native prompt
+    setSaveModalName(projectName || "Untitled");
+    setShowSaveModal(true);
+  }, [projectName]);
+
+  // Confirm save from modal
+  const handleConfirmSave = useCallback(() => {
+    const name = saveModalName.trim();
+    if (!name) return;
 
     // Update project name state
     setProjectName(name);
@@ -834,7 +852,10 @@ export default function ConversationPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [session, projectName, MODE_CODES]);
+
+    // Close modal
+    setShowSaveModal(false);
+  }, [session, saveModalName, MODE_CODES]);
 
   // Global keyboard shortcuts
   useEffect(() => {
@@ -1308,7 +1329,7 @@ export default function ConversationPage() {
         {/* Unsaved Changes Warning Modal for Critique Mode */}
         {showUnsavedWarning && (
           <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-sm shadow-editorial-lg p-6 w-full max-w-md mx-4 border border-parchment">
+            <div className="bg-popover rounded-sm shadow-editorial-lg p-6 w-full max-w-md mx-4 border border-parchment modal-content">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-display text-display-md text-ink">Unsaved Changes</h3>
                 <button
@@ -1319,7 +1340,7 @@ export default function ConversationPage() {
                 </button>
               </div>
               <p className="font-body text-body-sm text-slate mb-6">
-                You have unsaved work in this session. Would you like to save your project before leaving?
+                You have unsaved work{critiqueLayoutRef.current?.getProjectName() ? ` in "${critiqueLayoutRef.current.getProjectName()}"` : ""}. Would you like to save before leaving?
               </p>
               <div className="flex flex-col gap-3">
                 <button
@@ -1356,7 +1377,7 @@ export default function ConversationPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-ivory">
+    <div className="h-screen flex flex-col bg-background">
       {/* Success Toast - Editorial style */}
       {successMessage && (
         <div className="fixed top-4 right-4 z-50 animate-fade-in">
@@ -1376,7 +1397,7 @@ export default function ConversationPage() {
       )}
 
       {/* Header - Matching CritiqueLayout toolbar style */}
-      <header className="border-b border-parchment bg-ivory px-4 py-1 flex items-center justify-between relative z-10">
+      <header className="border-b border-parchment bg-background px-4 py-1 flex items-center justify-between relative z-10">
         <div className="flex items-center gap-4">
           <button
             onClick={handleNavigateHome}
@@ -1395,7 +1416,7 @@ export default function ConversationPage() {
                 <ChevronDown className={cn("h-2.5 w-2.5 transition-transform", showModeDropdown && "rotate-180")} strokeWidth={1.5} />
               </button>
               {showModeDropdown && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-sm shadow-lg border border-parchment p-1 z-50">
+                <div className="absolute top-full left-0 mt-1 w-48 bg-popover rounded-sm shadow-lg border border-parchment p-1 z-50">
                   {(["critique", "archaeology", "interpret", "create"] as const).map((mode) => (
                     <button
                       key={mode}
@@ -1444,7 +1465,7 @@ export default function ConversationPage() {
 
               {/* Experience level dropdown */}
               {showExperienceHelp && (
-                <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-sm shadow-lg border border-parchment p-1 z-50">
+                <div className="absolute top-full left-0 mt-1 w-56 bg-popover rounded-sm shadow-lg border border-parchment p-1 z-50">
                   {(["learning", "practitioner", "research"] as const).map((level) => (
                     <button
                       key={level}
@@ -1453,10 +1474,8 @@ export default function ConversationPage() {
                         setShowExperienceHelp(false);
                         // Add a system message to notify the conversation
                         addMessage({
-                          id: generateId(),
                           role: "system",
                           content: `[Experience level changed to ${EXPERIENCE_LEVEL_LABELS[level]}]`,
-                          timestamp: getCurrentTimestamp(),
                         });
                       }}
                       className={cn(
@@ -1488,7 +1507,7 @@ export default function ConversationPage() {
               <ChevronDown className={cn("h-2.5 w-2.5 transition-transform", showLanguageDropdown && "rotate-180")} strokeWidth={1.5} />
             </button>
             {showLanguageDropdown && (
-              <div className="absolute top-full left-0 mt-1 w-44 bg-white rounded-sm shadow-lg border border-parchment p-1 z-50 max-h-64 overflow-y-auto">
+              <div className="absolute top-full left-0 mt-1 w-44 bg-popover rounded-sm shadow-lg border border-parchment p-1 z-50 max-h-64 overflow-y-auto">
                 {PROGRAMMING_LANGUAGES.map((lang) => (
                   <button
                     key={lang.id}
@@ -1593,10 +1612,10 @@ export default function ConversationPage() {
             className={cn(
               "font-sans text-[10px] px-2 py-0.5 border rounded-sm transition-colors",
               !aiEnabled
-                ? "text-red-700 bg-red-50 border-red-200 hover:border-red-400"
+                ? "text-red-700 bg-red-50 border-red-200 hover:border-red-400 dark:text-red-400 dark:bg-red-950 dark:border-red-800 dark:hover:border-red-600"
                 : isAIConfigured
-                  ? "text-green-700 bg-green-50 border-green-200 hover:border-green-400"
-                  : "text-amber-700 bg-amber-50 border-amber-200 hover:border-amber-400"
+                  ? "text-green-700 bg-green-50 border-green-200 hover:border-green-400 dark:text-green-400 dark:bg-green-950 dark:border-green-800 dark:hover:border-green-600"
+                  : "text-amber-700 bg-amber-50 border-amber-200 hover:border-amber-400 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800 dark:hover:border-amber-600"
             )}
             title={
               !aiEnabled
@@ -1643,7 +1662,7 @@ export default function ConversationPage() {
           onClick={() => setShowCodeInput(false)}
         >
           <div
-            className="bg-white rounded-sm shadow-editorial-lg w-full max-w-xl mx-4 max-h-[90vh] flex flex-col border border-parchment"
+            className="bg-popover rounded-sm shadow-editorial-lg w-full max-w-xl mx-4 max-h-[90vh] flex flex-col border border-parchment modal-content"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 border-b border-parchment">
@@ -1725,7 +1744,7 @@ export default function ConversationPage() {
           onClick={() => setShowSearchModal(false)}
         >
           <div
-            className="bg-white rounded-sm shadow-editorial-lg p-4 w-full max-w-sm mx-4 border border-parchment"
+            className="bg-popover rounded-sm shadow-editorial-lg p-4 w-full max-w-sm mx-4 border border-parchment modal-content"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="font-display text-sm text-ink mb-2">Find References</h3>
@@ -1803,7 +1822,7 @@ export default function ConversationPage() {
           onClick={() => setShowOutputModal(false)}
         >
           <div
-            className="bg-white rounded-sm shadow-editorial-lg w-full max-w-xl mx-4 max-h-[90vh] flex flex-col border border-parchment"
+            className="bg-popover rounded-sm shadow-editorial-lg w-full max-w-xl mx-4 max-h-[90vh] flex flex-col border border-parchment modal-content"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal header */}
@@ -1929,7 +1948,7 @@ export default function ConversationPage() {
           onClick={() => setShowExportModal(false)}
         >
           <div
-            className="bg-white rounded-sm shadow-editorial-lg p-4 w-full max-w-sm mx-4 border border-parchment"
+            className="bg-popover rounded-sm shadow-editorial-lg p-4 w-full max-w-sm mx-4 border border-parchment modal-content"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-2">
@@ -1988,6 +2007,65 @@ export default function ConversationPage() {
         </div>
       )}
 
+      {/* Save Session Modal - Custom styled replacement for native prompt */}
+      {showSaveModal && (
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+          onClick={() => setShowSaveModal(false)}
+        >
+          <div
+            className="bg-popover rounded-sm shadow-editorial-lg p-4 w-full max-w-sm mx-4 border border-parchment modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-display text-sm text-foreground flex items-center gap-2">
+                <Save className="h-4 w-4 text-burgundy" strokeWidth={1.5} />
+                Save Session
+              </h3>
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="text-slate-muted hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" strokeWidth={1.5} />
+              </button>
+            </div>
+            <p className="font-body text-[11px] text-slate mb-3">
+              Enter a name for your session. The file will be saved with a .ccs extension to your browser's default download folder.
+            </p>
+            <input
+              type="text"
+              value={saveModalName}
+              onChange={(e) => setSaveModalName(e.target.value)}
+              placeholder="Session name"
+              className="w-full px-3 py-2 font-body text-[12px] bg-card border border-parchment rounded-sm focus:outline-none focus:border-burgundy/50 text-foreground placeholder:text-slate-muted"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && saveModalName.trim()) {
+                  handleConfirmSave();
+                } else if (e.key === 'Escape') {
+                  setShowSaveModal(false);
+                }
+              }}
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="btn-editorial-secondary text-[11px] px-3 py-1.5"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmSave}
+                disabled={!saveModalName.trim()}
+                className="btn-editorial-primary text-[11px] px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Unsaved Changes Warning Modal - Editorial style */}
       {showUnsavedWarning && (
         <div
@@ -1995,7 +2073,7 @@ export default function ConversationPage() {
           onClick={() => setShowUnsavedWarning(false)}
         >
           <div
-            className="bg-white rounded-sm shadow-editorial-lg p-4 w-full max-w-xs mx-4 border border-parchment"
+            className="bg-popover rounded-sm shadow-editorial-lg p-4 w-full max-w-xs mx-4 border border-parchment modal-content"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-2">
@@ -2047,7 +2125,7 @@ export default function ConversationPage() {
           onClick={() => setSelectedCodeDetails(null)}
         >
           <div
-            className="bg-white rounded-sm shadow-editorial-lg max-w-sm w-full mx-4 p-4 border border-parchment"
+            className="bg-popover rounded-sm shadow-editorial-lg max-w-sm w-full mx-4 p-4 border border-parchment modal-content"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-3">
@@ -2150,7 +2228,7 @@ export default function ConversationPage() {
           onClick={() => setSelectedRefDetails(null)}
         >
           <div
-            className="bg-white rounded-sm shadow-editorial-lg max-w-sm w-full mx-4 p-4 max-h-[80vh] overflow-y-auto border border-parchment"
+            className="bg-popover rounded-sm shadow-editorial-lg max-w-sm w-full mx-4 p-4 max-h-[80vh] overflow-y-auto border border-parchment modal-content"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-start mb-3">
@@ -2248,7 +2326,7 @@ export default function ConversationPage() {
           onClick={() => setShowCodeAnnotator(null)}
         >
           <div
-            className="bg-white rounded-sm shadow-editorial-lg w-full max-w-4xl h-[80vh] overflow-hidden border border-parchment"
+            className="bg-popover rounded-sm shadow-editorial-lg w-full max-w-4xl h-[80vh] overflow-hidden border border-parchment modal-content"
             onClick={(e) => e.stopPropagation()}
           >
             <AnnotatedCodeViewer
@@ -2268,7 +2346,7 @@ export default function ConversationPage() {
           onClick={() => setSelectedArtifactDetails(null)}
         >
           <div
-            className="bg-white rounded-sm shadow-editorial-lg max-w-lg w-full mx-4 p-4 max-h-[80vh] overflow-y-auto border border-parchment"
+            className="bg-popover rounded-sm shadow-editorial-lg max-w-lg w-full mx-4 p-4 max-h-[80vh] overflow-y-auto border border-parchment modal-content"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-start mb-3">
@@ -2326,7 +2404,7 @@ export default function ConversationPage() {
           onClick={() => setShowContextPreview(false)}
         >
           <div
-            className="bg-white rounded-sm shadow-lg w-full max-w-xl mx-4 border border-parchment max-h-[80vh] flex flex-col"
+            className="bg-popover rounded-sm shadow-lg w-full max-w-xl mx-4 border border-parchment max-h-[80vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-3 border-b border-parchment">
@@ -2362,7 +2440,7 @@ export default function ConversationPage() {
                 <div className="px-2 py-1.5 bg-cream/30 border-b border-parchment">
                   <span className="font-sans text-[9px] text-slate-muted uppercase tracking-wider">Context Sent to LLM</span>
                 </div>
-                <pre className="p-2 text-[10px] font-mono text-ink whitespace-pre-wrap overflow-x-auto max-h-48 overflow-y-auto bg-white">
+                <pre className="p-2 text-[10px] font-mono text-foreground whitespace-pre-wrap overflow-x-auto max-h-48 overflow-y-auto bg-card">
                   {contextPreviewText || "(No code loaded yet)"}
                 </pre>
               </div>
@@ -2473,7 +2551,7 @@ export default function ConversationPage() {
 
             {/* Claude-style input container */}
             <div className={cn(
-              "bg-white rounded-2xl border border-parchment shadow-sm",
+              "bg-card rounded-2xl border border-parchment shadow-sm",
               !aiEnabled && "opacity-50"
             )}>
               {/* Textarea */}
@@ -2592,7 +2670,7 @@ export default function ConversationPage() {
                       <SlidersHorizontal className="h-4 w-4" strokeWidth={1.5} />
                     </button>
                     {showFontSizePopover && (
-                      <div className="absolute bottom-full right-0 mb-2 bg-white rounded-lg border border-parchment shadow-lg p-2 z-50">
+                      <div className="absolute bottom-full right-0 mb-2 bg-popover rounded-lg border border-parchment shadow-lg p-2 z-50">
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => setModeChatFontSize(currentMode, chatFontSize - 1)}
@@ -2664,7 +2742,7 @@ export default function ConversationPage() {
             onClick={() => setIsContextPanelOpen(!isContextPanelOpen)}
             className={cn(
               "fixed right-0 top-1/2 -translate-y-1/2 z-10",
-              "bg-white border border-parchment rounded-l-sm p-2 shadow-editorial",
+              "bg-card border border-parchment rounded-l-sm p-2 shadow-editorial",
               "hover:bg-cream transition-colors",
               isContextPanelOpen ? "right-80" : "right-0"
             )}
@@ -2756,7 +2834,7 @@ export default function ConversationPage() {
                   }}
                   className={cn(
                     "w-full px-2 py-1.5 font-body text-xs rounded-sm border transition-colors",
-                    "bg-white border-parchment text-ink",
+                    "bg-card border-parchment text-foreground",
                     "hover:border-burgundy/50 focus:border-burgundy focus:ring-1 focus:ring-burgundy focus:outline-none",
                     "cursor-pointer"
                   )}
@@ -2805,7 +2883,7 @@ export default function ConversationPage() {
                       placeholder="Enter language name..."
                       className={cn(
                         "w-full px-2 py-1.5 font-body text-xs rounded-sm border transition-colors",
-                        "bg-white border-parchment text-ink",
+                        "bg-card border-parchment text-foreground",
                         "hover:border-burgundy/50 focus:border-burgundy focus:ring-1 focus:ring-burgundy focus:outline-none",
                         "placeholder:text-slate-muted"
                       )}
@@ -2836,7 +2914,7 @@ export default function ConversationPage() {
                   {session.codeFiles.map((file) => (
                     <li
                       key={file.id}
-                      className="font-body text-xs bg-white border border-parchment rounded-sm p-2"
+                      className="font-body text-xs bg-card border border-parchment rounded-sm p-2"
                     >
                       <div
                         className="cursor-pointer hover:text-burgundy transition-colors"
@@ -2895,7 +2973,7 @@ export default function ConversationPage() {
                   {session.references.map((ref) => (
                     <li
                       key={ref.id}
-                      className="font-body text-xs bg-white border border-parchment rounded-sm p-2 cursor-pointer hover:border-burgundy/50 transition-colors"
+                      className="font-body text-xs bg-card border border-parchment rounded-sm p-2 cursor-pointer hover:border-burgundy/50 transition-colors"
                       onClick={() => setSelectedRefDetails(ref)}
                       role="button"
                       tabIndex={0}
@@ -2955,7 +3033,7 @@ export default function ConversationPage() {
                   {session.critiqueArtifacts.map((artifact) => (
                     <li
                       key={artifact.id}
-                      className="font-body text-xs bg-white border border-parchment rounded-sm p-2 cursor-pointer hover:border-burgundy/50 transition-colors"
+                      className="font-body text-xs bg-card border border-parchment rounded-sm p-2 cursor-pointer hover:border-burgundy/50 transition-colors"
                       onClick={() => setSelectedArtifactDetails(artifact)}
                       role="button"
                       tabIndex={0}
@@ -3019,7 +3097,7 @@ function MessageBubble({
           "max-w-[80%] rounded-sm px-4 py-3",
           isUser
             ? "bg-burgundy/10 text-ink"
-            : "bg-white border border-parchment text-ink"
+            : "bg-card border border-parchment text-foreground"
         )}
       >
         <p

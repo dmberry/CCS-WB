@@ -142,12 +142,12 @@ export default function WelcomePage() {
   };
 
   return (
-    <main className="min-h-screen bg-ivory relative">
+    <main className="min-h-screen bg-background relative">
       {/* Subtle paper texture overlay */}
       <div className="paper-texture absolute inset-0" />
 
       {/* Header - minimal */}
-      <header className="border-b border-parchment/50 bg-ivory/95 backdrop-blur-sm sticky top-0 z-10 relative">
+      <header className="border-b border-parchment/50 bg-background/95 backdrop-blur-sm sticky top-0 z-10 relative">
         <div className="max-w-5xl mx-auto px-4 py-1">
           <div className="flex items-center justify-between">
             <h1 className="font-display text-sm text-ink tracking-tight">
@@ -159,10 +159,10 @@ export default function WelcomePage() {
                 className={cn(
                   "font-sans text-[10px] px-2 py-0.5 border rounded-sm transition-colors",
                   !aiSettings.aiEnabled
-                    ? "text-red-700 bg-red-50 border-red-200 hover:border-red-400"
+                    ? "text-red-700 bg-red-50 border-red-200 hover:border-red-400 dark:text-red-400 dark:bg-red-950 dark:border-red-800 dark:hover:border-red-600"
                     : isAIConfigured
-                      ? "text-green-700 bg-green-50 border-green-200 hover:border-green-400"
-                      : "text-amber-700 bg-amber-50 border-amber-200 hover:border-amber-400"
+                      ? "text-green-700 bg-green-50 border-green-200 hover:border-green-400 dark:text-green-400 dark:bg-green-950 dark:border-green-800 dark:hover:border-green-600"
+                      : "text-amber-700 bg-amber-50 border-amber-200 hover:border-amber-400 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800 dark:hover:border-amber-600"
                 )}
                 title={
                   !aiSettings.aiEnabled
@@ -210,7 +210,7 @@ export default function WelcomePage() {
       {/* Help Modal */}
       {showHelp && (
         <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-editorial-lg w-full max-w-2xl mx-4 border border-parchment max-h-[90vh] overflow-y-auto">
+          <div className="bg-popover rounded-sm shadow-editorial-lg w-full max-w-2xl mx-4 border border-parchment max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-5 border-b border-parchment">
               <h3 className="font-display text-display-md text-ink">Getting Started</h3>
               <button
@@ -386,7 +386,7 @@ export default function WelcomePage() {
       {/* Skill Document Viewer Modal */}
       {showSkillDoc && (
         <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-editorial-lg w-full max-w-4xl mx-4 border border-parchment max-h-[90vh] flex flex-col">
+          <div className="bg-popover rounded-sm shadow-editorial-lg w-full max-w-4xl mx-4 border border-parchment max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-5 border-b border-parchment">
               <h3 className="font-display text-display-md text-ink">CCS Methodology Framework</h3>
               <button
@@ -433,7 +433,7 @@ export default function WelcomePage() {
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className={cn(
                 "flex items-center gap-2 px-3 py-1.5",
-                "bg-white border border-parchment-dark rounded-sm",
+                "bg-card border border-parchment-dark rounded-sm",
                 "hover:border-slate-muted transition-all duration-300",
                 "font-sans text-xs text-ink",
                 "shadow-editorial",
@@ -463,7 +463,7 @@ export default function WelcomePage() {
 
             {/* Experience level dropdown */}
             {isDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-sm shadow-editorial-lg border border-parchment py-1 z-20 animate-fade-in">
+              <div className="absolute top-full left-0 mt-1 w-56 bg-popover rounded-sm shadow-editorial-lg border border-parchment py-1 z-20 animate-fade-in">
                 {CCS_EXPERIENCE_LEVELS.map((level) => (
                   <button
                     key={level}
@@ -486,7 +486,7 @@ export default function WelcomePage() {
 
             {/* Experience level help popup */}
             {showLevelHelp && (
-              <div className="absolute top-full left-0 mt-1 w-72 bg-white rounded-sm shadow-editorial-lg border border-parchment p-4 z-20 animate-fade-in">
+              <div className="absolute top-full left-0 mt-1 w-72 bg-popover rounded-sm shadow-editorial-lg border border-parchment p-4 z-20 animate-fade-in">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-display text-sm text-ink">Choose your experience</h4>
                   <button
@@ -523,11 +523,11 @@ export default function WelcomePage() {
                 onClick={() => handleModeSelect(entry.mode)}
                 className={cn(
                   "flex flex-col items-center text-center p-4",
-                  "bg-white border border-parchment rounded-sm",
+                  "bg-card border border-parchment rounded-sm",
                   "shadow-editorial hover:shadow-editorial-md",
                   "hover:border-parchment-dark hover:-translate-y-0.5",
                   "transition-all duration-300 ease-out",
-                  "focus:outline-none focus:ring-1 focus:ring-burgundy focus:ring-offset-1 focus:ring-offset-ivory",
+                  "focus:outline-none focus:ring-1 focus:ring-burgundy focus:ring-offset-1 focus:ring-offset-background",
                   "group"
                 )}
               >

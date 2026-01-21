@@ -10,9 +10,9 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Editorial color palette
+        // Editorial color palette - using CSS variables for dark mode support
         ink: {
-          DEFAULT: "#1a1a1a",
+          DEFAULT: "hsl(var(--ink))",
           50: "#f7f7f7",
           100: "#e3e3e3",
           200: "#c8c8c8",
@@ -25,28 +25,28 @@ const config: Config = {
           900: "#1a1a1a",
         },
         charcoal: {
-          DEFAULT: "#2d2d2d",
+          DEFAULT: "hsl(var(--charcoal))",
           light: "#3d3d3d",
         },
         slate: {
-          DEFAULT: "#4a4a4a",
+          DEFAULT: "hsl(var(--slate))",
           light: "#6b6b6b",
-          muted: "#8a8a8a",
+          muted: "hsl(var(--muted-foreground))",
         },
         ivory: {
-          DEFAULT: "#faf8f5",
+          DEFAULT: "hsl(var(--ivory))",
           warm: "#f8f6f1",
         },
         cream: {
-          DEFAULT: "#f5f2eb",
+          DEFAULT: "hsl(var(--cream))",
           warm: "#f0ebe0",
         },
         parchment: {
-          DEFAULT: "#ede8dc",
-          dark: "#e5dfd0",
+          DEFAULT: "hsl(var(--parchment))",
+          dark: "hsl(var(--border))",
         },
         burgundy: {
-          DEFAULT: "#7c2d36",
+          DEFAULT: "hsl(var(--burgundy))",
           50: "#fdf2f4",
           100: "#fce4e8",
           200: "#facdd5",
@@ -60,21 +60,21 @@ const config: Config = {
           950: "#3c1118",
         },
         gold: {
-          DEFAULT: "#b8860b",
+          DEFAULT: "hsl(var(--gold))",
           light: "#d4a017",
           muted: "#c9a227",
         },
-        // Semantic colors mapped to editorial palette
+        // Semantic colors mapped to CSS variables
         primary: {
-          DEFAULT: "#7c2d36",
-          foreground: "#faf8f5",
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
-          DEFAULT: "#b8860b",
-          foreground: "#1a1a1a",
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
-        background: "#faf8f5",
-        foreground: "#1a1a1a",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         success: {
           50: "#f0fdf4",
           100: "#dcfce7",
@@ -97,16 +97,20 @@ const config: Config = {
           DEFAULT: "#ef4444",
         },
         muted: {
-          DEFAULT: "#f5f2eb",
-          foreground: "#6b6b6b",
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
         card: {
-          DEFAULT: "#ffffff",
-          foreground: "#1a1a1a",
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
-        border: "#e5dfd0",
-        input: "#e5dfd0",
-        ring: "#7c2d36",
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
       },
       fontFamily: {
         display: ["var(--font-libre-baskerville)", "Georgia", "serif"],

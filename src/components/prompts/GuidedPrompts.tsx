@@ -104,7 +104,7 @@ export function GuidedPrompts({
           <li key={index}>
             <button
               onClick={() => onSelectPrompt?.(prompt)}
-              className="w-full text-left group flex items-start gap-2 p-2 rounded-sm hover:bg-white transition-colors"
+              className="w-full text-left group flex items-start gap-2 p-2 rounded-sm hover:bg-card transition-colors"
             >
               <ChevronRight
                 className="h-3.5 w-3.5 text-slate-muted group-hover:text-burgundy mt-0.5 flex-shrink-0 transition-colors"

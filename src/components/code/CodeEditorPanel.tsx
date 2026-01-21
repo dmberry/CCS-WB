@@ -455,7 +455,7 @@ export function CodeEditorPanel({
   }, [selectedFileId, currentCode, fileAnnotations, selectedFile, getExtensionForLanguage]);
 
   return (
-    <div className="flex h-full bg-white border-r border-parchment">
+    <div className="flex h-full bg-card border-r border-parchment">
       {/* File tree sidebar */}
       <div className="w-36 border-r border-parchment bg-cream/30 flex flex-col">
         <div className="px-3 py-2 border-b border-parchment flex items-center justify-between">
@@ -497,7 +497,7 @@ export function CodeEditorPanel({
                           }
                         }}
                         onBlur={() => setRenamingFileId(null)}
-                        className="w-full px-1 py-0.5 text-[11px] font-mono border border-burgundy rounded bg-white focus:outline-none"
+                        className="w-full px-1 py-0.5 text-[11px] font-mono border border-burgundy rounded bg-card focus:outline-none"
                         autoFocus
                       />
                     </div>
@@ -522,7 +522,7 @@ export function CodeEditorPanel({
                           <MoreVertical className="h-3 w-3" strokeWidth={1.5} />
                         </button>
                         {fileMenuOpen === file.id && (
-                          <div className="absolute left-0 top-full mt-1 w-28 bg-white rounded-sm shadow-lg border border-parchment py-1 z-50">
+                          <div className="absolute left-0 top-full mt-1 w-28 bg-popover rounded-sm shadow-lg border border-parchment py-1 z-50">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -607,7 +607,7 @@ export function CodeEditorPanel({
                     "px-2 py-0.5 text-[9px] font-sans transition-colors",
                     editorMode === "edit"
                       ? "bg-burgundy text-ivory"
-                      : "bg-white text-slate hover:bg-cream"
+                      : "bg-card text-slate hover:bg-cream"
                   )}
                   title="Edit code (annotations embedded as comments)"
                 >
@@ -619,7 +619,7 @@ export function CodeEditorPanel({
                     "px-2 py-0.5 text-[9px] font-sans transition-colors",
                     editorMode === "annotate"
                       ? "bg-burgundy text-ivory"
-                      : "bg-white text-slate hover:bg-cream"
+                      : "bg-card text-slate hover:bg-cream"
                   )}
                   title="Annotate code (click lines to add annotations)"
                 >
@@ -635,7 +635,7 @@ export function CodeEditorPanel({
                   <HelpCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
                 </button>
                 {showAnnotationHelp && (
-                  <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-sm shadow-lg border border-parchment p-3 z-50">
+                  <div className="absolute top-full left-0 mt-1 w-64 bg-popover rounded-sm shadow-lg border border-parchment p-3 z-50">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-display text-xs text-ink">Annotation Types</h4>
                       <button
@@ -698,12 +698,12 @@ export function CodeEditorPanel({
                   <Settings2 className="h-3.5 w-3.5" strokeWidth={1.5} />
                 </button>
                 {showDisplaySettings && (
-                  <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-sm shadow-lg border border-parchment p-3 z-50">
+                  <div className="absolute top-full right-0 mt-1 w-48 bg-popover rounded-sm shadow-lg border border-parchment p-3 z-50">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-display text-xs text-ink">Display</h4>
+                      <h4 className="font-display text-xs text-foreground">Display</h4>
                       <button
                         onClick={() => setShowDisplaySettings(false)}
-                        className="p-0.5 text-slate hover:text-ink"
+                        className="p-0.5 text-slate hover:text-foreground"
                       >
                         <X className="h-3 w-3" strokeWidth={1.5} />
                       </button>
@@ -721,7 +721,7 @@ export function CodeEditorPanel({
                             fontSize: Math.max(MIN_FONT_SIZE, prev.fontSize - 1)
                           }))}
                           disabled={displaySettings.fontSize <= MIN_FONT_SIZE}
-                          className="p-1 rounded-sm border border-parchment hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
+                          className="p-1 rounded-sm border border-parchment bg-card hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
                         >
                           <Minus className="h-3 w-3" strokeWidth={1.5} />
                         </button>
@@ -739,7 +739,7 @@ export function CodeEditorPanel({
                               }));
                             }
                           }}
-                          className="w-12 px-1 py-0.5 text-center text-[11px] font-mono border border-parchment rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy"
+                          className="w-12 px-1 py-0.5 text-center text-[11px] font-mono bg-card text-foreground border border-parchment rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy"
                         />
                         <button
                           onClick={() => setDisplaySettings(prev => ({
@@ -747,7 +747,7 @@ export function CodeEditorPanel({
                             fontSize: Math.min(MAX_FONT_SIZE, prev.fontSize + 1)
                           }))}
                           disabled={displaySettings.fontSize >= MAX_FONT_SIZE}
-                          className="p-1 rounded-sm border border-parchment hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
+                          className="p-1 rounded-sm border border-parchment bg-card hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
                         >
                           <Plus className="h-3 w-3" strokeWidth={1.5} />
                         </button>
@@ -813,7 +813,7 @@ export function CodeEditorPanel({
                 onChange={(e) => handleCodeEdit(e.target.value)}
                 onScroll={handleTextareaScroll}
                 className={cn(
-                  "flex-1 px-4 pt-1 font-mono bg-white resize-none focus:outline-none whitespace-pre overflow-auto",
+                  "flex-1 px-4 pt-1 font-mono bg-card resize-none focus:outline-none whitespace-pre overflow-auto",
                   displaySettings.bold && "font-semibold"
                 )}
                 spellCheck={false}
@@ -883,7 +883,7 @@ export function CodeEditorPanel({
                                   if (e.key === "Enter") handleSaveEdit();
                                   if (e.key === "Escape") handleCancelEdit();
                                 }}
-                                className="flex-1 px-2 py-0.5 text-[11px] border border-parchment rounded bg-white focus:outline-none focus:border-burgundy/50"
+                                className="flex-1 px-2 py-0.5 text-[11px] border border-parchment rounded bg-card focus:outline-none focus:border-burgundy/50"
                                 autoFocus
                               />
                               <button
@@ -941,7 +941,7 @@ export function CodeEditorPanel({
                             <select
                               value={annotationType}
                               onChange={(e) => setAnnotationType(e.target.value as LineAnnotationType)}
-                              className="px-1 py-0.5 text-[10px] border border-parchment rounded bg-white focus:outline-none focus:border-burgundy/50 flex-shrink-0"
+                              className="px-1 py-0.5 text-[10px] border border-parchment rounded bg-card focus:outline-none focus:border-burgundy/50 flex-shrink-0"
                             >
                               {LINE_ANNOTATION_TYPES.map((type) => (
                                 <option key={type} value={type}>
@@ -962,7 +962,7 @@ export function CodeEditorPanel({
                                 }
                               }}
                               placeholder="Enter annotation..."
-                              className="flex-1 min-w-0 px-2 py-0.5 text-[11px] border border-parchment rounded bg-white focus:outline-none focus:border-burgundy/50"
+                              className="flex-1 min-w-0 px-2 py-0.5 text-[11px] border border-parchment rounded bg-card focus:outline-none focus:border-burgundy/50"
                               autoFocus
                             />
                             <div className="flex-shrink-0 flex items-center gap-1">

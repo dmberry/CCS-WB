@@ -4,6 +4,9 @@
 
 @layer base {
   :root {
+    /* UI Font Size - default 11px, can be changed via settings */
+    --ui-font-size: 11px;
+
     /* Editorial color palette */
     --ink: 0 0% 10%;
     --charcoal: 0 0% 18%;
@@ -36,14 +39,51 @@
     --ring: 352 47% 33%;
     --radius: 0.25rem;
   }
+
+  /* Dark mode - scholarly night reading theme */
+  .dark {
+    /* Inverted editorial palette */
+    --ink: 40 20% 92%;
+    --charcoal: 40 10% 85%;
+    --slate: 40 8% 65%;
+    --ivory: 220 15% 12%;
+    --cream: 220 12% 16%;
+    --parchment: 220 10% 20%;
+    --burgundy: 352 55% 55%;
+    --gold: 43 75% 55%;
+
+    /* Semantic mappings for dark mode */
+    --background: 220 15% 12%;
+    --foreground: 40 20% 92%;
+    --muted: 220 12% 18%;
+    --muted-foreground: 40 8% 60%;
+    --popover: 220 12% 14%;
+    --popover-foreground: 40 20% 92%;
+    --card: 220 12% 14%;
+    --card-foreground: 40 20% 92%;
+    --border: 220 10% 25%;
+    --input: 220 10% 25%;
+    --primary: 352 55% 55%;
+    --primary-foreground: 220 15% 12%;
+    --secondary: 43 75% 55%;
+    --secondary-foreground: 220 15% 12%;
+    --accent: 220 12% 20%;
+    --accent-foreground: 40 20% 92%;
+    --destructive: 0 80% 60%;
+    --destructive-foreground: 220 15% 12%;
+    --ring: 352 55% 55%;
+  }
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+  html {
+    @apply bg-background;
+  }
   body {
-    @apply bg-ivory text-ink;
+    @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1, "kern" 1;
   }
 
@@ -64,17 +104,17 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(26, 26, 26, 0.15);
+  background: hsl(var(--slate) / 0.2);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(26, 26, 26, 0.25);
+  background: hsl(var(--slate) / 0.35);
 }
 
 /* Focus ring for accessibility */
 .focus-visible:focus {
-  @apply outline-none ring-2 ring-burgundy ring-offset-2 ring-offset-ivory;
+  @apply outline-none ring-2 ring-burgundy ring-offset-2 ring-offset-background;
 }
 
 /* Editorial dividers */
@@ -109,11 +149,11 @@
   @apply inline-flex items-center justify-center font-sans text-body-sm font-medium;
   @apply px-5 py-2.5 border border-parchment-dark rounded-sm;
   @apply transition-all duration-300 ease-out;
-  @apply focus:outline-none focus:ring-2 focus:ring-burgundy focus:ring-offset-2 focus:ring-offset-ivory;
+  @apply focus:outline-none focus:ring-2 focus:ring-burgundy focus:ring-offset-2 focus:ring-offset-background;
 }
 
 .btn-editorial-primary {
-  @apply btn-editorial bg-burgundy text-ivory border-burgundy;
+  @apply btn-editorial bg-burgundy text-primary-foreground border-burgundy;
   @apply hover:bg-burgundy-900 hover:border-burgundy-900;
   @apply active:bg-burgundy-950;
 }
@@ -132,11 +172,11 @@
 
 /* Editorial inputs */
 .input-editorial {
-  @apply w-full font-body text-body-md text-ink;
-  @apply px-4 py-3 bg-white border border-parchment-dark rounded-sm;
+  @apply w-full font-body text-body-md text-foreground;
+  @apply px-4 py-3 bg-card border border-parchment-dark rounded-sm;
   @apply shadow-editorial-inner;
   @apply transition-all duration-200;
-  @apply placeholder:text-slate-muted;
+  @apply placeholder:text-muted-foreground;
   @apply focus:outline-none focus:border-burgundy focus:ring-1 focus:ring-burgundy;
 }
 
@@ -144,9 +184,62 @@
   @apply input-editorial text-body-lg py-4;
 }
 
+/* Dynamic UI font size - applies to modals, dropdowns, settings, etc. */
+.text-ui {
+  font-size: var(--ui-font-size);
+}
+
+.text-ui-sm {
+  font-size: calc(var(--ui-font-size) - 1px);
+}
+
+.text-ui-xs {
+  font-size: calc(var(--ui-font-size) - 2px);
+}
+
+.text-ui-lg {
+  font-size: calc(var(--ui-font-size) + 2px);
+}
+
+/* Modal container - scales all text within based on UI font size setting */
+.modal-content {
+  font-size: var(--ui-font-size);
+}
+
+.modal-content .text-caption,
+.modal-content .text-body-sm,
+.modal-content .text-\[10px\],
+.modal-content .text-\[11px\],
+.modal-content .text-\[12px\] {
+  font-size: inherit;
+}
+
+.modal-content h2,
+.modal-content h3,
+.modal-content h4 {
+  font-size: calc(var(--ui-font-size) + 4px);
+}
+
+.modal-content label {
+  font-size: calc(var(--ui-font-size) - 1px);
+}
+
+.modal-content p {
+  font-size: var(--ui-font-size);
+}
+
+.modal-content button {
+  font-size: var(--ui-font-size);
+}
+
+.modal-content select,
+.modal-content input {
+  font-size: var(--ui-font-size);
+}
+
 /* Editorial cards */
 .card-editorial {
-  @apply bg-white border border-parchment rounded-sm;
+  @apply bg-card border border-parchment rounded-sm;
   @apply shadow-editorial;
   @apply transition-all duration-300 ease-out;
 }
@@ -274,19 +367,19 @@
 
 /* Prose styling for generated content - editorial */
 .prose {
-  @apply text-ink font-body text-body-md;
+  @apply text-foreground font-body text-body-md;
 }
 
 .prose h1 {
-  @apply font-display text-display-xl font-bold mb-6 text-ink;
+  @apply font-display text-display-xl font-bold mb-6 text-foreground;
 }
 
 .prose h2 {
-  @apply font-display text-display-lg font-bold mb-4 text-ink;
+  @apply font-display text-display-lg font-bold mb-4 text-foreground;
 }
 
 .prose h3 {
-  @apply font-display text-display-md font-bold mb-3 text-ink;
+  @apply font-display text-display-md font-bold mb-3 text-foreground;
 }
 
 .prose p {
@@ -310,11 +403,11 @@
 }
 
 .prose code {
-  @apply font-mono text-body-sm bg-cream px-1.5 py-0.5 rounded-sm text-burgundy-900;
+  @apply font-mono text-body-sm bg-muted px-1.5 py-0.5 rounded-sm text-burgundy;
 }
 
 .prose pre {
-  @apply bg-cream p-5 rounded-sm overflow-x-auto mb-5 border border-parchment;
+  @apply bg-muted p-5 rounded-sm overflow-x-auto mb-5 border border-border;
 }
 
 .prose a {
@@ -323,7 +416,7 @@
 }
 
 .prose strong {
-  @apply font-semibold text-ink;
+  @apply font-semibold text-foreground;
 }
 
 .prose em {
@@ -336,7 +429,7 @@
 }
 
 .citation-title {
-  @apply font-body font-medium text-ink not-italic;
+  @apply font-body font-medium text-foreground not-italic;
 }
 
 .citation-authors {

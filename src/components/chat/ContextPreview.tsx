@@ -91,7 +91,7 @@ export function ContextPreview({
                 Code context sent to LLM
               </span>
             </div>
-            <pre className="font-mono text-[8px] leading-tight text-slate-600 whitespace-pre-wrap bg-white/50 p-2 rounded border border-parchment/50 max-h-28 overflow-y-auto">
+            <pre className="font-mono text-[8px] leading-tight text-slate-600 whitespace-pre-wrap bg-card/50 p-2 rounded border border-parchment/50 max-h-28 overflow-y-auto">
               {contextPreview}
             </pre>
           </div>

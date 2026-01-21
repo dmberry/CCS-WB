@@ -13,6 +13,7 @@ import type {
   AppMode,
   FontSizeSettings,
   ProgrammingLanguageId,
+  ThemeMode,
 } from "@/types/app-settings";
 import {
   DEFAULT_APP_SETTINGS,
@@ -49,6 +50,12 @@ interface AppSettingsContextValue {
   // Set UI font size for modals and windows
   setUiFontSize: (size: number) => void;
 
+  // Set theme
+  setTheme: (theme: ThemeMode) => void;
+
+  // Get effective theme (resolves "system" to actual theme)
+  effectiveTheme: "light" | "dark";
+
   // Clear all settings
   clearSettings: () => void;
 }
@@ -62,6 +69,22 @@ export function AppSettingsProvider({
 }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [systemTheme, setSystemTheme] = useState<"light" | "dark">("light");
+
+  // Detect system theme preference
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    setSystemTheme(mediaQuery.matches ? "dark" : "light");
+
+    const handler = (e: MediaQueryListEvent) => {
+      setSystemTheme(e.matches ? "dark" : "light");
+    };
+
+    mediaQuery.addEventListener("change", handler);
+    return () => mediaQuery.removeEventListener("change", handler);
+  }, []);
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -70,11 +93,12 @@ export function AppSettingsProvider({
       if (stored) {
         const parsed: AppSettingsStorage = JSON.parse(stored);
         if (parsed.version === STORAGE_VERSION && parsed.settings) {
-          // Migrate old settings that don't have defaultLanguage or uiFontSize
+          // Migrate old settings that don't have defaultLanguage, uiFontSize, or theme
           const migratedSettings: AppSettings = {
             ...parsed.settings,
             defaultLanguage: parsed.settings.defaultLanguage ?? "",
             uiFontSize: parsed.settings.uiFontSize ?? DEFAULT_APP_SETTINGS.uiFontSize,
+            theme: parsed.settings.theme ?? DEFAULT_APP_SETTINGS.theme,
           };
           setSettings(migratedSettings);
         }
@@ -227,6 +251,38 @@ export function AppSettingsProvider({
     }));
   }, []);
 
+  // Set theme
+  const setTheme = useCallback((theme: ThemeMode) => {
+    setSettings((prev) => ({
+      ...prev,
+      theme,
+    }));
+  }, []);
+
+  // Calculate effective theme (resolves "system" to actual theme)
+  const effectiveTheme: "light" | "dark" =
+    settings.theme === "system" ? systemTheme : settings.theme;
+
+  // Apply theme class to document
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const root = document.documentElement;
+    if (effectiveTheme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [effectiveTheme]);
+
+  // Apply UI font size as CSS variable
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const root = document.documentElement;
+    root.style.setProperty("--ui-font-size", `${settings.uiFontSize}px`);
+  }, [settings.uiFontSize]);
+
   // Clear all settings
   const clearSettings = useCallback(() => {
     setSettings(DEFAULT_APP_SETTINGS);
@@ -246,6 +302,8 @@ export function AppSettingsProvider({
         resetModeToGlobal,
         setDefaultLanguage,
         setUiFontSize,
+        setTheme,
+        effectiveTheme,
         clearSettings,
       }}
     >

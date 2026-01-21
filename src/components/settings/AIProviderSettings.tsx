@@ -132,7 +132,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
             onClick={() => setIsProviderDropdownOpen(!isProviderDropdownOpen)}
             className={cn(
               "w-full flex items-center justify-between px-2.5 py-1.5",
-              "bg-white border border-parchment-dark rounded-sm",
+              "bg-card border border-parchment-dark rounded-sm",
               "font-sans text-[11px] text-ink",
               "hover:border-slate-muted transition-colors",
               isProviderDropdownOpen && "ring-1 ring-burgundy border-burgundy"
@@ -153,7 +153,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
           </button>
 
           {isProviderDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-sm shadow-editorial-lg border border-parchment py-1 z-50 max-h-64 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-popover rounded-sm shadow-editorial-lg border border-parchment py-1 z-50 max-h-64 overflow-y-auto">
               {providers.map((provider) => (
                 <button
                   key={provider.id}
@@ -186,7 +186,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
             onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
             className={cn(
               "w-full flex items-center justify-between px-2.5 py-1.5",
-              "bg-white border border-parchment-dark rounded-sm",
+              "bg-card border border-parchment-dark rounded-sm",
               "font-sans text-[11px] text-ink",
               "hover:border-slate-muted transition-colors",
               isModelDropdownOpen && "ring-1 ring-burgundy border-burgundy"
@@ -205,7 +205,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
           </button>
 
           {isModelDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-sm shadow-editorial-lg border border-parchment py-1 z-50 max-h-48 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-popover rounded-sm shadow-editorial-lg border border-parchment py-1 z-50 max-h-48 overflow-y-auto">
               {currentProvider.models.map((model) => (
                 <button
                   key={model.id}
@@ -236,7 +236,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
             onChange={(e) => setCustomModelId(e.target.value)}
             placeholder="e.g., llama3.2:latest or gpt-4"
             className={cn(
-              "w-full px-2.5 py-1.5 bg-white border border-parchment-dark rounded-sm",
+              "w-full px-2.5 py-1.5 bg-card border border-parchment-dark rounded-sm",
               "font-sans text-[11px] text-ink",
               "placeholder:text-slate-muted",
               "focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy"
@@ -258,7 +258,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
               onChange={(e) => setApiKey(e.target.value)}
               placeholder={`Enter your ${currentProvider.name} API key`}
               className={cn(
-                "w-full px-2.5 py-1.5 pr-8 bg-white border border-parchment-dark rounded-sm",
+                "w-full px-2.5 py-1.5 pr-8 bg-card border border-parchment-dark rounded-sm",
                 "font-sans text-[11px] text-ink",
                 "placeholder:text-slate-muted",
                 "focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy"
@@ -299,7 +299,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
                 : "https://api.example.com/v1"
             }
             className={cn(
-              "w-full px-2.5 py-1.5 bg-white border border-parchment-dark rounded-sm",
+              "w-full px-2.5 py-1.5 bg-card border border-parchment-dark rounded-sm",
               "font-sans text-[11px] text-ink",
               "placeholder:text-slate-muted",
               "focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy"

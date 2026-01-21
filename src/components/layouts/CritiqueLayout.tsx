@@ -60,6 +60,8 @@ interface CritiqueLayoutProps {
 
 export interface CritiqueLayoutRef {
   save: () => void;
+  hasUnsavedChanges: () => boolean;
+  getProjectName: () => string;
 }
 
 // Font size constants are imported from app-settings
@@ -115,6 +117,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     switchMode,
     clearModeSession,
     hasSavedSession,
+    setCodeContent,
+    removeCodeContent,
   } = useSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured } = useAISettings();
   const { settings: appSettings, getFontSizes, setModeCodeFontSize, setModeChatFontSize } = useAppSettings();
@@ -146,18 +150,34 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [showExportModal, setShowExportModal] = useState(false);
   const [showSendContextModal, setShowSendContextModal] = useState(false);
   const [showFontSizePopover, setShowFontSizePopover] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveModalName, setSaveModalName] = useState("");
 
   // Message interaction state
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [favouriteMessages, setFavouriteMessages] = useState<Set<string>>(new Set());
 
   // Resizable panel state (percentage width for code panel)
-  const [codePanelWidth, setCodePanelWidth] = useState(50);
+  const DEFAULT_CODE_PANEL_WIDTH = 70;
+  const [codePanelWidth, setCodePanelWidth] = useState(DEFAULT_CODE_PANEL_WIDTH);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Code contents storage (fileId -> content)
-  const [codeContents, setCodeContents] = useState<Map<string, string>>(new Map());
+  // Create a Map from session.codeContents for compatibility with existing code
+  const codeContents = useMemo(() => new Map(Object.entries(session.codeContents)), [session.codeContents]);
+
+  // Reset layout to defaults when session changes (clear or load new session)
+  const prevSessionIdRef = useRef(session.id);
+  useEffect(() => {
+    if (session.id !== prevSessionIdRef.current) {
+      // Session changed - reset layout to defaults
+      setCodePanelWidth(DEFAULT_CODE_PANEL_WIDTH);
+      setProjectName("");
+      setFavouriteMessages(new Set());
+      hasAddedOpeningMessage.current = false;
+      prevSessionIdRef.current = session.id;
+    }
+  }, [session.id]);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -428,8 +448,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           size: text.length,
         });
 
-        // Store code content with the actual ID
-        setCodeContents((prev) => new Map(prev).set(fileId, text));
+        // Store code content with the actual ID in session
+        setCodeContent(fileId, text);
 
         // Add message
         addMessage({
@@ -460,8 +480,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
       size: codeInputText.length,
     });
 
-    // Store code content with the actual ID
-    setCodeContents((prev) => new Map(prev).set(fileId, codeInputText));
+    // Store code content with the actual ID in session
+    setCodeContent(fileId, codeInputText);
 
     // Add message
     addMessage({
@@ -485,10 +505,15 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
   // Save session with code contents
   const handleSaveSession = useCallback(() => {
-    // Prompt for project name
-    const defaultName = projectName || "Untitled";
-    const name = prompt("Save session as:", defaultName);
-    if (!name) return; // User cancelled
+    // Open save modal instead of native prompt
+    setSaveModalName(projectName || "Untitled");
+    setShowSaveModal(true);
+  }, [projectName]);
+
+  // Confirm save from modal
+  const handleConfirmSave = useCallback(() => {
+    const name = saveModalName.trim();
+    if (!name) return;
 
     // Update project name state
     setProjectName(name);
@@ -496,10 +521,10 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     const exportData = {
       ...session,
       projectName: name,
-      // Include code contents as a serializable object
-      codeContentsMap: Object.fromEntries(codeContents),
+      // Also include codeContentsMap for backwards compatibility with older versions
+      codeContentsMap: session.codeContents,
       exportedAt: new Date().toISOString(),
-      version: "1.1", // New version with code contents
+      version: "1.2", // Version with codeContents in session
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -513,12 +538,44 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [session, codeContents, projectName]);
 
-  // Expose save function to parent via ref
+    // Close modal
+    setShowSaveModal(false);
+  }, [session, saveModalName]);
+
+  // Check if there are unsaved changes (more than just the initial assistant message)
+  // Note: We use a ref to access latest session data to avoid stale closure issues
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+
+  const hasUnsavedChanges = useCallback(() => {
+    const currentSession = sessionRef.current;
+    // User has sent at least one message
+    const hasUserMessages = currentSession.messages.some(m => m.role === 'user');
+    // Has code files
+    const hasCode = currentSession.codeFiles.length > 0;
+    // Has analysis results
+    const hasAnalysis = currentSession.analysisResults.length > 0;
+    // Has references
+    const hasRefs = currentSession.references.length > 0;
+    // Has generated outputs
+    const hasOutputs = currentSession.critiqueArtifacts.length > 0;
+    // Has line annotations
+    const hasAnnotations = currentSession.lineAnnotations.length > 0;
+
+    return hasUserMessages || hasCode || hasAnalysis || hasRefs || hasOutputs || hasAnnotations;
+  }, []); // No dependencies needed - we use ref to access latest session
+
+  // Use ref for projectName to avoid stale closure in imperative handle
+  const projectNameRef = useRef(projectName);
+  projectNameRef.current = projectName;
+
+  // Expose functions to parent via ref
   useImperativeHandle(ref, () => ({
     save: handleSaveSession,
-  }), [handleSaveSession]);
+    hasUnsavedChanges,
+    getProjectName: () => projectNameRef.current,
+  }), [handleSaveSession, hasUnsavedChanges]);
 
   // Handle save trigger from parent (prop-based approach as backup)
   useEffect(() => {
@@ -596,7 +653,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [handleSaveSession]);
 
-  // Close dropdowns when clicking outside
+  // Close dropdowns and panels when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -607,6 +664,14 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
         setShowLanguageDropdown(false);
         setShowFontSizePopover(false);
       }
+      // Close code input panel if clicking outside of it
+      if (!target.closest('[data-code-input]')) {
+        setShowCodeInput(false);
+      }
+      // Close guided prompts if clicking outside
+      if (!target.closest('[data-guided-prompts]')) {
+        setShowGuidedPrompts(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -616,11 +681,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   // File management handlers
   const handleDeleteFile = useCallback((fileId: string) => {
     removeCode(fileId);
-    setCodeContents((prev) => {
-      const next = new Map(prev);
-      next.delete(fileId);
-      return next;
-    });
+    // Note: removeCode already removes code content via REMOVE_CODE reducer
   }, [removeCode]);
 
   const handleRenameFile = useCallback((fileId: string, newName: string) => {
@@ -629,7 +690,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
   const handleDuplicateFile = useCallback((fileId: string) => {
     const originalFile = session.codeFiles.find((f) => f.id === fileId);
-    const originalContent = codeContents.get(fileId);
+    const originalContent = session.codeContents[fileId];
     if (!originalFile || !originalContent) return;
 
     const newId = addCode({
@@ -639,8 +700,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
       size: originalContent.length,
     });
 
-    setCodeContents((prev) => new Map(prev).set(newId, originalContent));
-  }, [session.codeFiles, codeContents, addCode]);
+    setCodeContent(newId, originalContent);
+  }, [session.codeFiles, session.codeContents, addCode, setCodeContent]);
 
   // Load session with code contents and mode validation
   const handleLoadSession = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -675,10 +736,9 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           setProjectName(importedData.projectName);
         }
 
-        // Restore code contents if present
-        if (importedData.codeContentsMap) {
-          setCodeContents(new Map(Object.entries(importedData.codeContentsMap)));
-        }
+        // Code contents are now handled via importSession (codeContents field in session)
+        // For backwards compatibility with older saves using codeContentsMap,
+        // we convert it to codeContents during import in the reducer
 
         // Restore favourite messages from session
         const favourites = new Set<string>(
@@ -723,9 +783,9 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   }, [session, projectName, codeContents]);
 
   return (
-    <div className="h-screen flex flex-col bg-ivory">
+    <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="border-b border-parchment bg-ivory px-4 py-1 flex items-center justify-between z-10 relative">
+      <header className="border-b border-parchment bg-background px-4 py-1 flex items-center justify-between z-10 relative">
         <div className="flex items-center gap-4">
           <button
             onClick={onNavigateHome}
@@ -743,7 +803,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
               <ChevronDown className={cn("h-2.5 w-2.5 transition-transform", showModeDropdown && "rotate-180")} strokeWidth={1.5} />
             </button>
             {showModeDropdown && (
-              <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-sm shadow-lg border border-parchment p-1 z-50">
+              <div className="absolute top-full left-0 mt-1 w-48 bg-popover rounded-sm shadow-lg border border-parchment p-1 z-50">
                 {(["critique", "archaeology", "interpret", "create"] as const).map((mode) => (
                   <button
                     key={mode}
@@ -792,7 +852,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
             {/* Experience level dropdown */}
             {showExperienceHelp && (
-              <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-sm shadow-lg border border-parchment p-1 z-50">
+              <div className="absolute top-full left-0 mt-1 w-56 bg-popover rounded-sm shadow-lg border border-parchment p-1 z-50">
                 {(["learning", "practitioner", "research"] as const).map((level) => (
                   <button
                     key={level}
@@ -833,7 +893,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
               <ChevronDown className={cn("h-2.5 w-2.5 transition-transform", showLanguageDropdown && "rotate-180")} strokeWidth={1.5} />
             </button>
             {showLanguageDropdown && (
-              <div className="absolute top-full left-0 mt-1 w-44 bg-white rounded-sm shadow-lg border border-parchment p-1 z-50 max-h-64 overflow-y-auto">
+              <div className="absolute top-full left-0 mt-1 w-44 bg-popover rounded-sm shadow-lg border border-parchment p-1 z-50 max-h-64 overflow-y-auto">
                 {PROGRAMMING_LANGUAGES.map((lang) => (
                   <button
                     key={lang.id}
@@ -921,10 +981,10 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             className={cn(
               "font-sans text-[10px] px-2 py-0.5 border rounded-sm transition-colors",
               !aiEnabled
-                ? "text-red-700 bg-red-50 border-red-200 hover:border-red-400"
+                ? "text-red-700 bg-red-50 border-red-200 hover:border-red-400 dark:text-red-400 dark:bg-red-950 dark:border-red-800 dark:hover:border-red-600"
                 : isAIConfigured
-                  ? "text-green-700 bg-green-50 border-green-200 hover:border-green-400"
-                  : "text-amber-700 bg-amber-50 border-amber-200 hover:border-amber-400"
+                  ? "text-green-700 bg-green-50 border-green-200 hover:border-green-400 dark:text-green-400 dark:bg-green-950 dark:border-green-800 dark:hover:border-green-600"
+                  : "text-amber-700 bg-amber-50 border-amber-200 hover:border-amber-400 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800 dark:hover:border-amber-600"
             )}
             title={
               !aiEnabled
@@ -961,7 +1021,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             codeFiles={session.codeFiles}
             codeContents={codeContents}
             onCodeContentChange={(fileId, content) => {
-              setCodeContents((prev) => new Map(prev).set(fileId, content));
+              setCodeContent(fileId, content);
             }}
             onDeleteFile={handleDeleteFile}
             onRenameFile={handleRenameFile}
@@ -999,7 +1059,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                     "px-4 py-3 rounded-sm",
                     message.role === "user"
                       ? "bg-burgundy/10 text-ink"
-                      : "bg-white border border-parchment"
+                      : "bg-card border border-parchment"
                   )}
                 >
                   <div
@@ -1072,7 +1132,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
           {/* Guided Prompts */}
           {showGuidedPrompts && session.mode && (
-            <div className="border-t border-parchment p-3">
+            <div data-guided-prompts className="border-t border-parchment p-3">
               <GuidedPrompts
                 mode={session.mode}
                 currentPhase={session.currentPhase}
@@ -1087,20 +1147,20 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           <div className="w-full md:w-[80%]">
             {/* Code paste input */}
             {showCodeInput && (
-              <div className="mb-3 p-3 bg-cream/50 border border-parchment rounded-lg">
+              <div data-code-input className="mb-3 p-3 bg-cream/50 border border-parchment rounded-lg modal-content">
                 <div className="flex gap-2 mb-2">
                   <input
                     type="text"
                     value={codeInputName}
                     onChange={(e) => setCodeInputName(e.target.value)}
                     placeholder="File name"
-                    className="flex-1 px-2 py-1 border border-parchment rounded bg-white"
+                    className="flex-1 px-2 py-1 border border-parchment rounded bg-card"
                     style={{ fontSize: `${chatFontSize}px` }}
                   />
                   <select
                     value={codeInputLanguage}
                     onChange={(e) => setCodeInputLanguage(e.target.value)}
-                    className="w-28 px-2 py-1 border border-parchment rounded bg-white"
+                    className="w-28 px-2 py-1 border border-parchment rounded bg-card"
                     style={{ fontSize: `${chatFontSize}px` }}
                   >
                     {CRITIQUE_LANGUAGES.map((lang) => (
@@ -1114,7 +1174,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                   value={codeInputText}
                   onChange={(e) => setCodeInputText(e.target.value)}
                   placeholder="Paste your code here..."
-                  className="w-full h-32 px-2 py-1 font-mono border border-parchment rounded bg-white resize-none"
+                  className="w-full h-32 px-2 py-1 font-mono border border-parchment rounded bg-card resize-none"
                   style={{ fontSize: `${chatFontSize}px` }}
                 />
                 <div className="flex justify-end gap-2 mt-2">
@@ -1136,7 +1196,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             )}
 
             {/* Claude-style input container */}
-            <div className="bg-white rounded-2xl border border-parchment shadow-sm">
+            <div className="bg-card rounded-2xl border border-parchment shadow-sm">
               {/* Textarea */}
               <textarea
                 ref={inputRef}
@@ -1161,6 +1221,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                     <Upload className="h-4 w-4" strokeWidth={1.5} />
                   </button>
                   <button
+                    data-code-input
                     onClick={() => setShowCodeInput(!showCodeInput)}
                     className={cn(
                       "p-1.5 rounded-md transition-colors",
@@ -1193,6 +1254,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                   )}
                   {(GUIDED_PROMPTS[session.mode]?.[session.currentPhase]?.length ?? 0) > 0 && (
                     <button
+                      data-guided-prompts
                       onClick={() => setShowGuidedPrompts(!showGuidedPrompts)}
                       className={cn(
                         "p-1.5 rounded-md transition-colors",
@@ -1220,7 +1282,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                       <SlidersHorizontal className="h-4 w-4" strokeWidth={1.5} />
                     </button>
                     {showFontSizePopover && (
-                      <div className="absolute bottom-full right-0 mb-2 bg-white rounded-lg border border-parchment shadow-lg p-2 z-50">
+                      <div className="absolute bottom-full right-0 mb-2 bg-popover rounded-lg border border-parchment shadow-lg p-2 z-50">
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => setModeChatFontSize("critique", chatFontSize - 1)}
@@ -1300,7 +1362,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           onClick={() => setShowExportModal(false)}
         >
           <div
-            className="bg-white rounded-sm shadow-lg p-6 w-full max-w-md mx-4 border border-parchment"
+            className="bg-popover rounded-sm shadow-lg p-6 w-full max-w-md mx-4 border border-parchment modal-content"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
@@ -1368,6 +1430,65 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
         </div>
       )}
 
+      {/* Save Session Modal - Custom styled replacement for native prompt */}
+      {showSaveModal && (
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+          onClick={() => setShowSaveModal(false)}
+        >
+          <div
+            className="bg-popover rounded-sm shadow-editorial-lg p-4 w-full max-w-sm mx-4 border border-parchment"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-display text-sm text-foreground flex items-center gap-2">
+                <Save className="h-4 w-4 text-burgundy" strokeWidth={1.5} />
+                Save Session
+              </h3>
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="text-slate-muted hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" strokeWidth={1.5} />
+              </button>
+            </div>
+            <p className="font-body text-[11px] text-slate mb-3">
+              Enter a name for your session. The file will be saved with a .ccs extension to your browser's default download folder.
+            </p>
+            <input
+              type="text"
+              value={saveModalName}
+              onChange={(e) => setSaveModalName(e.target.value)}
+              placeholder="Session name"
+              className="w-full px-3 py-2 font-body text-[12px] bg-card border border-parchment rounded-sm focus:outline-none focus:border-burgundy/50 text-foreground placeholder:text-slate-muted"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && saveModalName.trim()) {
+                  handleConfirmSave();
+                } else if (e.key === 'Escape') {
+                  setShowSaveModal(false);
+                }
+              }}
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setShowSaveModal(false)}
+                className="btn-editorial-secondary text-[11px] px-3 py-1.5"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmSave}
+                disabled={!saveModalName.trim()}
+                className="btn-editorial-primary text-[11px] px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Send Context Modal - Shows what gets sent to the LLM */}
       {showSendContextModal && (
         <div
@@ -1375,7 +1496,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           onClick={() => setShowSendContextModal(false)}
         >
           <div
-            className="bg-white rounded-sm shadow-lg w-full max-w-2xl mx-4 border border-parchment max-h-[80vh] flex flex-col"
+            className="bg-popover rounded-sm shadow-lg w-full max-w-2xl mx-4 border border-parchment max-h-[80vh] flex flex-col modal-content"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b border-parchment">
@@ -1409,7 +1530,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                 <div className="px-3 py-2 bg-cream/30 border-b border-parchment">
                   <span className="font-sans text-xs text-slate-muted uppercase tracking-wider">Context Sent to LLM</span>
                 </div>
-                <pre className="p-3 text-xs font-mono text-ink whitespace-pre-wrap overflow-x-auto max-h-64 overflow-y-auto bg-white">
+                <pre className="p-3 text-xs font-mono text-foreground whitespace-pre-wrap overflow-x-auto max-h-64 overflow-y-auto bg-card">
                   {annotatedCodeContext || "(No code loaded yet)"}
                 </pre>
               </div>

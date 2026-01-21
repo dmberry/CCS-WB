@@ -21,7 +21,7 @@ export function AISettingsPanel({ isOpen, onClose }: AISettingsPanelProps) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-sm shadow-lg max-w-md w-full mx-4 max-h-[85vh] flex flex-col"
+        className="bg-popover rounded-sm shadow-lg max-w-md w-full mx-4 max-h-[85vh] flex flex-col modal-content"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

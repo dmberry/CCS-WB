@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Bot, Palette, Info, Minus, Plus, Code } from "lucide-react";
+import { X, Bot, Palette, Info, Minus, Plus, Code, Sun, Moon, Monitor } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIProviderSettings } from "./AIProviderSettings";
 import { useAppSettings } from "@/context/AppSettingsContext";
@@ -12,6 +12,7 @@ import {
   UI_FONT_SIZE_MAX,
   PROGRAMMING_LANGUAGES,
   type ProgrammingLanguageId,
+  type ThemeMode,
 } from "@/types/app-settings";
 
 type SettingsTab = "code" | "appearance" | "ai" | "about";
@@ -34,6 +35,7 @@ export function SettingsModal({
     setGlobalChatFontSize,
     setUiFontSize,
     setDefaultLanguage,
+    setTheme,
   } = useAppSettings();
 
   if (!isOpen) return null;
@@ -53,7 +55,7 @@ export function SettingsModal({
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-sm shadow-lg max-w-lg w-full mx-4 max-h-[85vh] flex flex-col"
+        className="bg-popover rounded-sm shadow-lg max-w-lg w-full mx-4 max-h-[85vh] flex flex-col modal-content"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -102,7 +104,7 @@ export function SettingsModal({
                 <select
                   value={settings.defaultLanguage}
                   onChange={(e) => setDefaultLanguage(e.target.value as ProgrammingLanguageId)}
-                  className="w-full px-3 py-2 font-sans text-caption text-ink bg-white border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors"
+                  className="w-full px-3 py-2 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors"
                 >
                   {PROGRAMMING_LANGUAGES.map((lang) => (
                     <option key={lang.id} value={lang.id}>
@@ -254,10 +256,34 @@ export function SettingsModal({
                 </div>
               </div>
 
+              {/* Theme Selection */}
               <div className="pt-3 border-t border-parchment">
-                <p className="font-sans text-[10px] text-slate-muted italic">
-                  More appearance options (themes, dark mode) coming soon.
+                <h3 className="font-display text-caption text-ink mb-1">Theme</h3>
+                <p className="font-sans text-[10px] text-slate-muted mb-3">
+                  Choose your preferred colour scheme.
                 </p>
+
+                <div className="flex gap-2">
+                  {([
+                    { id: "light", label: "Light", icon: Sun },
+                    { id: "dark", label: "Dark", icon: Moon },
+                    { id: "system", label: "System", icon: Monitor },
+                  ] as const).map(({ id, label, icon: Icon }) => (
+                    <button
+                      key={id}
+                      onClick={() => setTheme(id)}
+                      className={cn(
+                        "flex-1 flex flex-col items-center gap-1.5 p-3 rounded-sm border transition-colors",
+                        settings.theme === id
+                          ? "border-burgundy bg-burgundy/5 text-burgundy"
+                          : "border-parchment-dark hover:border-slate-muted text-slate"
+                      )}
+                    >
+                      <Icon className="h-5 w-5" strokeWidth={1.5} />
+                      <span className="font-sans text-[10px]">{label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}

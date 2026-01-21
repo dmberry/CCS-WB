@@ -56,7 +56,10 @@ type SessionAction =
   | { type: "ADD_LINE_ANNOTATION"; payload: LineAnnotation }
   | { type: "UPDATE_LINE_ANNOTATION"; payload: { id: string; content: string } }
   | { type: "REMOVE_LINE_ANNOTATION"; payload: string }
-  | { type: "CLEAR_LINE_ANNOTATIONS"; payload?: string }; // optional codeFileId to clear only that file's annotations
+  | { type: "CLEAR_LINE_ANNOTATIONS"; payload?: string } // optional codeFileId to clear only that file's annotations
+  // Code contents actions
+  | { type: "SET_CODE_CONTENT"; payload: { fileId: string; content: string } }
+  | { type: "REMOVE_CODE_CONTENT"; payload: string };
 
 // Initial state
 const createInitialSession = (): Session => ({
@@ -64,6 +67,7 @@ const createInitialSession = (): Session => ({
   mode: "critique",
   messages: [],
   codeFiles: [],
+  codeContents: {},
   lineAnnotations: [],
   analysisResults: [],
   references: [],
@@ -113,14 +117,18 @@ function sessionReducer(state: Session, action: SessionAction): Session {
         lastModified: now,
       };
 
-    case "REMOVE_CODE":
+    case "REMOVE_CODE": {
+      // Remove the code content as well
+      const { [action.payload]: _, ...remainingContents } = state.codeContents;
       return {
         ...state,
         codeFiles: state.codeFiles.filter((f) => f.id !== action.payload),
+        codeContents: remainingContents,
         // Also remove annotations for this file
         lineAnnotations: state.lineAnnotations.filter((a) => a.codeFileId !== action.payload),
         lastModified: now,
       };
+    }
 
     case "UPDATE_CODE":
       return {
@@ -189,6 +197,7 @@ function sessionReducer(state: Session, action: SessionAction): Session {
         uploadedFiles?: CodeReference[];
         literatureFindings?: ReferenceResult[];
         puzzleArtifacts?: CritiqueArtifact[];
+        codeContentsMap?: Record<string, string>; // Old format from save files
       };
       return {
         ...defaultSession, // Start with all default values
@@ -197,6 +206,9 @@ function sessionReducer(state: Session, action: SessionAction): Session {
         // Support both old (uploadedFiles) and new (codeFiles) field names
         codeFiles: Array.isArray(imported.codeFiles) ? imported.codeFiles :
                    Array.isArray(imported.uploadedFiles) ? imported.uploadedFiles : [],
+        // Support new (codeContents) and old (codeContentsMap) field names
+        codeContents: imported.codeContents && typeof imported.codeContents === "object" ? imported.codeContents :
+                      imported.codeContentsMap && typeof imported.codeContentsMap === "object" ? imported.codeContentsMap : {},
         analysisResults: Array.isArray(action.payload.analysisResults) ? action.payload.analysisResults : [],
         // Support both old (literatureFindings) and new (references) field names
         references: Array.isArray(imported.references) ? imported.references :
@@ -388,6 +400,26 @@ function sessionReducer(state: Session, action: SessionAction): Session {
         lastModified: now,
       };
 
+    // Code contents actions
+    case "SET_CODE_CONTENT":
+      return {
+        ...state,
+        codeContents: {
+          ...state.codeContents,
+          [action.payload.fileId]: action.payload.content,
+        },
+        lastModified: now,
+      };
+
+    case "REMOVE_CODE_CONTENT": {
+      const { [action.payload]: _, ...remainingCodeContents } = state.codeContents;
+      return {
+        ...state,
+        codeContents: remainingCodeContents,
+        lastModified: now,
+      };
+    }
+
     default:
       return state;
   }
@@ -431,6 +463,9 @@ interface SessionContextType {
   updateLineAnnotation: (id: string, content: string) => void;
   removeLineAnnotation: (id: string) => void;
   clearLineAnnotations: (codeFileId?: string) => void;
+  // Code contents functions
+  setCodeContent: (fileId: string, content: string) => void;
+  removeCodeContent: (fileId: string) => void;
 }
 
 const SessionContext = createContext<SessionContextType | null>(null);
@@ -652,6 +687,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "CLEAR_LINE_ANNOTATIONS", payload: codeFileId });
   }, []);
 
+  // Code contents functions
+  const setCodeContent = useCallback((fileId: string, content: string) => {
+    dispatch({ type: "SET_CODE_CONTENT", payload: { fileId, content } });
+  }, []);
+
+  const removeCodeContent = useCallback((fileId: string) => {
+    dispatch({ type: "REMOVE_CODE_CONTENT", payload: fileId });
+  }, []);
+
   const value: SessionContextType = {
     session,
     initSession,
@@ -689,6 +733,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     updateLineAnnotation,
     removeLineAnnotation,
     clearLineAnnotations,
+    // Code contents
+    setCodeContent,
+    removeCodeContent,
   };
 
   return (

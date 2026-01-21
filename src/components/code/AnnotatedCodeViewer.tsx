@@ -104,7 +104,7 @@ export function AnnotatedCodeViewer({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-sm border border-parchment overflow-hidden">
+    <div className="flex flex-col h-full bg-card rounded-sm border border-parchment overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-parchment bg-cream/50">
         <div className="flex items-center gap-3">
@@ -220,7 +220,7 @@ export function AnnotatedCodeViewer({
                                 <textarea
                                   value={editContent}
                                   onChange={(e) => setEditContent(e.target.value)}
-                                  className="w-full p-2 font-body text-[10px] border border-parchment rounded-sm bg-white resize-none focus:outline-none focus:border-burgundy/50"
+                                  className="w-full p-2 font-body text-[10px] border border-parchment rounded-sm bg-card resize-none focus:outline-none focus:border-burgundy/50"
                                   rows={2}
                                   autoFocus
                                 />
@@ -288,7 +288,7 @@ export function AnnotatedCodeViewer({
                             onChange={(e) =>
                               setAnnotationType(e.target.value as LineAnnotationType)
                             }
-                            className="px-2 py-0.5 font-sans text-[10px] border border-parchment rounded-sm bg-white focus:outline-none focus:border-burgundy/50"
+                            className="px-2 py-0.5 font-sans text-[10px] border border-parchment rounded-sm bg-card focus:outline-none focus:border-burgundy/50"
                           >
                             {LINE_ANNOTATION_TYPES.map((type) => (
                               <option key={type} value={type}>

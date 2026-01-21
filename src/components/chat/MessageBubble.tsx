@@ -41,7 +41,7 @@ export function MessageBubble({
           "max-w-[80%] rounded-sm px-4 py-3",
           isUser
             ? "bg-burgundy/10 text-ink"
-            : "bg-white border border-parchment text-ink"
+            : "bg-card border border-parchment text-foreground"
         )}
       >
         <p

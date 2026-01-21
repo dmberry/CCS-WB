@@ -188,6 +188,7 @@ export interface Session {
   languageOverride?: string;  // Per-session language preference (overrides global default)
   messages: Message[];
   codeFiles: CodeReference[];   // Code being analysed
+  codeContents: Record<string, string>;  // Map of codeFileId -> actual code content
   lineAnnotations: LineAnnotation[];  // Line-anchored annotations for close reading
   analysisResults: AnalysisResult[];
   references: ReferenceResult[]; // Related code, scholarship

@@ -163,7 +163,7 @@ export function CodeDiffViewer({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-sm border border-parchment overflow-hidden">
+    <div className="flex flex-col h-full bg-card rounded-sm border border-parchment overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-parchment bg-cream/50">
         <div className="flex items-center gap-3">
@@ -178,7 +178,7 @@ export function CodeDiffViewer({
               className={cn(
                 "p-1 rounded-sm transition-colors",
                 viewMode === "side-by-side"
-                  ? "bg-white text-ink shadow-sm"
+                  ? "bg-card text-foreground shadow-sm"
                   : "text-slate-muted hover:text-ink"
               )}
               title="Side by side view"
@@ -190,7 +190,7 @@ export function CodeDiffViewer({
               className={cn(
                 "p-1 rounded-sm transition-colors",
                 viewMode === "unified"
-                  ? "bg-white text-ink shadow-sm"
+                  ? "bg-card text-foreground shadow-sm"
                   : "text-slate-muted hover:text-ink"
               )}
               title="Unified view"

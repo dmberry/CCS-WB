@@ -2,6 +2,9 @@
 
 export type AppMode = "critique" | "archaeology" | "interpret" | "create";
 
+// Theme options
+export type ThemeMode = "light" | "dark" | "system";
+
 // Supported programming languages (top 10 most popular + Other)
 export const PROGRAMMING_LANGUAGES = [
   { id: "", name: "Not specified", description: "Auto-detect or unspecified" },
@@ -42,6 +45,9 @@ export interface AppSettings {
   // Default programming language preference
   defaultLanguage: ProgrammingLanguageId;
 
+  // Theme setting
+  theme: ThemeMode;
+
   // Per-mode overrides (undefined = use global)
   modeOverrides: ModeOverrides;
 }
@@ -58,6 +64,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   chatFontSize: 14,
   uiFontSize: 11,
   defaultLanguage: "",
+  theme: "light",
   modeOverrides: {},
 };
 
