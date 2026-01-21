@@ -52,11 +52,17 @@ function buildSystemPrompt(
   currentPhase: string,
   experienceLevel?: string,
   mode?: string,
-  createLanguage?: string
+  createLanguage?: string,
+  defaultLanguage?: string
 ): string {
   const experienceGuidance = getExperienceLevelGuidance(experienceLevel);
 
   const modeContext = getModeContext(mode, createLanguage);
+
+  // Add language preference context if specified (and not in create mode, which uses createLanguage)
+  const languagePreference = defaultLanguage && mode !== "create"
+    ? `\n## User's Preferred Language\nThe user's preferred programming language is **${defaultLanguage}**. When providing code examples, explanations, or discussing implementation patterns, use ${defaultLanguage} unless the code under analysis is in a different language.\n`
+    : "";
 
   const feedbackStyle = settings.beDirectMode
     ? `Be direct in your interpretive suggestions. Offer clear readings and invite challenge or elaboration.`
@@ -74,6 +80,7 @@ function buildSystemPrompt(
 ${experienceGuidance}
 
 ${modeContext}
+${languagePreference}
 
 ## Current Conversation Phase: ${currentPhase}
 ${getPhaseGuidance(currentPhase)}
@@ -238,7 +245,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body: ChatRequest = await request.json();
-    const { messages, settings, currentPhase, experienceLevel, analysisContext, literatureContext, mode, codeContext, createLanguage } = body;
+    const { messages, currentPhase, experienceLevel, analysisContext, literatureContext, mode, codeContext, createLanguage, defaultLanguage } = body;
+
+    // Extract conversation style settings from headers (moved from session to AI settings)
+    const beDirectMode = request.headers.get("X-AI-Be-Direct") === "true";
+    const teachMeMode = request.headers.get("X-AI-Teach-Me") === "true";
+    const settings = { beDirectMode, teachMeMode };
 
     // Build context from code files and analysis if available
     let additionalContext = "";
@@ -308,7 +320,7 @@ Engage with these annotations in your response. They represent the analyst's dev
     }
 
     // Build system prompt with experience level and mode context
-    const systemPrompt = buildSystemPrompt(settings, currentPhase, experienceLevel, mode, createLanguage) + additionalContext;
+    const systemPrompt = buildSystemPrompt(settings, currentPhase, experienceLevel, mode, createLanguage, defaultLanguage) + additionalContext;
 
     // Extract and validate AI configuration from request headers
     const aiConfig = extractAIConfig(request);

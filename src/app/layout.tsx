@@ -3,6 +3,7 @@ import { Libre_Baskerville, Source_Serif_4, Inter } from "next/font/google";
 import "./globals.css";
 import { SessionProvider } from "@/context/SessionContext";
 import { AISettingsProvider } from "@/context/AISettingsContext";
+import { AppSettingsProvider } from "@/context/AppSettingsContext";
 
 const libreBaskerville = Libre_Baskerville({
   subsets: ["latin"],
@@ -52,9 +53,11 @@ export default function RootLayout({
       className={`${libreBaskerville.variable} ${sourceSerif.variable} ${inter.variable}`}
     >
       <body className="font-body antialiased bg-ivory text-ink selection:bg-burgundy/20 selection:text-burgundy-900">
-        <AISettingsProvider>
-          <SessionProvider>{children}</SessionProvider>
-        </AISettingsProvider>
+        <AppSettingsProvider>
+          <AISettingsProvider>
+            <SessionProvider>{children}</SessionProvider>
+          </AISettingsProvider>
+        </AppSettingsProvider>
       </body>
     </html>
   );

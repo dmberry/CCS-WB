@@ -27,6 +27,8 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
     setBaseUrl,
     setCustomModelId,
     setAiEnabled,
+    setBeDirectMode,
+    setTeachMeMode,
     isConfigured,
   } = useAISettings();
 
@@ -93,28 +95,28 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
     settings.model === "custom" || settings.provider === "openai-compatible";
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* AI Enable/Disable Toggle */}
-      <div className="flex items-center justify-between pb-4 border-b border-parchment">
+      <div className="flex items-center justify-between pb-3 border-b border-parchment">
         <div>
-          <label className="block font-sans text-body-sm font-medium text-ink">
+          <label className="block font-sans text-caption font-medium text-ink">
             Enable AI Assistant
           </label>
-          <p className="font-sans text-caption text-slate-muted mt-0.5">
+          <p className="font-sans text-[10px] text-slate-muted mt-0.5">
             When disabled, you can still annotate code and manage references
           </p>
         </div>
         <button
           onClick={() => setAiEnabled(!settings.aiEnabled)}
           className={cn(
-            "w-12 h-6 rounded-full transition-colors relative flex-shrink-0",
+            "w-10 h-5 rounded-full transition-colors relative flex-shrink-0",
             settings.aiEnabled ? "bg-burgundy" : "bg-parchment"
           )}
         >
           <span
             className={cn(
-              "absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform",
-              settings.aiEnabled ? "translate-x-6" : "translate-x-0"
+              "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform",
+              settings.aiEnabled ? "translate-x-5" : "translate-x-0"
             )}
           />
         </button>
@@ -122,29 +124,29 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
 
       {/* Provider Selection */}
       <div className={cn(!settings.aiEnabled && "opacity-50 pointer-events-none")}>
-        <label className="block font-sans text-caption uppercase tracking-widest text-slate-muted mb-2">
+        <label className="block font-sans text-[10px] uppercase tracking-widest text-slate-muted mb-1.5">
           AI Provider
         </label>
         <div className="relative">
           <button
             onClick={() => setIsProviderDropdownOpen(!isProviderDropdownOpen)}
             className={cn(
-              "w-full flex items-center justify-between px-4 py-3",
+              "w-full flex items-center justify-between px-2.5 py-1.5",
               "bg-white border border-parchment-dark rounded-sm",
-              "font-sans text-body-sm text-ink",
+              "font-sans text-[11px] text-ink",
               "hover:border-slate-muted transition-colors",
               isProviderDropdownOpen && "ring-1 ring-burgundy border-burgundy"
             )}
           >
             <div>
               <span className="font-medium">{currentProvider.name}</span>
-              <span className="text-slate-muted ml-2 text-caption">
+              <span className="text-slate-muted ml-1.5 text-[9px]">
                 {currentProvider.description}
               </span>
             </div>
             <ChevronDown
               className={cn(
-                "h-4 w-4 text-slate-muted transition-transform",
+                "h-3.5 w-3.5 text-slate-muted transition-transform",
                 isProviderDropdownOpen && "rotate-180"
               )}
             />
@@ -157,14 +159,14 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
                   key={provider.id}
                   onClick={() => handleProviderChange(provider.id)}
                   className={cn(
-                    "w-full text-left px-4 py-3 font-sans text-body-sm",
+                    "w-full text-left px-2.5 py-1.5 font-sans text-[11px]",
                     "hover:bg-cream transition-colors",
                     settings.provider === provider.id &&
                       "bg-burgundy/5 text-burgundy"
                   )}
                 >
                   <div className="font-medium">{provider.name}</div>
-                  <div className="text-caption text-slate-muted">
+                  <div className="text-[9px] text-slate-muted">
                     {provider.description}
                   </div>
                 </button>
@@ -176,16 +178,16 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
 
       {/* Model Selection */}
       <div className={cn(!settings.aiEnabled && "opacity-50 pointer-events-none")}>
-        <label className="block font-sans text-caption uppercase tracking-widest text-slate-muted mb-2">
+        <label className="block font-sans text-[10px] uppercase tracking-widest text-slate-muted mb-1.5">
           Model
         </label>
         <div className="relative">
           <button
             onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
             className={cn(
-              "w-full flex items-center justify-between px-4 py-3",
+              "w-full flex items-center justify-between px-2.5 py-1.5",
               "bg-white border border-parchment-dark rounded-sm",
-              "font-sans text-body-sm text-ink",
+              "font-sans text-[11px] text-ink",
               "hover:border-slate-muted transition-colors",
               isModelDropdownOpen && "ring-1 ring-burgundy border-burgundy"
             )}
@@ -196,7 +198,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
             </span>
             <ChevronDown
               className={cn(
-                "h-4 w-4 text-slate-muted transition-transform",
+                "h-3.5 w-3.5 text-slate-muted transition-transform",
                 isModelDropdownOpen && "rotate-180"
               )}
             />
@@ -209,7 +211,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
                   key={model.id}
                   onClick={() => handleModelChange(model.id)}
                   className={cn(
-                    "w-full text-left px-4 py-2.5 font-sans text-body-sm",
+                    "w-full text-left px-2.5 py-1.5 font-sans text-[11px]",
                     "hover:bg-cream transition-colors",
                     settings.model === model.id && "bg-burgundy/5 text-burgundy"
                   )}
@@ -225,7 +227,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
       {/* Custom Model ID (for Ollama/OpenAI-compatible) */}
       {showCustomModel && (
         <div className={cn(!settings.aiEnabled && "opacity-50 pointer-events-none")}>
-          <label className="block font-sans text-caption uppercase tracking-widest text-slate-muted mb-2">
+          <label className="block font-sans text-[10px] uppercase tracking-widest text-slate-muted mb-1.5">
             Custom Model ID
           </label>
           <input
@@ -234,8 +236,8 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
             onChange={(e) => setCustomModelId(e.target.value)}
             placeholder="e.g., llama3.2:latest or gpt-4"
             className={cn(
-              "w-full px-4 py-3 bg-white border border-parchment-dark rounded-sm",
-              "font-sans text-body-sm text-ink",
+              "w-full px-2.5 py-1.5 bg-white border border-parchment-dark rounded-sm",
+              "font-sans text-[11px] text-ink",
               "placeholder:text-slate-muted",
               "focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy"
             )}
@@ -246,7 +248,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
       {/* API Key (if required) */}
       {currentProvider.requiresApiKey && (
         <div className={cn(!settings.aiEnabled && "opacity-50 pointer-events-none")}>
-          <label className="block font-sans text-caption uppercase tracking-widest text-slate-muted mb-2">
+          <label className="block font-sans text-[10px] uppercase tracking-widest text-slate-muted mb-1.5">
             API Key
           </label>
           <div className="relative">
@@ -256,8 +258,8 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
               onChange={(e) => setApiKey(e.target.value)}
               placeholder={`Enter your ${currentProvider.name} API key`}
               className={cn(
-                "w-full px-4 py-3 pr-12 bg-white border border-parchment-dark rounded-sm",
-                "font-sans text-body-sm text-ink",
+                "w-full px-2.5 py-1.5 pr-8 bg-white border border-parchment-dark rounded-sm",
+                "font-sans text-[11px] text-ink",
                 "placeholder:text-slate-muted",
                 "focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy"
               )}
@@ -265,16 +267,16 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
             <button
               type="button"
               onClick={() => setShowApiKey(!showApiKey)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-muted hover:text-ink transition-colors"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-muted hover:text-ink transition-colors"
             >
               {showApiKey ? (
-                <EyeOff className="h-4 w-4" />
+                <EyeOff className="h-3.5 w-3.5" />
               ) : (
-                <Eye className="h-4 w-4" />
+                <Eye className="h-3.5 w-3.5" />
               )}
             </button>
           </div>
-          <p className="mt-1.5 font-sans text-caption text-slate-muted">
+          <p className="mt-1 font-sans text-[10px] text-slate-muted">
             Your API key is stored locally in your browser and never sent to our
             servers.
           </p>
@@ -284,7 +286,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
       {/* Base URL (for Ollama and OpenAI-compatible) */}
       {showBaseUrl && (
         <div className={cn(!settings.aiEnabled && "opacity-50 pointer-events-none")}>
-          <label className="block font-sans text-caption uppercase tracking-widest text-slate-muted mb-2">
+          <label className="block font-sans text-[10px] uppercase tracking-widest text-slate-muted mb-1.5">
             Base URL
           </label>
           <input
@@ -297,16 +299,16 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
                 : "https://api.example.com/v1"
             }
             className={cn(
-              "w-full px-4 py-3 bg-white border border-parchment-dark rounded-sm",
-              "font-sans text-body-sm text-ink",
+              "w-full px-2.5 py-1.5 bg-white border border-parchment-dark rounded-sm",
+              "font-sans text-[11px] text-ink",
               "placeholder:text-slate-muted",
               "focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy"
             )}
           />
           {settings.provider === "ollama" && (
-            <p className="mt-1.5 font-sans text-caption text-slate-muted">
+            <p className="mt-1 font-sans text-[10px] text-slate-muted">
               Start Ollama with{" "}
-              <code className="bg-cream px-1 rounded-sm">ollama serve</code> in
+              <code className="bg-cream px-1 rounded-sm text-[10px]">ollama serve</code> in
               your terminal.
             </p>
           )}
@@ -314,13 +316,13 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
       )}
 
       {/* Test Connection Button */}
-      <div className={cn("pt-2", !settings.aiEnabled && "opacity-50 pointer-events-none")}>
+      <div className={cn("pt-1", !settings.aiEnabled && "opacity-50 pointer-events-none")}>
         <button
           onClick={handleTestConnection}
           disabled={testStatus === "testing" || !isConfigured || !settings.aiEnabled}
           className={cn(
-            "w-full flex items-center justify-center gap-2 px-4 py-3",
-            "font-sans text-body-sm rounded-sm transition-all",
+            "w-full flex items-center justify-center gap-2 px-2.5 py-1.5",
+            "font-sans text-[11px] rounded-sm transition-all",
             testStatus === "success"
               ? "bg-success/10 text-success border border-success/30"
               : testStatus === "error"
@@ -332,17 +334,17 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
         >
           {testStatus === "testing" ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Testing connection...
             </>
           ) : testStatus === "success" ? (
             <>
-              <CheckCircle className="h-4 w-4" />
+              <CheckCircle className="h-3.5 w-3.5" />
               Connection successful
             </>
           ) : testStatus === "error" ? (
             <>
-              <XCircle className="h-4 w-4" />
+              <XCircle className="h-3.5 w-3.5" />
               Connection failed
             </>
           ) : (
@@ -351,22 +353,83 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
         </button>
 
         {testError && (
-          <p className="mt-2 font-sans text-caption text-error">{testError}</p>
+          <p className="mt-1.5 font-sans text-[10px] text-error">{testError}</p>
         )}
 
         {!isConfigured && (
-          <p className="mt-2 font-sans text-caption text-slate-muted">
+          <p className="mt-1.5 font-sans text-[10px] text-slate-muted">
             Please enter your API key to test the connection.
           </p>
         )}
       </div>
 
+      {/* Conversation Style Settings */}
+      <div className={cn("pt-3 border-t border-parchment space-y-3", !settings.aiEnabled && "opacity-50 pointer-events-none")}>
+        <div>
+          <h4 className="font-sans text-[10px] uppercase tracking-widest text-slate-muted mb-2">
+            Conversation Style
+          </h4>
+
+          {/* Be Direct Toggle */}
+          <div className="flex items-center justify-between py-1.5">
+            <div>
+              <label className="block font-sans text-caption font-medium text-ink">
+                Be Direct
+              </label>
+              <p className="font-sans text-[10px] text-slate-muted">
+                Offer clear readings and interpretive suggestions
+              </p>
+            </div>
+            <button
+              onClick={() => setBeDirectMode(!settings.beDirectMode)}
+              className={cn(
+                "w-10 h-5 rounded-sm transition-colors flex-shrink-0",
+                settings.beDirectMode ? "bg-burgundy" : "bg-parchment"
+              )}
+            >
+              <div
+                className={cn(
+                  "w-4 h-4 bg-white rounded-sm transition-transform mx-0.5 shadow-editorial",
+                  settings.beDirectMode && "translate-x-5"
+                )}
+              />
+            </button>
+          </div>
+
+          {/* Teach Me Toggle */}
+          <div className="flex items-center justify-between py-1.5">
+            <div>
+              <label className="block font-sans text-caption font-medium text-ink">
+                Teach Me
+              </label>
+              <p className="font-sans text-[10px] text-slate-muted">
+                Explain CCS concepts and connect to scholarship
+              </p>
+            </div>
+            <button
+              onClick={() => setTeachMeMode(!settings.teachMeMode)}
+              className={cn(
+                "w-10 h-5 rounded-sm transition-colors flex-shrink-0",
+                settings.teachMeMode ? "bg-burgundy" : "bg-parchment"
+              )}
+            >
+              <div
+                className={cn(
+                  "w-4 h-4 bg-white rounded-sm transition-transform mx-0.5 shadow-editorial",
+                  settings.teachMeMode && "translate-x-5"
+                )}
+              />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Close button */}
       {onClose && (
-        <div className="pt-3 border-t border-parchment">
+        <div className="pt-2 border-t border-parchment">
           <button
             onClick={onClose}
-            className="w-full px-4 py-2.5 font-sans text-body-sm text-slate hover:text-ink hover:bg-cream rounded-sm transition-colors"
+            className="w-full px-3 py-2 font-sans text-caption text-slate hover:text-ink hover:bg-cream rounded-sm transition-colors"
           >
             Close Settings
           </button>

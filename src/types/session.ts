@@ -185,6 +185,7 @@ export interface Session {
   id: string;
   mode: EntryMode;
   experienceLevel?: ExperienceLevel;  // CCS experience level (learning, practitioner, research)
+  languageOverride?: string;  // Per-session language preference (overrides global default)
   messages: Message[];
   codeFiles: CodeReference[];   // Code being analysed
   lineAnnotations: LineAnnotation[];  // Line-anchored annotations for close reading

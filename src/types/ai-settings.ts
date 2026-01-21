@@ -33,6 +33,9 @@ export interface AISettings {
   baseUrl?: string; // For Ollama and OpenAI-compatible
   customModelId?: string; // For custom model names
   aiEnabled: boolean; // Master toggle for AI functionality
+  // Conversation style settings
+  beDirectMode: boolean; // Direct feedback vs graduated Socratic approach
+  teachMeMode: boolean; // Explain CCS concepts vs dialogue-based learning
 }
 
 export interface AISettingsStorage {
@@ -60,4 +63,6 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
   model: "llama3.2",
   baseUrl: "http://localhost:11434",
   aiEnabled: true,
+  beDirectMode: false, // Default to graduated Socratic approach
+  teachMeMode: false, // Default to dialogue-based learning
 };

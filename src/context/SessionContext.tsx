@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useCallback } from "react";
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from "react";
 import type {
   Session,
   EntryMode,
@@ -17,6 +17,13 @@ import type {
   LineAnnotation,
 } from "@/types";
 import { generateId, getCurrentTimestamp } from "@/lib/utils";
+import {
+  saveSessionForMode,
+  loadSessionForMode,
+  clearSessionForMode,
+  clearAllSessions,
+  hasSessionForMode,
+} from "@/lib/session-storage";
 
 // Action types
 type SessionAction =
@@ -40,6 +47,10 @@ type SessionAction =
   | { type: "ADD_CODE_VERSION"; payload: Omit<CodeVersion, "id" | "createdAt" | "version"> }
   | { type: "SET_CURRENT_VERSION"; payload: string }
   | { type: "SET_CREATE_LANGUAGE"; payload: CreateLanguage }
+  | { type: "SET_LANGUAGE_OVERRIDE"; payload: string | undefined }
+  | { type: "SET_EXPERIENCE_LEVEL"; payload: ExperienceLevel }
+  | { type: "SET_MODE"; payload: EntryMode }
+  | { type: "LOAD_SAVED_SESSION"; payload: Session }
   | { type: "TRANSFER_TO_CRITIQUE"; payload: string } // version id to transfer
   // Line annotation actions
   | { type: "ADD_LINE_ANNOTATION"; payload: LineAnnotation }
@@ -271,6 +282,33 @@ function sessionReducer(state: Session, action: SessionAction): Session {
         lastModified: now,
       };
 
+    case "SET_LANGUAGE_OVERRIDE":
+      return {
+        ...state,
+        languageOverride: action.payload,
+        lastModified: now,
+      };
+
+    case "SET_EXPERIENCE_LEVEL":
+      return {
+        ...state,
+        experienceLevel: action.payload,
+        lastModified: now,
+      };
+
+    case "SET_MODE":
+      return {
+        ...state,
+        mode: action.payload,
+        lastModified: now,
+      };
+
+    case "LOAD_SAVED_SESSION":
+      return {
+        ...action.payload,
+        lastModified: now,
+      };
+
     case "SET_CURRENT_VERSION":
       return {
         ...state,
@@ -379,7 +417,15 @@ interface SessionContextType {
   addCodeVersion: (version: Omit<CodeVersion, "id" | "createdAt" | "version">) => void;
   setCurrentVersion: (versionId: string) => void;
   setCreateLanguage: (language: CreateLanguage) => void;
+  setLanguageOverride: (language: string | undefined) => void;
+  setExperienceLevel: (level: ExperienceLevel) => void;
+  setMode: (mode: EntryMode) => void;
   transferToCritique: (versionId: string) => void;
+  // Session persistence functions
+  switchMode: (mode: EntryMode) => void; // Save current, load target mode
+  clearModeSession: (mode: EntryMode) => void;
+  clearAllModeSessions: () => void;
+  hasSavedSession: (mode: EntryMode) => boolean;
   // Line annotation functions
   addLineAnnotation: (annotation: Omit<LineAnnotation, "id" | "createdAt">) => void;
   updateLineAnnotation: (id: string, content: string) => void;
@@ -517,9 +563,69 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "SET_CREATE_LANGUAGE", payload: language });
   }, []);
 
+  const setLanguageOverride = useCallback((language: string | undefined) => {
+    dispatch({ type: "SET_LANGUAGE_OVERRIDE", payload: language });
+  }, []);
+
+  const setExperienceLevel = useCallback((level: ExperienceLevel) => {
+    dispatch({ type: "SET_EXPERIENCE_LEVEL", payload: level });
+  }, []);
+
+  const setMode = useCallback((mode: EntryMode) => {
+    dispatch({ type: "SET_MODE", payload: mode });
+  }, []);
+
   const transferToCritique = useCallback((versionId: string) => {
     dispatch({ type: "TRANSFER_TO_CRITIQUE", payload: versionId });
   }, []);
+
+  // Session persistence functions
+  const switchMode = useCallback((targetMode: EntryMode) => {
+    // Save current session before switching
+    saveSessionForMode(session.mode, session);
+
+    // Try to load saved session for target mode
+    const savedSession = loadSessionForMode(targetMode);
+    if (savedSession) {
+      dispatch({ type: "LOAD_SAVED_SESSION", payload: savedSession });
+    } else {
+      // No saved session, create a fresh one for the target mode
+      dispatch({ type: "INIT_SESSION", payload: { mode: targetMode, experienceLevel: session.experienceLevel } });
+    }
+  }, [session]);
+
+  const clearModeSession = useCallback((mode: EntryMode) => {
+    clearSessionForMode(mode);
+    // If clearing current mode, reset the session
+    if (mode === session.mode) {
+      dispatch({ type: "INIT_SESSION", payload: { mode, experienceLevel: session.experienceLevel } });
+    }
+  }, [session.mode, session.experienceLevel]);
+
+  const clearAllModeSessions = useCallback(() => {
+    clearAllSessions();
+    // Reset current session
+    dispatch({ type: "INIT_SESSION", payload: { mode: session.mode, experienceLevel: session.experienceLevel } });
+  }, [session.mode, session.experienceLevel]);
+
+  const hasSavedSession = useCallback((mode: EntryMode) => {
+    return hasSessionForMode(mode);
+  }, []);
+
+  // Auto-save session on changes (debounced via lastModified check)
+  const lastSavedRef = useRef<string>("");
+  useEffect(() => {
+    // Don't save if nothing has changed since last save
+    if (session.lastModified === lastSavedRef.current) return;
+
+    // Debounce saves to avoid excessive writes
+    const timeoutId = setTimeout(() => {
+      saveSessionForMode(session.mode, session);
+      lastSavedRef.current = session.lastModified;
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [session]);
 
   // Line annotation functions
   const addLineAnnotation = useCallback(
@@ -569,7 +675,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     addCodeVersion,
     setCurrentVersion,
     setCreateLanguage,
+    setLanguageOverride,
+    setExperienceLevel,
+    setMode,
     transferToCritique,
+    // Session persistence
+    switchMode,
+    clearModeSession,
+    clearAllModeSessions,
+    hasSavedSession,
     // Line annotations
     addLineAnnotation,
     updateLineAnnotation,

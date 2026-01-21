@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/context/SessionContext";
 import { useAISettings } from "@/context/AISettingsContext";
-import { cn, formatTimestamp, fetchWithTimeout, retryWithBackoff } from "@/lib/utils";
+import { cn, formatTimestamp, fetchWithTimeout, retryWithBackoff, generateId, getCurrentTimestamp } from "@/lib/utils";
 import type { Message, AnalysisResult, ReferenceResult, CodeReference, CreateLanguage, ExperienceLevel } from "@/types";
 import { CREATE_LANGUAGES, EXPERIENCE_LEVEL_LABELS, EXPERIENCE_LEVEL_DESCRIPTIONS } from "@/types";
 import {
@@ -35,9 +35,14 @@ import {
   Heart,
   ArrowUp,
   SlidersHorizontal,
+  ChevronDown,
 } from "lucide-react";
 import jsPDF from "jspdf";
-import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
+import { SettingsModal } from "@/components/settings/SettingsModal";
+import { AISettingsPanel } from "@/components/settings/AISettingsPanel";
+import { useAppSettings } from "@/context/AppSettingsContext";
+import type { AppMode } from "@/types/app-settings";
+import { FONT_SIZE_MIN, FONT_SIZE_MAX, PROGRAMMING_LANGUAGES } from "@/types/app-settings";
 import { AnnotatedCodeViewer, generateAnnotatedCode } from "@/components/code";
 import { GuidedPrompts } from "@/components/prompts";
 import { CritiqueLayout, type CritiqueLayoutRef } from "@/components/layouts";
@@ -54,9 +59,7 @@ import {
   CCS_SKILL_VERSION,
 } from "@/lib/export";
 
-// Font size constants for chat
-const MIN_CHAT_FONT_SIZE = 10;
-const MAX_CHAT_FONT_SIZE = 24;
+// Font size constants are imported from app-settings
 
 // Opening prompts based on mode
 const openingPrompts: Record<string, string> = {
@@ -68,11 +71,20 @@ const openingPrompts: Record<string, string> = {
 
 export default function ConversationPage() {
   const router = useRouter();
-  const { session, addMessage, updateMessage, updateSettings, addCode, removeCode, addReferences, clearReferences, addArtifact, importSession, setCreateLanguage } = useSession();
+  const { session, addMessage, updateMessage, updateSettings, addCode, removeCode, addReferences, clearReferences, addArtifact, importSession, setCreateLanguage, setLanguageOverride, setExperienceLevel, switchMode, clearModeSession, hasSavedSession } = useSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured } = useAISettings();
+  const { settings: appSettings, getFontSizes, setModeChatFontSize } = useAppSettings();
   const aiEnabled = aiSettings.aiEnabled;
   const [input, setInput] = useState("");
-  const [showAISettings, setShowAISettings] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"code" | "appearance" | "ai" | "about">("appearance");
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [showModeDropdown, setShowModeDropdown] = useState(false);
+
+  // Get effective language: session override > global default > "Not specified"
+  const effectiveLanguage = session.languageOverride || appSettings.defaultLanguage || "";
+  const languageName = PROGRAMMING_LANGUAGES.find(l => l.id === effectiveLanguage)?.name || "Not specified";
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -100,7 +112,6 @@ export default function ConversationPage() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-  const [showSettings, setShowSettings] = useState(false);
   const [isSearchingLiterature, setIsSearchingLiterature] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -125,7 +136,10 @@ export default function ConversationPage() {
   const [showCodeAnnotator, setShowCodeAnnotator] = useState<{ code: string; fileId: string; fileName?: string; language?: string } | null>(null);
   const [showGuidedPrompts, setShowGuidedPrompts] = useState(false);
   const [projectName, setProjectName] = useState<string>("");
-  const [chatFontSize, setChatFontSize] = useState<number>(14);
+
+  // Get font size from app settings based on current mode
+  const currentMode = (session.mode || "critique") as AppMode;
+  const { chatFontSize } = getFontSizes(currentMode);
   const [showFontSizePopover, setShowFontSizePopover] = useState(false);
   const [showContextPreview, setShowContextPreview] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
@@ -166,6 +180,23 @@ export default function ConversationPage() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Close dropdowns if clicking outside of them
+      if (!target.closest('[data-dropdown]')) {
+        setShowModeDropdown(false);
+        setShowExperienceHelp(false);
+        setShowLanguageDropdown(false);
+        setShowFontSizePopover(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Handle navigation to home with warning
   const handleNavigateHome = useCallback(() => {
@@ -275,6 +306,7 @@ export default function ConversationPage() {
               experienceLevel: session.experienceLevel,
               mode: session.mode,
               createLanguage: session.createState?.language,
+              defaultLanguage: effectiveLanguage || undefined,
               analysisContext: session.analysisResults,
               literatureContext: session.references,
               // Include annotations for archaeology and interpret modes
@@ -345,7 +377,7 @@ export default function ConversationPage() {
       let errorMessage: string;
       if (isConfigError) {
         // Open AI settings modal for configuration errors
-        setShowAISettings(true);
+        setSettingsTab("ai"); setShowSettingsModal(true);
         errorMessage = "AI provider not configured or not responding. Please check your AI settings. The settings panel has been opened for you.";
       } else if (isRateLimitError) {
         errorMessage = `You're sending messages too quickly. Please wait ${retryAfter || 60} seconds before trying again. Your conversation is saved and you can continue shortly.`;
@@ -353,7 +385,7 @@ export default function ConversationPage() {
         errorMessage = "The request took too long and timed out. The server might be busy. Please try again in a moment. Your conversation context is preserved.";
       } else if (isNetworkError || isOllamaConnectionError) {
         // Open AI settings modal for network/connection errors (likely Ollama not running)
-        setShowAISettings(true);
+        setSettingsTab("ai"); setShowSettingsModal(true);
         errorMessage = "Unable to connect to the AI provider. If using Ollama, make sure it's running (ollama serve). The settings panel has been opened for you.";
       } else {
         errorMessage = "I apologize, but I encountered an error processing your message. Please try again.";
@@ -844,14 +876,18 @@ export default function ConversationPage() {
       // Cmd/Ctrl + - - Decrease font size
       if (isMod && e.key === '-') {
         e.preventDefault();
-        setChatFontSize(prev => Math.max(MIN_CHAT_FONT_SIZE, prev - 1));
+        if (chatFontSize > FONT_SIZE_MIN) {
+          setModeChatFontSize(currentMode, chatFontSize - 1);
+        }
         return;
       }
 
       // Cmd/Ctrl + = or + - Increase font size
       if (isMod && (e.key === '=' || e.key === '+')) {
         e.preventDefault();
-        setChatFontSize(prev => Math.min(MAX_CHAT_FONT_SIZE, prev + 1));
+        if (chatFontSize < FONT_SIZE_MAX) {
+          setModeChatFontSize(currentMode, chatFontSize + 1);
+        }
         return;
       }
 
@@ -1348,65 +1384,143 @@ export default function ConversationPage() {
           >
             CCS Workbench
           </button>
+          {/* Mode indicator - clickable to switch */}
           {session.mode && (
-            <span className="font-sans text-[10px] text-burgundy bg-burgundy/5 px-2 py-0.5 border border-burgundy/10 rounded-sm">
-              {session.mode.charAt(0).toUpperCase() + session.mode.slice(1)} Mode
-            </span>
-          )}
-          <button
-            onClick={() => setShowAISettings(true)}
-            className={cn(
-              "font-sans text-[10px] px-2 py-0.5 border rounded-sm transition-colors",
-              !aiEnabled
-                ? "text-red-700 bg-red-50 border-red-200 hover:border-red-400"
-                : isAIConfigured
-                  ? "text-green-700 bg-green-50 border-green-200 hover:border-green-400"
-                  : "text-amber-700 bg-amber-50 border-amber-200 hover:border-amber-400"
-            )}
-            title={
-              !aiEnabled
-                ? "AI disabled - click to enable"
-                : isAIConfigured
-                  ? "AI connected - click to configure"
-                  : "AI not configured - click to set up"
-            }
-          >
-            {!aiEnabled ? "AI: Off" : isAIConfigured ? "AI: On" : "AI: ??"}
-          </button>
-          {session.experienceLevel && (
-            <div className="relative">
+            <div className="relative" data-dropdown>
               <button
-                onClick={() => setShowExperienceHelp(!showExperienceHelp)}
-                className="font-sans text-[8px] uppercase tracking-wide text-slate-muted hover:text-ink transition-colors"
+                onClick={() => setShowModeDropdown(!showModeDropdown)}
+                className="font-sans text-[10px] text-slate hover:text-ink px-2 py-0.5 border border-parchment hover:border-slate-muted rounded-sm transition-colors flex items-center gap-1"
               >
-                {EXPERIENCE_LEVEL_LABELS[session.experienceLevel as ExperienceLevel]}
+                {session.mode.charAt(0).toUpperCase() + session.mode.slice(1)}
+                <ChevronDown className={cn("h-2.5 w-2.5 transition-transform", showModeDropdown && "rotate-180")} strokeWidth={1.5} />
               </button>
-
-              {/* Experience level help popup */}
-              {showExperienceHelp && (
-                <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-sm shadow-editorial-lg border border-parchment p-3 z-50 animate-fade-in">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-display text-xs text-ink">Experience Level</h4>
+              {showModeDropdown && (
+                <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-sm shadow-lg border border-parchment p-1 z-50">
+                  {(["critique", "archaeology", "interpret", "create"] as const).map((mode) => (
                     <button
-                      onClick={() => setShowExperienceHelp(false)}
-                      className="p-0.5 text-slate hover:text-ink transition-colors"
+                      key={mode}
+                      onClick={() => {
+                        if (mode !== session.mode) {
+                          switchMode(mode);
+                        }
+                        setShowModeDropdown(false);
+                      }}
+                      className={cn(
+                        "w-full text-left px-2 py-1.5 text-[11px] rounded-sm transition-colors flex items-center justify-between",
+                        session.mode === mode ? "bg-burgundy/10 text-burgundy" : "text-ink hover:bg-cream"
+                      )}
                     >
-                      <X className="h-3 w-3" strokeWidth={1.5} />
+                      <span>{mode.charAt(0).toUpperCase() + mode.slice(1)} Mode</span>
+                      {hasSavedSession(mode) && mode !== session.mode && (
+                        <span className="text-[9px] text-slate-muted">(saved)</span>
+                      )}
+                    </button>
+                  ))}
+                  <div className="border-t border-parchment mt-1 pt-1">
+                    <button
+                      onClick={() => {
+                        clearModeSession(session.mode);
+                        setShowModeDropdown(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 text-[11px] text-slate-muted hover:text-error hover:bg-cream rounded-sm transition-colors"
+                    >
+                      Clear Current Session
                     </button>
                   </div>
-                  <p className="font-sans text-[10px] font-medium text-burgundy mb-1">
-                    {EXPERIENCE_LEVEL_LABELS[session.experienceLevel as ExperienceLevel]}
-                  </p>
-                  <p className="font-body text-[10px] text-slate leading-snug mb-2">
-                    {EXPERIENCE_LEVEL_DESCRIPTIONS[session.experienceLevel as ExperienceLevel]}
-                  </p>
-                  <p className="font-body text-[9px] text-slate-muted italic">
-                    To change, start a new session from the home page.
-                  </p>
                 </div>
               )}
             </div>
           )}
+          {/* Experience level indicator - clickable to change */}
+          {session.experienceLevel && (
+            <div className="relative" data-dropdown>
+              <button
+                onClick={() => setShowExperienceHelp(!showExperienceHelp)}
+                className="font-sans text-[10px] text-slate hover:text-ink px-2 py-0.5 border border-parchment hover:border-slate-muted rounded-sm transition-colors flex items-center gap-1"
+              >
+                {EXPERIENCE_LEVEL_LABELS[session.experienceLevel as ExperienceLevel]}
+                <ChevronDown className={cn("h-2.5 w-2.5 transition-transform", showExperienceHelp && "rotate-180")} strokeWidth={1.5} />
+              </button>
+
+              {/* Experience level dropdown */}
+              {showExperienceHelp && (
+                <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-sm shadow-lg border border-parchment p-1 z-50">
+                  {(["learning", "practitioner", "research"] as const).map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => {
+                        setExperienceLevel(level);
+                        setShowExperienceHelp(false);
+                        // Add a system message to notify the conversation
+                        addMessage({
+                          id: generateId(),
+                          role: "system",
+                          content: `[Experience level changed to ${EXPERIENCE_LEVEL_LABELS[level]}]`,
+                          timestamp: getCurrentTimestamp(),
+                        });
+                      }}
+                      className={cn(
+                        "w-full text-left px-2 py-1.5 rounded-sm transition-colors",
+                        session.experienceLevel === level ? "bg-burgundy/10" : "hover:bg-cream"
+                      )}
+                    >
+                      <span className={cn("block text-[11px]", session.experienceLevel === level ? "text-burgundy" : "text-ink")}>
+                        {EXPERIENCE_LEVEL_LABELS[level]}
+                      </span>
+                      <span className="block text-[9px] text-slate-muted mt-0.5">
+                        {EXPERIENCE_LEVEL_DESCRIPTIONS[level]}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {/* Language indicator with dropdown */}
+          <div className="relative" data-dropdown>
+            <button
+              onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+              className="font-sans text-[10px] text-slate hover:text-ink px-2 py-0.5 border border-parchment hover:border-slate-muted rounded-sm transition-colors flex items-center gap-1"
+              title="Click to change language"
+            >
+              <Code className="h-3 w-3" strokeWidth={1.5} />
+              <span>{languageName}</span>
+              <ChevronDown className={cn("h-2.5 w-2.5 transition-transform", showLanguageDropdown && "rotate-180")} strokeWidth={1.5} />
+            </button>
+            {showLanguageDropdown && (
+              <div className="absolute top-full left-0 mt-1 w-44 bg-white rounded-sm shadow-lg border border-parchment p-1 z-50 max-h-64 overflow-y-auto">
+                {PROGRAMMING_LANGUAGES.map((lang) => (
+                  <button
+                    key={lang.id}
+                    onClick={() => {
+                      setLanguageOverride(lang.id || undefined);
+                      setShowLanguageDropdown(false);
+                    }}
+                    className={cn(
+                      "w-full text-left px-2 py-1.5 text-[11px] rounded-sm hover:bg-cream transition-colors",
+                      effectiveLanguage === lang.id ? "bg-burgundy/10 text-burgundy" : "text-ink"
+                    )}
+                  >
+                    {lang.name}
+                  </button>
+                ))}
+                {session.languageOverride && (
+                  <>
+                    <div className="border-t border-parchment my-1" />
+                    <button
+                      onClick={() => {
+                        setLanguageOverride(undefined);
+                        setShowLanguageDropdown(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 text-[11px] text-slate-muted hover:text-burgundy rounded-sm transition-colors"
+                    >
+                      Reset to default
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Center: Full filename with extension - click to rename */}
@@ -1473,178 +1587,117 @@ export default function ConversationPage() {
             <Download className="h-4 w-4" strokeWidth={1.5} />
           </button>
 
-          {/* Settings toggle */}
+          {/* AI Status Button */}
           <button
-            onClick={() => setShowSettings(!showSettings)}
+            onClick={() => setShowAIPanel(true)}
             className={cn(
-              "p-1.5 rounded-sm transition-colors",
-              showSettings
-                ? "bg-burgundy text-ivory"
-                : "text-slate hover:text-ink hover:bg-cream"
+              "font-sans text-[10px] px-2 py-0.5 border rounded-sm transition-colors",
+              !aiEnabled
+                ? "text-red-700 bg-red-50 border-red-200 hover:border-red-400"
+                : isAIConfigured
+                  ? "text-green-700 bg-green-50 border-green-200 hover:border-green-400"
+                  : "text-amber-700 bg-amber-50 border-amber-200 hover:border-amber-400"
             )}
+            title={
+              !aiEnabled
+                ? "AI disabled - click to enable"
+                : isAIConfigured
+                  ? "AI connected - click to configure"
+                  : "AI not configured - click to set up"
+            }
+          >
+            {!aiEnabled ? "AI: Off" : isAIConfigured ? "AI: On" : "AI: ??"}
+          </button>
+
+          <div className="w-px h-4 bg-parchment mx-1" />
+
+          {/* Settings button - opens full settings modal */}
+          <button
+            onClick={() => {
+              setSettingsTab("appearance");
+              setShowSettingsModal(true);
+            }}
+            className="p-1.5 rounded-sm transition-colors text-slate hover:text-ink hover:bg-cream"
             aria-label="Settings"
           >
             <Settings className="h-4 w-4" strokeWidth={1.5} />
           </button>
 
-          {/* Settings dropdown - Editorial style */}
-          {showSettings && (
-            <div className="absolute top-full right-0 mt-2 bg-white rounded-sm shadow-editorial-lg border border-parchment p-5 z-20 w-72">
-              <div className="space-y-5">
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="font-sans text-body-sm text-ink">Be Direct</span>
-                  <button
-                    onClick={() =>
-                      updateSettings({
-                        beDirectMode: !session.settings.beDirectMode,
-                      })
-                    }
-                    className={cn(
-                      "w-11 h-6 rounded-sm transition-colors",
-                      session.settings.beDirectMode
-                        ? "bg-burgundy"
-                        : "bg-parchment"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "w-5 h-5 bg-white rounded-sm transition-transform mx-0.5 shadow-editorial",
-                        session.settings.beDirectMode && "translate-x-5"
-                      )}
-                    />
-                  </button>
-                </label>
-
-                <label className="flex items-center justify-between cursor-pointer">
-                  <span className="font-sans text-body-sm text-ink">Teach Me</span>
-                  <button
-                    onClick={() =>
-                      updateSettings({
-                        teachMeMode: !session.settings.teachMeMode,
-                      })
-                    }
-                    className={cn(
-                      "w-11 h-6 rounded-sm transition-colors",
-                      session.settings.teachMeMode ? "bg-burgundy" : "bg-parchment"
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "w-5 h-5 bg-white rounded-sm transition-transform mx-0.5 shadow-editorial",
-                        session.settings.teachMeMode && "translate-x-5"
-                      )}
-                    />
-                  </button>
-                </label>
-
-                {/* AI Provider Settings */}
-                <div className="pt-4 border-t border-parchment">
-                  <button
-                    onClick={() => {
-                      setShowSettings(false);
-                      setShowAISettings(true);
-                    }}
-                    className="w-full flex items-center justify-between text-left group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Cpu className="h-4 w-4 text-slate group-hover:text-burgundy transition-colors" strokeWidth={1.5} />
-                      <span className="font-sans text-body-sm text-ink group-hover:text-burgundy transition-colors">AI Provider</span>
-                    </div>
-                    <span className="font-sans text-body-xs text-slate">
-                      {PROVIDER_CONFIGS[aiSettings.provider]?.name?.split(' ')[0] || 'Configure'}
-                    </span>
-                  </button>
-                  {!isAIConfigured && (
-                    <p className="font-sans text-body-xs text-burgundy mt-1">
-                      Configure API key to continue
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* AI Settings Modal */}
-          {showAISettings && (
-            <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-              <div className="bg-white rounded-sm shadow-editorial-lg w-full max-w-lg mx-4 border border-parchment max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between p-5 border-b border-parchment">
-                  <h3 className="font-display text-display-md text-ink">AI Provider Settings</h3>
-                  <button
-                    onClick={() => setShowAISettings(false)}
-                    className="p-1 text-slate hover:text-ink transition-colors"
-                  >
-                    <X className="h-5 w-5" strokeWidth={1.5} />
-                  </button>
-                </div>
-                <div className="p-5">
-                  <AIProviderSettings onClose={() => setShowAISettings(false)} />
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Settings Modal */}
+          <SettingsModal
+            isOpen={showSettingsModal}
+            onClose={() => setShowSettingsModal(false)}
+            initialTab={settingsTab}
+          />
+          <AISettingsPanel
+            isOpen={showAIPanel}
+            onClose={() => setShowAIPanel(false)}
+          />
         </div>
       </header>
 
       {/* Code input modal - Editorial style */}
       {showCodeInput && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-editorial-lg w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col border border-parchment">
-            <div className="p-6 border-b border-parchment">
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+          onClick={() => setShowCodeInput(false)}
+        >
+          <div
+            className="bg-white rounded-sm shadow-editorial-lg w-full max-w-xl mx-4 max-h-[90vh] flex flex-col border border-parchment"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-parchment">
               <div className="flex items-center justify-between">
-                <h3 className="font-display text-display-md text-ink">Add Code for Analysis</h3>
+                <h3 className="font-display text-sm text-ink">Add Code for Analysis</h3>
                 <button
                   onClick={() => setShowCodeInput(false)}
                   className="text-slate-muted hover:text-ink transition-colors"
                 >
-                  <X className="h-5 w-5" strokeWidth={1.5} />
+                  <X className="h-4 w-4" strokeWidth={1.5} />
                 </button>
               </div>
-              <p className="font-body text-body-sm text-slate mt-2">
+              <p className="font-body text-[11px] text-slate mt-1.5">
                 Paste or type the code you want to analyse. Add a name and language to help with interpretation.
               </p>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-sans text-caption text-slate-muted block mb-1">Name (optional)</label>
+                  <label className="font-sans text-[10px] text-slate-muted block mb-1">Name (optional)</label>
                   <input
                     type="text"
                     value={codeInputName}
                     onChange={(e) => setCodeInputName(e.target.value)}
                     placeholder="e.g., Strachey Love Letter Generator"
-                    className="input-editorial w-full"
-                    style={{ fontSize: `${chatFontSize}px` }}
+                    className="input-editorial w-full text-[11px] px-2.5 py-1.5"
                   />
                 </div>
                 <div>
-                  <label className="font-sans text-caption text-slate-muted block mb-1">Language (optional)</label>
+                  <label className="font-sans text-[10px] text-slate-muted block mb-1">Language (optional)</label>
                   <input
                     type="text"
                     value={codeInputLanguage}
                     onChange={(e) => setCodeInputLanguage(e.target.value)}
                     placeholder="e.g., BASIC, Python, C"
-                    className="input-editorial w-full"
-                    style={{ fontSize: `${chatFontSize}px` }}
+                    className="input-editorial w-full text-[11px] px-2.5 py-1.5"
                   />
                 </div>
               </div>
               <div>
-                <label className="font-sans text-caption text-slate-muted block mb-1">Code</label>
+                <label className="font-sans text-[10px] text-slate-muted block mb-1">Code</label>
                 <textarea
                   value={codeInputText}
                   onChange={(e) => setCodeInputText(e.target.value)}
                   placeholder="Paste or type your code here..."
-                  className="input-editorial w-full h-64 font-mono"
-                  style={{ fontSize: `${chatFontSize}px` }}
+                  className="input-editorial w-full h-48 font-mono text-[11px] px-2.5 py-1.5"
                   autoFocus
                 />
               </div>
             </div>
-            <div className="p-6 border-t border-parchment flex gap-3 justify-end">
+            <div className="p-4 border-t border-parchment flex gap-2 justify-end">
               <button
                 onClick={() => setShowCodeInput(false)}
-                className="btn-editorial-secondary"
+                className="btn-editorial-secondary text-[11px] px-3 py-1.5"
               >
                 Cancel
               </button>
@@ -1652,6 +1705,7 @@ export default function ConversationPage() {
                 onClick={handleCodeSubmit}
                 disabled={!codeInputText.trim()}
                 className={cn(
+                  "text-[11px] px-3 py-1.5",
                   codeInputText.trim()
                     ? "btn-editorial-primary"
                     : "btn-editorial bg-parchment text-slate-muted cursor-not-allowed"
@@ -1666,10 +1720,16 @@ export default function ConversationPage() {
 
       {/* Reference search modal - Editorial style */}
       {showSearchModal && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-editorial-lg p-6 w-full max-w-md mx-4 border border-parchment">
-            <h3 className="font-display text-display-md text-ink mb-4">Find References</h3>
-            <p className="font-body text-body-sm text-slate mb-5">
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+          onClick={() => setShowSearchModal(false)}
+        >
+          <div
+            className="bg-white rounded-sm shadow-editorial-lg p-4 w-full max-w-sm mx-4 border border-parchment"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-display text-sm text-ink mb-2">Find References</h3>
+            <p className="font-body text-[11px] text-slate mb-3">
               Search for related scholarship, code repositories, or historical software archives.
             </p>
             <input
@@ -1682,7 +1742,7 @@ export default function ConversationPage() {
                 }
               }}
               placeholder="e.g., critical code studies, ELIZA, game programming"
-              className="input-editorial mb-4"
+              className="input-editorial mb-3 text-[11px] px-2.5 py-1.5"
               autoFocus
             />
 
@@ -1691,16 +1751,16 @@ export default function ConversationPage() {
               const suggestions = getSuggestedSearchTerms();
               if (suggestions.length > 0) {
                 return (
-                  <div className="mb-5">
-                    <p className="font-sans text-caption uppercase tracking-widest text-slate-muted mb-2">
+                  <div className="mb-3">
+                    <p className="font-sans text-[9px] uppercase tracking-widest text-slate-muted mb-1.5">
                       Suggested searches
                     </p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {suggestions.map((term, i) => (
                         <button
                           key={i}
                           onClick={() => setSearchQuery(term)}
-                          className="px-3 py-1 text-body-sm font-sans bg-cream border border-parchment rounded-sm hover:border-burgundy hover:text-burgundy transition-colors"
+                          className="px-2 py-0.5 text-[10px] font-sans bg-cream border border-parchment rounded-sm hover:border-burgundy hover:text-burgundy transition-colors"
                         >
                           {term}
                         </button>
@@ -1712,10 +1772,10 @@ export default function ConversationPage() {
               return null;
             })()}
 
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-2 justify-end">
               <button
                 onClick={() => setShowSearchModal(false)}
-                className="btn-editorial-secondary"
+                className="btn-editorial-secondary text-[11px] px-3 py-1.5"
               >
                 Cancel
               </button>
@@ -1723,6 +1783,7 @@ export default function ConversationPage() {
                 onClick={() => executeSearchLiterature(searchQuery)}
                 disabled={!searchQuery.trim()}
                 className={cn(
+                  "text-[11px] px-3 py-1.5",
                   searchQuery.trim()
                     ? "btn-editorial-primary"
                     : "btn-editorial bg-parchment text-slate-muted cursor-not-allowed"
@@ -1737,37 +1798,43 @@ export default function ConversationPage() {
 
       {/* Output generation modal - Editorial style */}
       {showOutputModal && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-editorial-lg w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col border border-parchment">
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+          onClick={() => setShowOutputModal(false)}
+        >
+          <div
+            className="bg-white rounded-sm shadow-editorial-lg w-full max-w-xl mx-4 max-h-[90vh] flex flex-col border border-parchment"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal header */}
-            <div className="p-6 border-b border-parchment">
+            <div className="p-4 border-b border-parchment">
               <div className="flex items-center justify-between">
-                <h3 className="font-display text-display-md text-ink">Generate Critique</h3>
+                <h3 className="font-display text-sm text-ink">Generate Critique</h3>
                 <button
                   onClick={() => setShowOutputModal(false)}
                   className="text-slate-muted hover:text-ink transition-colors"
                 >
-                  <X className="h-5 w-5" strokeWidth={1.5} />
+                  <X className="h-4 w-4" strokeWidth={1.5} />
                 </button>
               </div>
               {!generatedOutput && (
-                <p className="font-body text-body-sm text-slate mt-2">
+                <p className="font-body text-[11px] text-slate mt-1.5">
                   Choose the type of critical output you&apos;d like to generate from your analysis.
                 </p>
               )}
             </div>
 
             {/* Modal content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-4">
               {!generatedOutput && !isGenerating && (
-                <div className="grid gap-4">
+                <div className="grid gap-2">
                   {/* Code Annotation option */}
                   <button
                     onClick={() => executeGenerateOutput("annotation")}
-                    className="text-left p-5 border border-parchment rounded-sm hover:border-burgundy hover:bg-burgundy/5 transition-all duration-300"
+                    className="text-left p-3 border border-parchment rounded-sm hover:border-burgundy hover:bg-burgundy/5 transition-all duration-300"
                   >
-                    <h4 className="font-display text-display-md text-ink mb-1">Code Annotation</h4>
-                    <p className="font-body text-body-sm text-slate">
+                    <h4 className="font-display text-caption text-ink mb-0.5">Code Annotation</h4>
+                    <p className="font-body text-[10px] text-slate">
                       Line-by-line annotations exploring lexical choices, naming conventions, and structural decisions.
                     </p>
                   </button>
@@ -1775,10 +1842,10 @@ export default function ConversationPage() {
                   {/* Code Critique option */}
                   <button
                     onClick={() => executeGenerateOutput("critique")}
-                    className="text-left p-5 border border-parchment rounded-sm hover:border-burgundy hover:bg-burgundy/5 transition-all duration-300"
+                    className="text-left p-3 border border-parchment rounded-sm hover:border-burgundy hover:bg-burgundy/5 transition-all duration-300"
                   >
-                    <h4 className="font-display text-display-md text-ink mb-1">Code Critique</h4>
-                    <p className="font-body text-body-sm text-slate">
+                    <h4 className="font-display text-caption text-ink mb-0.5">Code Critique</h4>
+                    <p className="font-body text-[10px] text-slate">
                       A structured critical analysis following the triadic hermeneutic framework (intention, generation, execution).
                     </p>
                   </button>
@@ -1786,10 +1853,10 @@ export default function ConversationPage() {
                   {/* Close Reading option */}
                   <button
                     onClick={() => executeGenerateOutput("reading")}
-                    className="text-left p-5 border border-parchment rounded-sm hover:border-burgundy hover:bg-burgundy/5 transition-all duration-300"
+                    className="text-left p-3 border border-parchment rounded-sm hover:border-burgundy hover:bg-burgundy/5 transition-all duration-300"
                   >
-                    <h4 className="font-display text-display-md text-ink mb-1">Close Reading</h4>
-                    <p className="font-body text-body-sm text-slate">
+                    <h4 className="font-display text-caption text-ink mb-0.5">Close Reading</h4>
+                    <p className="font-body text-[10px] text-slate">
                       A comprehensive interpretive essay situating the code within its cultural, historical, and technical contexts.
                     </p>
                   </button>
@@ -1797,28 +1864,28 @@ export default function ConversationPage() {
               )}
 
               {isGenerating && (
-                <div className="flex flex-col items-center justify-center py-16">
-                  <Loader2 className="h-8 w-8 text-burgundy animate-spin mb-4" />
-                  <p className="font-body text-body-md text-slate">Generating your {selectedOutputType === "annotation" ? "code annotation" : selectedOutputType === "critique" ? "code critique" : "close reading"}...</p>
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 text-burgundy animate-spin mb-3" />
+                  <p className="font-body text-[11px] text-slate">Generating your {selectedOutputType === "annotation" ? "code annotation" : selectedOutputType === "critique" ? "code critique" : "close reading"}...</p>
                 </div>
               )}
 
               {generatedOutput && !isGenerating && (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-display text-display-md text-ink">
+                    <h4 className="font-display text-caption text-ink">
                       {generatedOutput.type === "annotation" ? "Code Annotation" :
                         generatedOutput.type === "critique" ? "Code Critique" :
                           generatedOutput.type === "reading" ? "Close Reading" : "Output"}
                     </h4>
                     <button
                       onClick={() => copyToClipboard(generatedOutput.content)}
-                      className="font-sans text-body-sm text-burgundy hover:text-burgundy-900 transition-colors"
+                      className="font-sans text-[10px] text-burgundy hover:text-burgundy-900 transition-colors"
                     >
                       Copy to clipboard
                     </button>
                   </div>
-                  <div className="prose prose-sm max-w-none bg-cream rounded-sm p-5 border border-parchment whitespace-pre-wrap">
+                  <div className="prose prose-sm max-w-none bg-cream rounded-sm p-4 border border-parchment whitespace-pre-wrap text-[11px]">
                     {generatedOutput.content}
                   </div>
                 </div>
@@ -1826,18 +1893,18 @@ export default function ConversationPage() {
             </div>
 
             {/* Modal footer */}
-            <div className="p-6 border-t border-parchment flex justify-between">
+            <div className="p-4 border-t border-parchment flex justify-between">
               {generatedOutput && !isGenerating ? (
                 <>
                   <button
                     onClick={() => setGeneratedOutput(null)}
-                    className="btn-editorial-secondary"
+                    className="btn-editorial-secondary text-[11px] px-3 py-1.5"
                   >
                     Generate Another
                   </button>
                   <button
                     onClick={() => setShowOutputModal(false)}
-                    className="btn-editorial-primary"
+                    className="btn-editorial-primary text-[11px] px-3 py-1.5"
                   >
                     Done
                   </button>
@@ -1845,7 +1912,7 @@ export default function ConversationPage() {
               ) : (
                 <button
                   onClick={() => setShowOutputModal(false)}
-                  className="btn-editorial-secondary ml-auto"
+                  className="btn-editorial-secondary text-[11px] px-3 py-1.5 ml-auto"
                 >
                   Cancel
                 </button>
@@ -1857,56 +1924,62 @@ export default function ConversationPage() {
 
       {/* Export modal - Session Log Export */}
       {showExportModal && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-editorial-lg p-6 w-full max-w-md mx-4 border border-parchment">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-display text-display-md text-ink">Export Session Log</h3>
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+          onClick={() => setShowExportModal(false)}
+        >
+          <div
+            className="bg-white rounded-sm shadow-editorial-lg p-4 w-full max-w-sm mx-4 border border-parchment"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-display text-sm text-ink">Export Session Log</h3>
               <button
                 onClick={() => setShowExportModal(false)}
                 className="text-slate-muted hover:text-ink transition-colors"
               >
-                <X className="h-5 w-5" strokeWidth={1.5} />
+                <X className="h-4 w-4" strokeWidth={1.5} />
               </button>
             </div>
-            <p className="font-body text-body-sm text-slate mb-6">
+            <p className="font-body text-[11px] text-slate mb-3">
               Export a comprehensive log of your analysis session for research documentation.
             </p>
-            <div className="space-y-3">
+            <div className="space-y-2">
               <button
                 onClick={handleExportSessionLogJSON}
-                className="w-full text-left p-5 border border-parchment rounded-sm hover:border-burgundy hover:bg-burgundy/5 transition-all duration-300"
+                className="w-full text-left p-3 border border-parchment rounded-sm hover:border-burgundy hover:bg-burgundy/5 transition-all duration-300"
               >
-                <h4 className="font-display text-display-md text-ink mb-1">JSON Format</h4>
-                <p className="font-body text-body-sm text-slate">
-                  Structured data format. Includes all metadata, code artefacts, annotations, and conversation. Can be processed programmatically.
+                <h4 className="font-display text-caption text-ink mb-0.5">JSON Format</h4>
+                <p className="font-body text-[10px] text-slate">
+                  Structured data format. Includes all metadata, code artefacts, annotations, and conversation.
                 </p>
               </button>
               <button
                 onClick={handleExportSessionLogText}
-                className="w-full text-left p-5 border border-parchment rounded-sm hover:border-burgundy hover:bg-burgundy/5 transition-all duration-300"
+                className="w-full text-left p-3 border border-parchment rounded-sm hover:border-burgundy hover:bg-burgundy/5 transition-all duration-300"
               >
-                <h4 className="font-display text-display-md text-ink mb-1">Text Format</h4>
-                <p className="font-body text-body-sm text-slate">
+                <h4 className="font-display text-caption text-ink mb-0.5">Text Format</h4>
+                <p className="font-body text-[10px] text-slate">
                   Plain text log. Human-readable format suitable for archiving or sharing.
                 </p>
               </button>
               <button
                 onClick={handleExportSessionLogPDF}
-                className="w-full text-left p-5 border border-parchment rounded-sm hover:border-burgundy hover:bg-burgundy/5 transition-all duration-300"
+                className="w-full text-left p-3 border border-parchment rounded-sm hover:border-burgundy hover:bg-burgundy/5 transition-all duration-300"
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <FileDown className="h-5 w-5 text-burgundy" strokeWidth={1.5} />
-                  <h4 className="font-display text-display-md text-ink">PDF Format</h4>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <FileDown className="h-3.5 w-3.5 text-burgundy" strokeWidth={1.5} />
+                  <h4 className="font-display text-caption text-ink">PDF Format</h4>
                 </div>
-                <p className="font-body text-body-sm text-slate">
+                <p className="font-body text-[10px] text-slate">
                   Formatted document with metadata, annotated code, and full conversation history.
                 </p>
               </button>
             </div>
-            <div className="mt-6 flex justify-end">
+            <div className="mt-4 flex justify-end">
               <button
                 onClick={() => setShowExportModal(false)}
-                className="btn-editorial-secondary"
+                className="btn-editorial-secondary text-[11px] px-3 py-1.5"
               >
                 Cancel
               </button>
@@ -1917,27 +1990,33 @@ export default function ConversationPage() {
 
       {/* Unsaved Changes Warning Modal - Editorial style */}
       {showUnsavedWarning && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-editorial-lg p-6 w-full max-w-md mx-4 border border-parchment">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-display text-display-md text-ink">Unsaved Changes</h3>
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+          onClick={() => setShowUnsavedWarning(false)}
+        >
+          <div
+            className="bg-white rounded-sm shadow-editorial-lg p-4 w-full max-w-xs mx-4 border border-parchment"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-display text-sm text-ink">Unsaved Changes</h3>
               <button
                 onClick={() => setShowUnsavedWarning(false)}
                 className="text-slate-muted hover:text-ink transition-colors"
               >
-                <X className="h-5 w-5" strokeWidth={1.5} />
+                <X className="h-4 w-4" strokeWidth={1.5} />
               </button>
             </div>
-            <p className="font-body text-body-sm text-slate mb-6">
+            <p className="font-body text-[11px] text-slate mb-4">
               You have unsaved work in this session. Would you like to save your project before leaving?
             </p>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
               <button
                 onClick={() => {
                   setShowUnsavedWarning(false);
                   handleSaveSession();
                 }}
-                className="w-full btn-editorial-primary py-3"
+                className="w-full btn-editorial-primary text-[11px] py-2"
               >
                 Save First
               </button>
@@ -1946,13 +2025,13 @@ export default function ConversationPage() {
                   setShowUnsavedWarning(false);
                   router.push('/');
                 }}
-                className="w-full btn-editorial bg-gold text-ink border-gold hover:bg-gold-light py-3"
+                className="w-full btn-editorial bg-gold text-ink border-gold hover:bg-gold-light text-[11px] py-2"
               >
                 Leave Without Saving
               </button>
               <button
                 onClick={() => setShowUnsavedWarning(false)}
-                className="w-full btn-editorial-ghost py-3"
+                className="w-full btn-editorial-ghost text-[11px] py-2"
               >
                 Cancel
               </button>
@@ -1963,37 +2042,43 @@ export default function ConversationPage() {
 
       {/* Code Details Modal - Editorial style */}
       {selectedCodeDetails && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-editorial-lg max-w-md w-full mx-4 p-6 border border-parchment">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="font-display text-display-md text-ink flex items-center gap-2">
-                <Code className="h-5 w-5 text-burgundy" strokeWidth={1.5} />
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+          onClick={() => setSelectedCodeDetails(null)}
+        >
+          <div
+            className="bg-white rounded-sm shadow-editorial-lg max-w-sm w-full mx-4 p-4 border border-parchment"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="font-display text-sm text-ink flex items-center gap-1.5">
+                <Code className="h-4 w-4 text-burgundy" strokeWidth={1.5} />
                 Code Details
               </h2>
               <button
                 onClick={() => setSelectedCodeDetails(null)}
                 className="text-slate-muted hover:text-ink transition-colors"
               >
-                <X className="h-5 w-5" strokeWidth={1.5} />
+                <X className="h-4 w-4" strokeWidth={1.5} />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div>
-                <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Name</label>
-                <p className="font-body text-body-md text-ink font-medium mt-1">{selectedCodeDetails.name}</p>
+                <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Name</label>
+                <p className="font-body text-[11px] text-ink font-medium mt-0.5">{selectedCodeDetails.name}</p>
               </div>
 
               {selectedCodeDetails.language && (
                 <div>
-                  <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Language</label>
-                  <p className="font-body text-body-md text-ink mt-1">{selectedCodeDetails.language}</p>
+                  <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Language</label>
+                  <p className="font-body text-[11px] text-ink mt-0.5">{selectedCodeDetails.language}</p>
                 </div>
               )}
 
               <div>
-                <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Size</label>
-                <p className="font-body text-body-md text-ink mt-1">
+                <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Size</label>
+                <p className="font-body text-[11px] text-ink mt-0.5">
                   {selectedCodeDetails.size < 1024
                     ? `${selectedCodeDetails.size} bytes`
                     : selectedCodeDetails.size < 1024 * 1024
@@ -2004,52 +2089,52 @@ export default function ConversationPage() {
               </div>
 
               <div>
-                <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Added</label>
-                <p className="font-body text-body-md text-ink mt-1">{new Date(selectedCodeDetails.uploadedAt).toLocaleString()}</p>
+                <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Added</label>
+                <p className="font-body text-[11px] text-ink mt-0.5">{new Date(selectedCodeDetails.uploadedAt).toLocaleString()}</p>
               </div>
 
               {selectedCodeDetails.author && (
                 <div>
-                  <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Author</label>
-                  <p className="font-body text-body-sm text-slate mt-1">{selectedCodeDetails.author}</p>
+                  <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Author</label>
+                  <p className="font-body text-[10px] text-slate mt-0.5">{selectedCodeDetails.author}</p>
                 </div>
               )}
 
               {selectedCodeDetails.date && (
                 <div>
-                  <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Date Written</label>
-                  <p className="font-body text-body-sm text-slate mt-1">{selectedCodeDetails.date}</p>
+                  <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Date Written</label>
+                  <p className="font-body text-[10px] text-slate mt-0.5">{selectedCodeDetails.date}</p>
                 </div>
               )}
 
               {selectedCodeDetails.platform && (
                 <div>
-                  <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Platform</label>
-                  <p className="font-body text-body-sm text-slate mt-1">{selectedCodeDetails.platform}</p>
+                  <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Platform</label>
+                  <p className="font-body text-[10px] text-slate mt-0.5">{selectedCodeDetails.platform}</p>
                 </div>
               )}
 
               {selectedCodeDetails.context && (
                 <div>
-                  <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Context</label>
-                  <p className="font-body text-body-sm text-slate mt-1">{selectedCodeDetails.context}</p>
+                  <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Context</label>
+                  <p className="font-body text-[10px] text-slate mt-0.5">{selectedCodeDetails.context}</p>
                 </div>
               )}
             </div>
 
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="mt-4 flex justify-end gap-2">
               <button
                 onClick={() => {
                   removeCode(selectedCodeDetails.id);
                   setSelectedCodeDetails(null);
                 }}
-                className="btn-editorial bg-error/10 text-error border-error/30 hover:bg-error/20"
+                className="btn-editorial bg-error/10 text-error border-error/30 hover:bg-error/20 text-[11px] px-3 py-1.5"
               >
                 Remove Code
               </button>
               <button
                 onClick={() => setSelectedCodeDetails(null)}
-                className="btn-editorial-secondary"
+                className="btn-editorial-secondary text-[11px] px-3 py-1.5"
               >
                 Close
               </button>
@@ -2060,89 +2145,93 @@ export default function ConversationPage() {
 
       {/* Reference Details Modal - Editorial style */}
       {selectedRefDetails && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-editorial-lg max-w-lg w-full mx-4 p-6 max-h-[80vh] overflow-y-auto border border-parchment">
-            <div className="flex justify-between items-start mb-5">
-              <div className="flex items-center gap-2 pr-4">
-                <BookOpen className="h-5 w-5 text-burgundy flex-shrink-0" strokeWidth={1.5} />
-                <h2 className="font-display text-display-md text-ink">Reference Details</h2>
-                <div className="flex gap-1 ml-2">
-                  {selectedRefDetails.isHistorical && (
-                    <span className="px-2 py-0.5 font-sans text-caption font-medium bg-ink/10 text-ink border border-ink/20 rounded-sm">
-                      Historical
-                    </span>
-                  )}
-                </div>
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+          onClick={() => setSelectedRefDetails(null)}
+        >
+          <div
+            className="bg-white rounded-sm shadow-editorial-lg max-w-sm w-full mx-4 p-4 max-h-[80vh] overflow-y-auto border border-parchment"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex items-center gap-1.5 pr-4">
+                <BookOpen className="h-4 w-4 text-burgundy flex-shrink-0" strokeWidth={1.5} />
+                <h2 className="font-display text-sm text-ink">Reference Details</h2>
+                {selectedRefDetails.isHistorical && (
+                  <span className="px-1.5 py-0.5 font-sans text-[9px] font-medium bg-ink/10 text-ink border border-ink/20 rounded-sm ml-1">
+                    Historical
+                  </span>
+                )}
               </div>
               <button
                 onClick={() => setSelectedRefDetails(null)}
                 className="text-slate-muted hover:text-ink flex-shrink-0 transition-colors"
               >
-                <X className="h-5 w-5" strokeWidth={1.5} />
+                <X className="h-4 w-4" strokeWidth={1.5} />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div>
-                <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Title</label>
-                <p className="font-display text-body-lg text-ink font-medium mt-1 leading-snug">{selectedRefDetails.title}</p>
+                <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Title</label>
+                <p className="font-display text-[11px] text-ink font-medium mt-0.5 leading-snug">{selectedRefDetails.title}</p>
               </div>
 
               {selectedRefDetails.repository && (
                 <div>
-                  <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Repository</label>
-                  <p className="font-body text-body-md text-ink mt-1 italic">{selectedRefDetails.repository}</p>
+                  <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Repository</label>
+                  <p className="font-body text-[11px] text-ink mt-0.5 italic">{selectedRefDetails.repository}</p>
                 </div>
               )}
 
               <div>
-                <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Authors</label>
-                <p className="font-body text-body-md text-ink mt-1">{selectedRefDetails.authors.join(", ")}</p>
+                <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Authors</label>
+                <p className="font-body text-[11px] text-ink mt-0.5">{selectedRefDetails.authors.join(", ")}</p>
               </div>
 
-              <div className="flex gap-8 flex-wrap">
+              <div className="flex gap-4 flex-wrap">
                 {selectedRefDetails.year && (
                   <div>
-                    <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Year</label>
-                    <p className="font-body text-body-md text-ink mt-1">{selectedRefDetails.year}</p>
+                    <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Year</label>
+                    <p className="font-body text-[11px] text-ink mt-0.5">{selectedRefDetails.year}</p>
                   </div>
                 )}
                 {selectedRefDetails.language && (
                   <div>
-                    <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Language</label>
-                    <p className="font-body text-body-md text-ink mt-1">{selectedRefDetails.language}</p>
+                    <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Language</label>
+                    <p className="font-body text-[11px] text-ink mt-0.5">{selectedRefDetails.language}</p>
                   </div>
                 )}
                 {selectedRefDetails.platform && (
                   <div>
-                    <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Platform</label>
-                    <p className="font-body text-body-md text-ink mt-1">{selectedRefDetails.platform}</p>
+                    <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Platform</label>
+                    <p className="font-body text-[11px] text-ink mt-0.5">{selectedRefDetails.platform}</p>
                   </div>
                 )}
               </div>
 
               {selectedRefDetails.description && (
                 <div>
-                  <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Description</label>
-                  <p className="font-body text-body-sm text-slate mt-1 leading-relaxed">{selectedRefDetails.description}</p>
+                  <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Description</label>
+                  <p className="font-body text-[10px] text-slate mt-0.5 leading-relaxed">{selectedRefDetails.description}</p>
                 </div>
               )}
             </div>
 
-            <div className="mt-6 flex justify-between items-center">
+            <div className="mt-4 flex justify-between items-center">
               {selectedRefDetails.url && (
                 <a
                   href={selectedRefDetails.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-editorial-primary"
+                  className="btn-editorial-primary text-[11px] px-3 py-1.5"
                 >
                   View Document
                 </a>
               )}
               <button
                 onClick={() => setSelectedRefDetails(null)}
-                className="btn-editorial-secondary ml-auto"
+                className="btn-editorial-secondary text-[11px] px-3 py-1.5 ml-auto"
               >
                 Close
               </button>
@@ -2154,8 +2243,14 @@ export default function ConversationPage() {
       {/* Artifact Details Modal - Editorial style */}
       {/* Code Annotator Modal */}
       {showCodeAnnotator && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-sm shadow-editorial-lg w-full max-w-4xl h-[80vh] overflow-hidden border border-parchment">
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowCodeAnnotator(null)}
+        >
+          <div
+            className="bg-white rounded-sm shadow-editorial-lg w-full max-w-4xl h-[80vh] overflow-hidden border border-parchment"
+            onClick={(e) => e.stopPropagation()}
+          >
             <AnnotatedCodeViewer
               code={showCodeAnnotator.code}
               codeFileId={showCodeAnnotator.fileId}
@@ -2168,48 +2263,54 @@ export default function ConversationPage() {
       )}
 
       {selectedArtifactDetails && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-editorial-lg max-w-2xl w-full mx-4 p-6 max-h-[80vh] overflow-y-auto border border-parchment">
-            <div className="flex justify-between items-start mb-5">
-              <h2 className="font-display text-display-md text-ink flex items-center gap-2 pr-4">
-                <FileOutput className="h-5 w-5 text-burgundy flex-shrink-0" strokeWidth={1.5} />
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+          onClick={() => setSelectedArtifactDetails(null)}
+        >
+          <div
+            className="bg-white rounded-sm shadow-editorial-lg max-w-lg w-full mx-4 p-4 max-h-[80vh] overflow-y-auto border border-parchment"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start mb-3">
+              <h2 className="font-display text-sm text-ink flex items-center gap-1.5 pr-4">
+                <FileOutput className="h-4 w-4 text-burgundy flex-shrink-0" strokeWidth={1.5} />
                 {selectedArtifactDetails.type === "annotation" ? "Code Annotation" :
                   selectedArtifactDetails.type === "critique" ? "Code Critique" :
                     selectedArtifactDetails.type === "reading" ? "Close Reading" : "Output"}
-                <span className="font-sans text-body-sm font-normal text-slate-muted">v{selectedArtifactDetails.version}</span>
+                <span className="font-sans text-[10px] font-normal text-slate-muted">v{selectedArtifactDetails.version}</span>
               </h2>
               <button
                 onClick={() => setSelectedArtifactDetails(null)}
                 className="text-slate-muted hover:text-ink flex-shrink-0 transition-colors"
               >
-                <X className="h-5 w-5" strokeWidth={1.5} />
+                <X className="h-4 w-4" strokeWidth={1.5} />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div>
-                <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Created</label>
-                <p className="font-body text-body-md text-ink mt-1">{new Date(selectedArtifactDetails.createdAt).toLocaleString()}</p>
+                <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Created</label>
+                <p className="font-body text-[11px] text-ink mt-0.5">{new Date(selectedArtifactDetails.createdAt).toLocaleString()}</p>
               </div>
 
               <div>
-                <label className="font-sans text-caption uppercase tracking-widest text-slate-muted">Content</label>
-                <div className="mt-2 p-5 bg-cream rounded-sm border border-parchment max-h-[50vh] overflow-y-auto">
-                  <p className="font-body text-body-sm text-ink whitespace-pre-wrap leading-relaxed">{selectedArtifactDetails.content}</p>
+                <label className="font-sans text-[9px] uppercase tracking-widest text-slate-muted">Content</label>
+                <div className="mt-1 p-3 bg-cream rounded-sm border border-parchment max-h-[50vh] overflow-y-auto">
+                  <p className="font-body text-[10px] text-ink whitespace-pre-wrap leading-relaxed">{selectedArtifactDetails.content}</p>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="mt-4 flex justify-end gap-2">
               <button
                 onClick={() => copyToClipboard(selectedArtifactDetails.content)}
-                className="btn-editorial-primary"
+                className="btn-editorial-primary text-[11px] px-3 py-1.5"
               >
                 Copy to Clipboard
               </button>
               <button
                 onClick={() => setSelectedArtifactDetails(null)}
-                className="btn-editorial-secondary"
+                className="btn-editorial-secondary text-[11px] px-3 py-1.5"
               >
                 Close
               </button>
@@ -2220,53 +2321,59 @@ export default function ConversationPage() {
 
       {/* Context Preview Modal - Shows what gets sent to the LLM */}
       {showContextPreview && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-lg w-full max-w-2xl mx-4 border border-parchment max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-parchment">
-              <div className="flex items-center gap-2">
-                <Eye className="h-4 w-4 text-burgundy" strokeWidth={1.5} />
-                <h3 className="font-display text-lg text-ink">LLM Context Preview</h3>
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+          onClick={() => setShowContextPreview(false)}
+        >
+          <div
+            className="bg-white rounded-sm shadow-lg w-full max-w-xl mx-4 border border-parchment max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-3 border-b border-parchment">
+              <div className="flex items-center gap-1.5">
+                <Eye className="h-3.5 w-3.5 text-burgundy" strokeWidth={1.5} />
+                <h3 className="font-display text-sm text-ink">LLM Context Preview</h3>
               </div>
               <button
                 onClick={() => setShowContextPreview(false)}
                 className="text-slate-muted hover:text-ink transition-colors"
               >
-                <X className="h-5 w-5" strokeWidth={1.5} />
+                <X className="h-4 w-4" strokeWidth={1.5} />
               </button>
             </div>
-            <div className="p-4 flex-1 overflow-y-auto">
-              <p className="font-body text-sm text-slate mb-4">
+            <div className="p-3 flex-1 overflow-y-auto">
+              <p className="font-body text-[10px] text-slate mb-3">
                 This is the code context that gets sent to the LLM with each message.
                 {session.lineAnnotations.length > 0 && (
-                  <> Your annotations are embedded as <code className="bg-cream px-1 rounded text-xs">// An:Type:</code> comments.</>
+                  <> Your annotations are embedded as <code className="bg-cream px-1 rounded text-[9px]">// An:Type:</code> comments.</>
                 )}
               </p>
-              <div className="mb-4 p-3 bg-cream/50 rounded-sm border border-parchment">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-sans text-xs font-medium text-ink">Summary</span>
+              <div className="mb-3 p-2 bg-cream/50 rounded-sm border border-parchment">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="font-sans text-[10px] font-medium text-ink">Summary</span>
                 </div>
-                <ul className="font-body text-xs text-slate space-y-1">
+                <ul className="font-body text-[10px] text-slate space-y-0.5">
                   <li>• {session.codeFiles.length} code file{session.codeFiles.length !== 1 ? "s" : ""}</li>
                   <li>• {session.lineAnnotations.length} annotation{session.lineAnnotations.length !== 1 ? "s" : ""}</li>
                   <li>• {contextPreviewText.length.toLocaleString()} characters total</li>
                 </ul>
               </div>
               <div className="border border-parchment rounded-sm">
-                <div className="px-3 py-2 bg-cream/30 border-b border-parchment">
-                  <span className="font-sans text-xs text-slate-muted uppercase tracking-wider">Context Sent to LLM</span>
+                <div className="px-2 py-1.5 bg-cream/30 border-b border-parchment">
+                  <span className="font-sans text-[9px] text-slate-muted uppercase tracking-wider">Context Sent to LLM</span>
                 </div>
-                <pre className="p-3 text-xs font-mono text-ink whitespace-pre-wrap overflow-x-auto max-h-64 overflow-y-auto bg-white">
+                <pre className="p-2 text-[10px] font-mono text-ink whitespace-pre-wrap overflow-x-auto max-h-48 overflow-y-auto bg-white">
                   {contextPreviewText || "(No code loaded yet)"}
                 </pre>
               </div>
             </div>
-            <div className="p-4 border-t border-parchment flex justify-between items-center">
-              <p className="font-body text-xs text-slate-muted">
+            <div className="p-3 border-t border-parchment flex justify-between items-center">
+              <p className="font-body text-[9px] text-slate-muted">
                 Use the code annotator to add annotations that enrich the context.
               </p>
               <button
                 onClick={() => setShowContextPreview(false)}
-                className="px-4 py-2 text-sm text-slate hover:text-ink border border-parchment rounded-sm"
+                className="px-3 py-1.5 text-[11px] text-slate hover:text-ink border border-parchment rounded-sm"
               >
                 Close
               </button>
@@ -2352,7 +2459,10 @@ export default function ConversationPage() {
                 <p className="font-body text-body-sm text-slate text-center">
                   AI assistant is disabled. You can still add code, search references, and manage your session.
                   <button
-                    onClick={() => setShowAISettings(true)}
+                    onClick={() => {
+                      setSettingsTab("ai");
+                      setShowSettingsModal(true);
+                    }}
                     className="ml-2 text-burgundy hover:text-burgundy-dark underline"
                   >
                     Enable in Settings
@@ -2470,7 +2580,7 @@ export default function ConversationPage() {
                 {/* Right side: font size + send button */}
                 <div className="flex items-center gap-1">
                   {/* Font size popover */}
-                  <div className="relative">
+                  <div className="relative" data-dropdown>
                     <button
                       onClick={() => setShowFontSizePopover(!showFontSizePopover)}
                       className={cn(
@@ -2485,8 +2595,8 @@ export default function ConversationPage() {
                       <div className="absolute bottom-full right-0 mb-2 bg-white rounded-lg border border-parchment shadow-lg p-2 z-50">
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => setChatFontSize(prev => Math.max(MIN_CHAT_FONT_SIZE, prev - 1))}
-                            disabled={chatFontSize <= MIN_CHAT_FONT_SIZE}
+                            onClick={() => setModeChatFontSize(currentMode, chatFontSize - 1)}
+                            disabled={chatFontSize <= FONT_SIZE_MIN}
                             className="p-1.5 text-slate hover:text-ink hover:bg-cream rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                             title="Decrease"
                           >
@@ -2494,8 +2604,8 @@ export default function ConversationPage() {
                           </button>
                           <span className="text-xs text-ink font-mono w-6 text-center">{chatFontSize}</span>
                           <button
-                            onClick={() => setChatFontSize(prev => Math.min(MAX_CHAT_FONT_SIZE, prev + 1))}
-                            disabled={chatFontSize >= MAX_CHAT_FONT_SIZE}
+                            onClick={() => setModeChatFontSize(currentMode, chatFontSize + 1)}
+                            disabled={chatFontSize >= FONT_SIZE_MAX}
                             className="p-1.5 text-slate hover:text-ink hover:bg-cream rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                             title="Increase"
                           >

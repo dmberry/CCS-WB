@@ -29,6 +29,8 @@ interface AISettingsContextValue {
   setBaseUrl: (url: string) => void;
   setCustomModelId: (modelId: string) => void;
   setAiEnabled: (enabled: boolean) => void;
+  setBeDirectMode: (enabled: boolean) => void;
+  setTeachMeMode: (enabled: boolean) => void;
   clearSettings: () => void;
   getRequestHeaders: () => Record<string, string>;
 }
@@ -50,10 +52,12 @@ export function AISettingsProvider({
       if (stored) {
         const parsed: AISettingsStorage = JSON.parse(stored);
         if (parsed.version === STORAGE_VERSION && parsed.settings) {
-          // Migrate old settings that don't have aiEnabled (default to true)
+          // Migrate old settings that don't have newer fields
           const migratedSettings: AISettings = {
             ...parsed.settings,
             aiEnabled: parsed.settings.aiEnabled ?? true,
+            beDirectMode: parsed.settings.beDirectMode ?? false,
+            teachMeMode: parsed.settings.teachMeMode ?? false,
           };
           setSettings(migratedSettings);
         }
@@ -127,6 +131,14 @@ export function AISettingsProvider({
     setSettings((prev) => ({ ...prev, aiEnabled }));
   }, []);
 
+  const setBeDirectMode = useCallback((beDirectMode: boolean) => {
+    setSettings((prev) => ({ ...prev, beDirectMode }));
+  }, []);
+
+  const setTeachMeMode = useCallback((teachMeMode: boolean) => {
+    setSettings((prev) => ({ ...prev, teachMeMode }));
+  }, []);
+
   const clearSettings = useCallback(() => {
     setSettings(DEFAULT_AI_SETTINGS);
     localStorage.removeItem(STORAGE_KEY);
@@ -137,6 +149,8 @@ export function AISettingsProvider({
     const headers: Record<string, string> = {
       "X-AI-Provider": settings.provider,
       "X-AI-Model": settings.model,
+      "X-AI-Be-Direct": settings.beDirectMode ? "true" : "false",
+      "X-AI-Teach-Me": settings.teachMeMode ? "true" : "false",
     };
 
     if (settings.apiKey) {
@@ -167,6 +181,8 @@ export function AISettingsProvider({
         setBaseUrl,
         setCustomModelId,
         setAiEnabled,
+        setBeDirectMode,
+        setTeachMeMode,
         clearSettings,
         getRequestHeaders,
       }}

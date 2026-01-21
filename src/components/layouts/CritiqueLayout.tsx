@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback, useMemo, useImperativeHandle,
 import { useRouter } from "next/navigation";
 import { useSession } from "@/context/SessionContext";
 import { useAISettings } from "@/context/AISettingsContext";
-import { cn, formatTimestamp, fetchWithTimeout, retryWithBackoff } from "@/lib/utils";
+import { cn, formatTimestamp, fetchWithTimeout, retryWithBackoff, generateId, getCurrentTimestamp } from "@/lib/utils";
 import type { Message, CodeReference, ExperienceLevel } from "@/types";
 import { EXPERIENCE_LEVEL_LABELS, EXPERIENCE_LEVEL_DESCRIPTIONS, GUIDED_PROMPTS } from "@/types";
 import {
@@ -31,11 +31,16 @@ import {
   Heart,
   ArrowUp,
   SlidersHorizontal,
+  Code,
+  ChevronDown,
 } from "lucide-react";
 import { CodeEditorPanel, generateAnnotatedCode } from "@/components/code";
 import { ContextPreview } from "@/components/chat";
 import { GuidedPrompts } from "@/components/prompts";
-import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
+import { SettingsModal } from "@/components/settings/SettingsModal";
+import { AISettingsPanel } from "@/components/settings/AISettingsPanel";
+import { useAppSettings } from "@/context/AppSettingsContext";
+import { FONT_SIZE_MIN, FONT_SIZE_MAX, PROGRAMMING_LANGUAGES } from "@/types/app-settings";
 import { PROVIDER_CONFIGS } from "@/lib/ai/config";
 import {
   generateSessionLog,
@@ -57,9 +62,7 @@ export interface CritiqueLayoutRef {
   save: () => void;
 }
 
-// Font size constants for chat
-const MIN_CHAT_FONT_SIZE = 10;
-const MAX_CHAT_FONT_SIZE = 24;
+// Font size constants are imported from app-settings
 
 // Opening prompt for critique mode
 const CRITIQUE_OPENING = "What code would you like to explore? You can paste it directly, upload a file, or describe what you're looking at. I'm curious what drew your attention to this particular piece of software.";
@@ -107,16 +110,32 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     updateCode,
     updateSettings,
     importSession,
+    setLanguageOverride,
+    setExperienceLevel,
+    switchMode,
+    clearModeSession,
+    hasSavedSession,
   } = useSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured } = useAISettings();
+  const { settings: appSettings, getFontSizes, setModeCodeFontSize, setModeChatFontSize } = useAppSettings();
   const aiEnabled = aiSettings.aiEnabled;
   const router = useRouter();
+
+  // Get font sizes from app settings for critique mode
+  const { codeFontSize, chatFontSize } = getFontSizes("critique");
+
+  // Get effective language: session override > global default > "Not specified"
+  const effectiveLanguage = session.languageOverride || appSettings.defaultLanguage || "";
+  const languageName = PROGRAMMING_LANGUAGES.find(l => l.id === effectiveLanguage)?.name || "Not specified";
 
   // State
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showAISettings, setShowAISettings] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"code" | "appearance" | "ai" | "about">("appearance");
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [showModeDropdown, setShowModeDropdown] = useState(false);
   const [showGuidedPrompts, setShowGuidedPrompts] = useState(false);
   const [showExperienceHelp, setShowExperienceHelp] = useState(false);
   const [showCodeInput, setShowCodeInput] = useState(false);
@@ -136,9 +155,6 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [codePanelWidth, setCodePanelWidth] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // Chat font size (in pixels)
-  const [chatFontSize, setChatFontSize] = useState<number>(14);
 
   // Code contents storage (fileId -> content)
   const [codeContents, setCodeContents] = useState<Map<string, string>>(new Map());
@@ -293,6 +309,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
               currentPhase: session.currentPhase,
               experienceLevel: session.experienceLevel,
               mode: "critique",
+              defaultLanguage: effectiveLanguage || undefined,
               analysisContext: session.analysisResults,
               literatureContext: session.references,
               // Include annotated code context
@@ -346,7 +363,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     } catch (error) {
       console.error("Chat error:", error);
       const isConfigError = (error as Error & { isConfigError?: boolean }).isConfigError;
-      if (isConfigError) setShowAISettings(true);
+      if (isConfigError) { setSettingsTab("ai"); setShowSettingsModal(true); };
 
       addMessage({
         role: "assistant",
@@ -547,14 +564,18 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
       // Cmd/Ctrl + - - Decrease font size
       if (isMod && e.key === '-') {
         e.preventDefault();
-        setChatFontSize(prev => Math.max(MIN_CHAT_FONT_SIZE, prev - 1));
+        if (chatFontSize > FONT_SIZE_MIN) {
+          setModeChatFontSize("critique", chatFontSize - 1);
+        }
         return;
       }
 
       // Cmd/Ctrl + = or + - Increase font size
       if (isMod && (e.key === '=' || e.key === '+')) {
         e.preventDefault();
-        setChatFontSize(prev => Math.min(MAX_CHAT_FONT_SIZE, prev + 1));
+        if (chatFontSize < FONT_SIZE_MAX) {
+          setModeChatFontSize("critique", chatFontSize + 1);
+        }
         return;
       }
 
@@ -565,8 +586,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
         setShowSendContextModal(false);
         setShowExperienceHelp(false);
         setShowCodeInput(false);
-        setShowSettings(false);
-        setShowAISettings(false);
+        setShowSettingsModal(false);
         setShowExportModal(false);
         return;
       }
@@ -575,6 +595,23 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [handleSaveSession]);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Close dropdowns if clicking outside of them
+      if (!target.closest('[data-dropdown]')) {
+        setShowModeDropdown(false);
+        setShowExperienceHelp(false);
+        setShowLanguageDropdown(false);
+        setShowFontSizePopover(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // File management handlers
   const handleDeleteFile = useCallback((fileId: string) => {
@@ -696,60 +733,136 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           >
             CCS Workbench
           </button>
-          <span className="font-sans text-[10px] text-burgundy bg-burgundy/5 px-2 py-0.5 border border-burgundy/10 rounded-sm">
-            Critique Mode
-          </span>
-          <button
-            onClick={() => setShowAISettings(true)}
-            className={cn(
-              "font-sans text-[10px] px-2 py-0.5 border rounded-sm transition-colors",
-              !aiEnabled
-                ? "text-red-700 bg-red-50 border-red-200 hover:border-red-400"
-                : isAIConfigured
-                  ? "text-green-700 bg-green-50 border-green-200 hover:border-green-400"
-                  : "text-amber-700 bg-amber-50 border-amber-200 hover:border-amber-400"
+          {/* Mode indicator - clickable to switch */}
+          <div className="relative" data-dropdown>
+            <button
+              onClick={() => setShowModeDropdown(!showModeDropdown)}
+              className="font-sans text-[10px] text-slate hover:text-ink px-2 py-0.5 border border-parchment hover:border-slate-muted rounded-sm transition-colors flex items-center gap-1"
+            >
+              {session.mode.charAt(0).toUpperCase() + session.mode.slice(1)}
+              <ChevronDown className={cn("h-2.5 w-2.5 transition-transform", showModeDropdown && "rotate-180")} strokeWidth={1.5} />
+            </button>
+            {showModeDropdown && (
+              <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-sm shadow-lg border border-parchment p-1 z-50">
+                {(["critique", "archaeology", "interpret", "create"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => {
+                      if (mode !== session.mode) {
+                        switchMode(mode);
+                      }
+                      setShowModeDropdown(false);
+                    }}
+                    className={cn(
+                      "w-full text-left px-2 py-1.5 text-[11px] rounded-sm transition-colors flex items-center justify-between",
+                      session.mode === mode ? "bg-burgundy/10 text-burgundy" : "text-ink hover:bg-cream"
+                    )}
+                  >
+                    <span>{mode.charAt(0).toUpperCase() + mode.slice(1)} Mode</span>
+                    {hasSavedSession(mode) && mode !== session.mode && (
+                      <span className="text-[9px] text-slate-muted">(saved)</span>
+                    )}
+                  </button>
+                ))}
+                <div className="border-t border-parchment mt-1 pt-1">
+                  <button
+                    onClick={() => {
+                      clearModeSession(session.mode);
+                      setShowModeDropdown(false);
+                    }}
+                    className="w-full text-left px-2 py-1.5 text-[11px] text-slate-muted hover:text-error hover:bg-cream rounded-sm transition-colors"
+                  >
+                    Clear Current Session
+                  </button>
+                </div>
+              </div>
             )}
-            title={
-              !aiEnabled
-                ? "AI disabled - click to enable"
-                : isAIConfigured
-                  ? "AI connected - click to configure"
-                  : "AI not configured - click to set up"
-            }
-          >
-            {!aiEnabled ? "AI: Off" : isAIConfigured ? "AI: On" : "AI: ??"}
-          </button>
-          <div className="relative">
+          </div>
+          {/* Experience level indicator - clickable to change */}
+          <div className="relative" data-dropdown>
             <button
               onClick={() => setShowExperienceHelp(!showExperienceHelp)}
-              className="font-sans text-[9px] uppercase tracking-wide text-slate-muted hover:text-ink transition-colors border border-parchment px-1.5 py-0.5 rounded-sm"
+              className="font-sans text-[10px] text-slate hover:text-ink px-2 py-0.5 border border-parchment hover:border-slate-muted rounded-sm transition-colors flex items-center gap-1"
             >
               {session.experienceLevel
                 ? EXPERIENCE_LEVEL_LABELS[session.experienceLevel as ExperienceLevel]
-                : "No level set"}
+                : "No level"}
+              <ChevronDown className={cn("h-2.5 w-2.5 transition-transform", showExperienceHelp && "rotate-180")} strokeWidth={1.5} />
             </button>
 
-            {/* Experience level help popup */}
-            {showExperienceHelp && session.experienceLevel && (
-              <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-sm shadow-lg border border-parchment p-3 z-50">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-display text-xs text-ink">Experience Level</h4>
+            {/* Experience level dropdown */}
+            {showExperienceHelp && (
+              <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-sm shadow-lg border border-parchment p-1 z-50">
+                {(["learning", "practitioner", "research"] as const).map((level) => (
                   <button
-                    onClick={() => setShowExperienceHelp(false)}
-                    className="p-0.5 text-slate hover:text-ink transition-colors"
+                    key={level}
+                    onClick={() => {
+                      setExperienceLevel(level);
+                      setShowExperienceHelp(false);
+                      // Add a system message to notify the conversation
+                      addMessage({
+                        role: "system",
+                        content: `[Experience level changed to ${EXPERIENCE_LEVEL_LABELS[level]}]`,
+                      });
+                    }}
+                    className={cn(
+                      "w-full text-left px-2 py-1.5 rounded-sm transition-colors",
+                      session.experienceLevel === level ? "bg-burgundy/10" : "hover:bg-cream"
+                    )}
                   >
-                    <X className="h-3 w-3" strokeWidth={1.5} />
+                    <span className={cn("block text-[11px]", session.experienceLevel === level ? "text-burgundy" : "text-ink")}>
+                      {EXPERIENCE_LEVEL_LABELS[level]}
+                    </span>
+                    <span className="block text-[9px] text-slate-muted mt-0.5">
+                      {EXPERIENCE_LEVEL_DESCRIPTIONS[level]}
+                    </span>
                   </button>
-                </div>
-                <p className="font-sans text-[10px] font-medium text-burgundy mb-1">
-                  {EXPERIENCE_LEVEL_LABELS[session.experienceLevel as ExperienceLevel]}
-                </p>
-                <p className="font-body text-[10px] text-slate leading-snug mb-2">
-                  {EXPERIENCE_LEVEL_DESCRIPTIONS[session.experienceLevel as ExperienceLevel]}
-                </p>
-                <p className="font-body text-[9px] text-slate-muted italic">
-                  To change, start a new session from the home page.
-                </p>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* Language indicator with dropdown */}
+          <div className="relative" data-dropdown>
+            <button
+              onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+              className="font-sans text-[10px] text-slate hover:text-ink px-2 py-0.5 border border-parchment hover:border-slate-muted rounded-sm transition-colors flex items-center gap-1"
+              title="Click to change language"
+            >
+              <Code className="h-3 w-3" strokeWidth={1.5} />
+              <span>{languageName}</span>
+              <ChevronDown className={cn("h-2.5 w-2.5 transition-transform", showLanguageDropdown && "rotate-180")} strokeWidth={1.5} />
+            </button>
+            {showLanguageDropdown && (
+              <div className="absolute top-full left-0 mt-1 w-44 bg-white rounded-sm shadow-lg border border-parchment p-1 z-50 max-h-64 overflow-y-auto">
+                {PROGRAMMING_LANGUAGES.map((lang) => (
+                  <button
+                    key={lang.id}
+                    onClick={() => {
+                      setLanguageOverride(lang.id || undefined);
+                      setShowLanguageDropdown(false);
+                    }}
+                    className={cn(
+                      "w-full text-left px-2 py-1.5 text-[11px] rounded-sm hover:bg-cream transition-colors",
+                      effectiveLanguage === lang.id ? "bg-burgundy/10 text-burgundy" : "text-ink"
+                    )}
+                  >
+                    {lang.name}
+                  </button>
+                ))}
+                {session.languageOverride && (
+                  <>
+                    <div className="border-t border-parchment my-1" />
+                    <button
+                      onClick={() => {
+                        setLanguageOverride(undefined);
+                        setShowLanguageDropdown(false);
+                      }}
+                      className="w-full text-left px-2 py-1.5 text-[11px] text-slate-muted hover:text-burgundy rounded-sm transition-colors"
+                    >
+                      Reset to default
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -802,9 +915,35 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           <button onClick={() => setShowExportModal(true)} className="p-1.5 text-slate hover:text-ink" title="Export session log">
             <Download className="h-4 w-4" strokeWidth={1.5} />
           </button>
+          {/* AI Status Button */}
           <button
-            onClick={() => setShowSettings(!showSettings)}
-            className={cn("p-1.5 rounded-sm", showSettings ? "bg-burgundy text-ivory" : "text-slate hover:text-ink")}
+            onClick={() => setShowAIPanel(true)}
+            className={cn(
+              "font-sans text-[10px] px-2 py-0.5 border rounded-sm transition-colors",
+              !aiEnabled
+                ? "text-red-700 bg-red-50 border-red-200 hover:border-red-400"
+                : isAIConfigured
+                  ? "text-green-700 bg-green-50 border-green-200 hover:border-green-400"
+                  : "text-amber-700 bg-amber-50 border-amber-200 hover:border-amber-400"
+            )}
+            title={
+              !aiEnabled
+                ? "AI disabled - click to enable"
+                : isAIConfigured
+                  ? "AI connected - click to configure"
+                  : "AI not configured - click to set up"
+            }
+          >
+            {!aiEnabled ? "AI: Off" : isAIConfigured ? "AI: On" : "AI: ??"}
+          </button>
+          <div className="w-px h-4 bg-parchment mx-1" />
+          {/* Settings button - opens full settings modal */}
+          <button
+            onClick={() => {
+              setSettingsTab("appearance");
+              setShowSettingsModal(true);
+            }}
+            className="p-1.5 rounded-sm text-slate hover:text-ink hover:bg-cream transition-colors"
           >
             <Settings className="h-4 w-4" strokeWidth={1.5} />
           </button>
@@ -946,14 +1085,6 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           {/* Input area - Claude-style */}
           <div className="p-3 flex justify-center">
           <div className="w-full md:w-[80%]">
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              onChange={handleFileChange}
-              accept=".js,.jsx,.ts,.tsx,.py,.rb,.c,.cpp,.h,.hpp,.java,.go,.rs,.lisp,.scm,.el,.bas,.txt,.md,.json,.yaml,.yml,.xml,.html,.css,.scss,.sh,.bash,.zsh,.pl,.php,.swift,.kt,.scala,.clj,.hs,.ml,.fs,.lua,.r,.jl,.m,.sql,.asm,.s"
-            />
-
             {/* Code paste input */}
             {showCodeInput && (
               <div className="mb-3 p-3 bg-cream/50 border border-parchment rounded-lg">
@@ -1077,7 +1208,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                 {/* Right side: font size + send button */}
                 <div className="flex items-center gap-1">
                   {/* Font size popover */}
-                  <div className="relative">
+                  <div className="relative" data-dropdown>
                     <button
                       onClick={() => setShowFontSizePopover(!showFontSizePopover)}
                       className={cn(
@@ -1092,8 +1223,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                       <div className="absolute bottom-full right-0 mb-2 bg-white rounded-lg border border-parchment shadow-lg p-2 z-50">
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => setChatFontSize(prev => Math.max(MIN_CHAT_FONT_SIZE, prev - 1))}
-                            disabled={chatFontSize <= MIN_CHAT_FONT_SIZE}
+                            onClick={() => setModeChatFontSize("critique", chatFontSize - 1)}
+                            disabled={chatFontSize <= FONT_SIZE_MIN}
                             className="p-1.5 text-slate hover:text-ink hover:bg-cream rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                             title="Decrease"
                           >
@@ -1101,8 +1232,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                           </button>
                           <span className="text-xs text-ink font-mono w-6 text-center">{chatFontSize}</span>
                           <button
-                            onClick={() => setChatFontSize(prev => Math.min(MAX_CHAT_FONT_SIZE, prev + 1))}
-                            disabled={chatFontSize >= MAX_CHAT_FONT_SIZE}
+                            onClick={() => setModeChatFontSize("critique", chatFontSize + 1)}
+                            disabled={chatFontSize >= FONT_SIZE_MAX}
                             className="p-1.5 text-slate hover:text-ink hover:bg-cream rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                             title="Increase"
                           >
@@ -1137,81 +1268,41 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           </div>
         </div>
         )}
+
+        {/* Hidden file input - outside aiEnabled conditional so it works when AI is disabled */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          onChange={handleFileChange}
+          accept=".js,.jsx,.ts,.tsx,.py,.rb,.c,.cpp,.h,.hpp,.java,.go,.rs,.lisp,.scm,.el,.bas,.txt,.md,.json,.yaml,.yml,.xml,.html,.css,.scss,.sh,.bash,.zsh,.pl,.php,.swift,.kt,.scala,.clj,.hs,.ml,.fs,.lua,.r,.jl,.m,.sql,.asm,.s"
+        />
       </div>
 
-      {/* AI Settings Modal */}
-      {showAISettings && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-lg max-w-md w-full mx-4 p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-display text-lg">AI Settings</h2>
-              <button onClick={() => setShowAISettings(false)}>
-                <X className="h-5 w-5 text-slate-muted hover:text-ink" />
-              </button>
-            </div>
-            <AIProviderSettings onClose={() => setShowAISettings(false)} />
-          </div>
-        </div>
-      )}
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        initialTab={settingsTab}
+      />
 
-      {/* Settings dropdown */}
-      {showSettings && (
-        <div className="fixed top-12 right-4 bg-white rounded-sm shadow-lg border border-parchment p-4 z-20 w-64">
-          <div className="space-y-4">
-            <label className="flex items-center justify-between">
-              <span className="font-sans text-sm">Be Direct</span>
-              <button
-                onClick={() => updateSettings({ beDirectMode: !session.settings.beDirectMode })}
-                className={cn(
-                  "w-10 h-5 rounded-sm transition-colors",
-                  session.settings.beDirectMode ? "bg-burgundy" : "bg-parchment"
-                )}
-              >
-                <div
-                  className={cn(
-                    "w-4 h-4 bg-white rounded-sm transition-transform mx-0.5",
-                    session.settings.beDirectMode && "translate-x-5"
-                  )}
-                />
-              </button>
-            </label>
-            <label className="flex items-center justify-between">
-              <span className="font-sans text-sm">Teach Me</span>
-              <button
-                onClick={() => updateSettings({ teachMeMode: !session.settings.teachMeMode })}
-                className={cn(
-                  "w-10 h-5 rounded-sm transition-colors",
-                  session.settings.teachMeMode ? "bg-burgundy" : "bg-parchment"
-                )}
-              >
-                <div
-                  className={cn(
-                    "w-4 h-4 bg-white rounded-sm transition-transform mx-0.5",
-                    session.settings.teachMeMode && "translate-x-5"
-                  )}
-                />
-              </button>
-            </label>
-            <div className="pt-3 border-t border-parchment">
-              <button
-                onClick={() => {
-                  setShowSettings(false);
-                  setShowAISettings(true);
-                }}
-                className="flex items-center gap-2 text-sm text-slate hover:text-burgundy"
-              >
-                <Cpu className="h-4 w-4" />
-                AI Provider: {PROVIDER_CONFIGS[aiSettings.provider]?.name?.split(" ")[0] || "Configure"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* AI Settings Panel */}
+      <AISettingsPanel
+        isOpen={showAIPanel}
+        onClose={() => setShowAIPanel(false)}
+      />
+
 
       {/* Export Session Log Modal */}
       {showExportModal && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-lg p-6 w-full max-w-md mx-4 border border-parchment">
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+          onClick={() => setShowExportModal(false)}
+        >
+          <div
+            className="bg-white rounded-sm shadow-lg p-6 w-full max-w-md mx-4 border border-parchment"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-display text-lg text-ink">Export Session Log</h3>
               <button
@@ -1279,8 +1370,14 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
       {/* Send Context Modal - Shows what gets sent to the LLM */}
       {showSendContextModal && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-lg w-full max-w-2xl mx-4 border border-parchment max-h-[80vh] flex flex-col">
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+          onClick={() => setShowSendContextModal(false)}
+        >
+          <div
+            className="bg-white rounded-sm shadow-lg w-full max-w-2xl mx-4 border border-parchment max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between p-4 border-b border-parchment">
               <div className="flex items-center gap-2">
                 <Eye className="h-4 w-4 text-burgundy" strokeWidth={1.5} />

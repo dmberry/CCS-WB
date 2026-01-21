@@ -7,7 +7,8 @@ import { useAISettings } from "@/context/AISettingsContext";
 import { CCS_EXPERIENCE_LEVELS, EXPERIENCE_LEVEL_LABELS, EXPERIENCE_LEVEL_DESCRIPTIONS, type EntryMode, type ExperienceLevel } from "@/types";
 import { cn } from "@/lib/utils";
 import { Code, Archive, BookOpen, Sparkles, ChevronDown, FolderOpen, Settings, HelpCircle, X, ExternalLink, Info } from "lucide-react";
-import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
+import { SettingsModal } from "@/components/settings/SettingsModal";
+import { AISettingsPanel } from "@/components/settings/AISettingsPanel";
 import { PROVIDER_CONFIGS } from "@/lib/ai/config";
 import { APP_VERSION, APP_CREATOR } from "@/lib/config";
 
@@ -56,7 +57,9 @@ export default function WelcomePage() {
   const [selectedLevel, setSelectedLevel] = useState<ExperienceLevel>("practitioner");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showLevelHelp, setShowLevelHelp] = useState(false);
-  const [showAISettings, setShowAISettings] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"code" | "appearance" | "ai" | "about">("appearance");
+  const [showAIPanel, setShowAIPanel] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showSkillDoc, setShowSkillDoc] = useState(false);
   const [skillDocContent, setSkillDocContent] = useState<string>("");
@@ -152,7 +155,7 @@ export default function WelcomePage() {
             </h1>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setShowAISettings(true)}
+                onClick={() => setShowAIPanel(true)}
                 className={cn(
                   "font-sans text-[10px] px-2 py-0.5 border rounded-sm transition-colors",
                   !aiSettings.aiEnabled
@@ -180,15 +183,10 @@ export default function WelcomePage() {
                 <HelpCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
               </button>
               <button
-                onClick={() => setShowAISettings(true)}
-                className={cn(
-                  "p-1 rounded-sm transition-colors",
-                  !isAIConfigured
-                    ? "text-burgundy bg-burgundy/10 hover:bg-burgundy/20"
-                    : "text-slate hover:text-ink hover:bg-cream"
-                )}
-                aria-label="AI Settings"
-                title={isAIConfigured ? `Using ${PROVIDER_CONFIGS[aiSettings.provider]?.name || 'AI'}` : "Configure AI Provider"}
+                onClick={() => setShowSettings(true)}
+                className="p-1 rounded-sm transition-colors text-slate hover:text-ink hover:bg-cream"
+                aria-label="Settings"
+                title="Settings"
               >
                 <Settings className="h-3.5 w-3.5" strokeWidth={1.5} />
               </button>
@@ -197,25 +195,17 @@ export default function WelcomePage() {
         </div>
       </header>
 
-      {/* AI Settings Modal */}
-      {showAISettings && (
-        <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-sm shadow-editorial-lg w-full max-w-lg mx-4 border border-parchment max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b border-parchment">
-              <h3 className="font-display text-display-md text-ink">AI Provider Settings</h3>
-              <button
-                onClick={() => setShowAISettings(false)}
-                className="p-1 text-slate hover:text-ink transition-colors"
-              >
-                <X className="h-5 w-5" strokeWidth={1.5} />
-              </button>
-            </div>
-            <div className="p-5">
-              <AIProviderSettings onClose={() => setShowAISettings(false)} />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        initialTab={settingsTab}
+      />
+
+      <AISettingsPanel
+        isOpen={showAIPanel}
+        onClose={() => setShowAIPanel(false)}
+      />
 
       {/* Help Modal */}
       {showHelp && (
