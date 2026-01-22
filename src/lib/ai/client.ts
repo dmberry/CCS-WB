@@ -163,6 +163,12 @@ export async function generateAIResponse(
       maxOutputTokens: options.maxTokens,
     });
 
+    // Ensure we have a valid response
+    if (!result.text || result.text.trim() === "") {
+      console.error("Empty response from AI:", { provider: config.provider, model: config.model, result });
+      throw new Error(`${PROVIDER_CONFIGS[config.provider].name} returned an empty response. Please try again.`);
+    }
+
     return result.text;
   } catch (error) {
     // Enhance error messages for common issues

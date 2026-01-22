@@ -288,3 +288,16 @@ export function getAllProviders(): ProviderConfig[] {
 export function getAllProvidersWithModels(): ProviderConfig[] {
   return (Object.keys(PROVIDER_CONFIGS) as AIProvider[]).map(getProviderConfigWithModels);
 }
+
+/**
+ * Get the display name for a model given provider and model ID
+ */
+export function getModelDisplayName(provider: AIProvider, modelId: string): string {
+  const models = getModelsForProvider(provider);
+  const model = models.find(m => m.id === modelId);
+  if (model) {
+    return model.name;
+  }
+  // For custom models, return the model ID as-is
+  return modelId;
+}

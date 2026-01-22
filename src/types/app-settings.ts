@@ -121,6 +121,23 @@ export interface AppSettingsStorage {
   lastUpdated: string;
 }
 
+// User profile for identification and export attribution
+export interface UserProfile {
+  name: string;
+  preferredName: string;
+  affiliation: string;
+  bio: string;
+  anonymousMode: boolean; // If true, exclude profile from exports
+}
+
+export const DEFAULT_USER_PROFILE: UserProfile = {
+  name: "",
+  preferredName: "",
+  affiliation: "",
+  bio: "",
+  anonymousMode: false,
+};
+
 // Default settings
 export const DEFAULT_APP_SETTINGS: AppSettings = {
   codeFontSize: 13,

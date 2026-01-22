@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateId, getCurrentTimestamp } from "@/lib/utils";
 import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from "@/lib/rate-limit";
 import { extractAIConfig, validateAIConfig, generateAIResponse } from "@/lib/ai/client";
+import { getModelDisplayName } from "@/lib/ai/config";
 import { getMethodologyForPhase } from "@/lib/prompts/ccs-methodology";
 import type { ChatRequest, ChatResponse } from "@/types/api";
 import type { Message } from "@/types/session";
@@ -389,6 +390,7 @@ Engage with these annotations in your response. They represent the analyst's dev
     });
 
     // Build response message
+    const modelName = getModelDisplayName(aiConfig.provider, aiConfig.model);
     const assistantMessage: Message = {
       id: generateId(),
       role: "assistant",
@@ -396,6 +398,7 @@ Engage with these annotations in your response. They represent the analyst's dev
       timestamp: getCurrentTimestamp(),
       metadata: {
         phase: currentPhase as NonNullable<Message["metadata"]>["phase"],
+        model: modelName,
       },
     };
 
@@ -406,10 +409,16 @@ Engage with these annotations in your response. They represent the analyst's dev
     return NextResponse.json(chatResponse);
   } catch (error) {
     console.error("Chat API error:", error);
+
+    // Pass through meaningful error messages from AI providers
+    const errorMessage = error instanceof Error
+      ? error.message
+      : "Failed to process chat message. Please try again.";
+
     return NextResponse.json(
       {
         error: "chat_error",
-        message: "Failed to process chat message. Please try again.",
+        message: errorMessage,
       },
       { status: 500 }
     );

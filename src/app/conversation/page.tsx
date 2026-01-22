@@ -73,11 +73,11 @@ export default function ConversationPage() {
   const router = useRouter();
   const { session, addMessage, updateMessage, updateSettings, addCode, removeCode, addReferences, clearReferences, addArtifact, importSession, setCreateLanguage, setLanguageOverride, setExperienceLevel, switchMode, clearModeSession, hasSavedSession } = useSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured } = useAISettings();
-  const { settings: appSettings, getFontSizes, setModeChatFontSize } = useAppSettings();
+  const { settings: appSettings, getFontSizes, setModeChatFontSize, getDisplayName, profile } = useAppSettings();
   const aiEnabled = aiSettings.aiEnabled;
   const [input, setInput] = useState("");
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<"code" | "appearance" | "ai" | "about">("appearance");
+  const [settingsTab, setSettingsTab] = useState<"profile" | "code" | "appearance" | "ai" | "about">("appearance");
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showModeDropdown, setShowModeDropdown] = useState(false);
@@ -349,7 +349,17 @@ export default function ConversationPage() {
           }
 
           if (!response.ok) {
-            throw new Error("Failed to get response");
+            // Try to get the actual error message from the response
+            try {
+              const errorData = await response.json();
+              throw new Error(errorData.message || `Server error: ${response.status}`);
+            } catch (parseError) {
+              // If we can't parse the error response, throw a generic error
+              if (parseError instanceof Error && parseError.message !== `Server error: ${response.status}`) {
+                throw parseError;
+              }
+              throw new Error(`Failed to get response (${response.status})`);
+            }
           }
 
           return response.json();
@@ -1293,28 +1303,28 @@ export default function ConversationPage() {
 
   // Export handlers using shared utilities
   const handleExportSessionLogJSON = useCallback(() => {
-    const log = generateSessionLog(session, projectName);
+    const log = generateSessionLog(session, projectName, undefined, undefined, profile);
     const modeCode = MODE_CODES[session.mode] || "XX";
     exportSessionLogJSON(log, projectName, modeCode);
     setShowExportModal(false);
     setSuccessMessage("Session log exported as JSON!");
-  }, [session, projectName]);
+  }, [session, projectName, profile]);
 
   const handleExportSessionLogText = useCallback(() => {
-    const log = generateSessionLog(session, projectName);
+    const log = generateSessionLog(session, projectName, undefined, undefined, profile);
     const modeCode = MODE_CODES[session.mode] || "XX";
     exportSessionLogText(log, projectName, modeCode);
     setShowExportModal(false);
     setSuccessMessage("Session log exported as text!");
-  }, [session, projectName]);
+  }, [session, projectName, profile]);
 
   const handleExportSessionLogPDF = useCallback(() => {
-    const log = generateSessionLog(session, projectName);
+    const log = generateSessionLog(session, projectName, undefined, undefined, profile);
     const modeCode = MODE_CODES[session.mode] || "XX";
     exportSessionLogPDF(log, projectName, modeCode);
     setShowExportModal(false);
     setSuccessMessage("Session log exported as PDF!");
-  }, [session, projectName]);
+  }, [session, projectName, profile]);
 
   // Use the new IDE-style layout for critique mode
   if (session.mode === "critique") {
@@ -2478,6 +2488,7 @@ export default function ConversationPage() {
                 key={message.id}
                 message={message}
                 fontSize={chatFontSize}
+                userName={getDisplayName()}
                 isCopied={copiedMessageId === message.id}
                 isFavourite={favouriteMessages.has(message.id)}
                 onCopy={handleCopyMessage}

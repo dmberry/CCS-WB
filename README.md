@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 1.8.1** | CCS Methodology v2.5
+**Version 1.8.2** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -277,6 +277,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 1.8.2 | User profile (name/initials, affiliation, bio) displayed in chat and included in session exports, anonymous mode option, unified muted timestamp styling |
 | 1.8.1 | User-editable AI models configuration via `public/models.md` file (add/remove models without code changes) |
 | 1.8.0 | Custom theme colours (6 accent colours via dropdown), fixed dark mode annotation colours, updated AI models (Gemini 2.5 Flash/Pro, OpenAI o1), custom model input for all providers |
 | 1.7.0 | Fixed unsaved changes detection (no more false warnings on fresh sessions), improved session state handling, default 70% code panel width in critique mode |

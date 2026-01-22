@@ -7,6 +7,7 @@
 import jsPDF from "jspdf";
 import { APP_VERSION } from "@/lib/config";
 import type { Session, LineAnnotation } from "@/types";
+import type { UserProfile } from "@/types/app-settings";
 
 // CCS Skill document version
 export const CCS_SKILL_VERSION = "2.5";
@@ -52,6 +53,13 @@ export interface SessionLogData {
     logVersion: string;
     appVersion: string;
     ccsSkillVersion: string;
+    // Author info (only included if not anonymous)
+    author?: {
+      name: string;
+      preferredName?: string;
+      affiliation?: string;
+      bio?: string;
+    };
   };
   codeArtefacts: Array<{
     id: string;
@@ -129,10 +137,21 @@ export function generateSessionLog(
   session: Session,
   projectName: string,
   codeContents?: Map<string, string>,
-  generateAnnotatedCode?: (code: string, annotations: LineAnnotation[]) => string
+  generateAnnotatedCode?: (code: string, annotations: LineAnnotation[]) => string,
+  profile?: UserProfile
 ): SessionLogData {
   const modeCode = MODE_CODES[session.mode] || "XX";
   const modeLabel = MODE_LABELS[modeCode] || session.mode;
+
+  // Include author info only if profile exists and not anonymous
+  const authorInfo = profile && !profile.anonymousMode && profile.name
+    ? {
+        name: profile.name,
+        preferredName: profile.preferredName || undefined,
+        affiliation: profile.affiliation || undefined,
+        bio: profile.bio || undefined,
+      }
+    : undefined;
 
   return {
     metadata: {
@@ -146,9 +165,10 @@ export function generateSessionLog(
       createdAt: session.createdAt,
       lastModified: session.lastModified,
       exportedAt: new Date().toISOString(),
-      logVersion: "1.0",
+      logVersion: "1.1",
       appVersion: APP_VERSION,
       ccsSkillVersion: CCS_SKILL_VERSION,
+      author: authorInfo,
     },
     codeArtefacts: session.codeFiles.map((file) => {
       const content = codeContents?.get(file.id) || "";
@@ -269,6 +289,12 @@ export function exportSessionLogText(
   lines.push("SESSION METADATA");
   lines.push("─".repeat(40));
   lines.push(`Project: ${log.metadata.projectName}`);
+  if (log.metadata.author) {
+    lines.push(`Author: ${log.metadata.author.name}${log.metadata.author.preferredName ? ` (${log.metadata.author.preferredName})` : ""}`);
+    if (log.metadata.author.affiliation) {
+      lines.push(`Affiliation: ${log.metadata.author.affiliation}`);
+    }
+  }
   lines.push(`Mode: ${log.metadata.modeLabel} (-${log.metadata.modeCode})`);
   lines.push(`Experience Level: ${log.metadata.experienceLevel || "Not set"}`);
   lines.push(`Current Phase: ${log.metadata.currentPhase}`);
@@ -490,6 +516,18 @@ export function exportSessionLogPDF(
   doc.setTextColor(50, 50, 50);
   doc.text(sanitiseForPDF(log.metadata.projectName), margin, yPos);
   yPos += 8;
+
+  // Author info (if present)
+  if (log.metadata.author) {
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(50, 50, 50);
+    const authorText = log.metadata.author.affiliation
+      ? `${log.metadata.author.name} - ${log.metadata.author.affiliation}`
+      : log.metadata.author.name;
+    doc.text(sanitiseForPDF(authorText), margin, yPos);
+    yPos += 6;
+  }
 
   // Mode badge
   doc.setFontSize(10);

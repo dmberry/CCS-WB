@@ -15,9 +15,11 @@ import type {
   ProgrammingLanguageId,
   ThemeMode,
   AccentColourId,
+  UserProfile,
 } from "@/types/app-settings";
 import {
   DEFAULT_APP_SETTINGS,
+  DEFAULT_USER_PROFILE,
   FONT_SIZE_MIN,
   FONT_SIZE_MAX,
   UI_FONT_SIZE_MIN,
@@ -26,6 +28,7 @@ import {
 } from "@/types/app-settings";
 
 const STORAGE_KEY = "ccs-wb-app-settings";
+const PROFILE_STORAGE_KEY = "ccs-wb-user-profile";
 const STORAGE_VERSION = "1.0";
 
 interface AppSettingsContextValue {
@@ -63,6 +66,12 @@ interface AppSettingsContextValue {
 
   // Clear all settings
   clearSettings: () => void;
+
+  // User profile
+  profile: UserProfile;
+  updateProfile: (updates: Partial<UserProfile>) => void;
+  clearProfile: () => void;
+  getDisplayName: () => string; // Returns preferred name or name, or empty string
 }
 
 const AppSettingsContext = createContext<AppSettingsContextValue | null>(null);
@@ -73,6 +82,7 @@ export function AppSettingsProvider({
   children: React.ReactNode;
 }) {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
+  const [profile, setProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE);
   const [isLoaded, setIsLoaded] = useState(false);
   const [systemTheme, setSystemTheme] = useState<"light" | "dark">("light");
 
@@ -91,7 +101,7 @@ export function AppSettingsProvider({
     return () => mediaQuery.removeEventListener("change", handler);
   }, []);
 
-  // Load settings from localStorage on mount
+  // Load settings and profile from localStorage on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -112,6 +122,21 @@ export function AppSettingsProvider({
     } catch (e) {
       console.error("Failed to load app settings:", e);
     }
+
+    // Load user profile
+    try {
+      const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (storedProfile) {
+        const parsed = JSON.parse(storedProfile);
+        setProfile({
+          ...DEFAULT_USER_PROFILE,
+          ...parsed,
+        });
+      }
+    } catch (e) {
+      console.error("Failed to load user profile:", e);
+    }
+
     setIsLoaded(true);
   }, []);
 
@@ -130,6 +155,17 @@ export function AppSettingsProvider({
       }
     }
   }, [settings, isLoaded]);
+
+  // Save profile to localStorage on change
+  useEffect(() => {
+    if (isLoaded) {
+      try {
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+      } catch (e) {
+        console.error("Failed to save user profile:", e);
+      }
+    }
+  }, [profile, isLoaded]);
 
   // Get effective font sizes for a mode
   const getFontSizes = useCallback(
@@ -328,6 +364,31 @@ export function AppSettingsProvider({
     localStorage.removeItem(STORAGE_KEY);
   }, []);
 
+  // Update user profile
+  const updateProfile = useCallback((updates: Partial<UserProfile>) => {
+    setProfile((prev) => ({
+      ...prev,
+      ...updates,
+    }));
+  }, []);
+
+  // Clear user profile
+  const clearProfile = useCallback(() => {
+    setProfile(DEFAULT_USER_PROFILE);
+    localStorage.removeItem(PROFILE_STORAGE_KEY);
+  }, []);
+
+  // Get display name (preferred name > name > empty)
+  const getDisplayName = useCallback(() => {
+    if (profile.preferredName.trim()) {
+      return profile.preferredName.trim();
+    }
+    if (profile.name.trim()) {
+      return profile.name.trim();
+    }
+    return "";
+  }, [profile.name, profile.preferredName]);
+
   return (
     <AppSettingsContext.Provider
       value={{
@@ -345,6 +406,10 @@ export function AppSettingsProvider({
         effectiveTheme,
         setAccentColour,
         clearSettings,
+        profile,
+        updateProfile,
+        clearProfile,
+        getDisplayName,
       }}
     >
       {children}

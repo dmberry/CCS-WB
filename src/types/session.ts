@@ -42,6 +42,7 @@ export interface MessageMetadata {
   literatureQueried?: boolean;
   feedbackLevel?: FeedbackLevel;
   phase?: ConversationPhase;
+  model?: string;  // Model name that generated this response (e.g., "Gemini 2.5 Pro")
 }
 
 export interface Message {

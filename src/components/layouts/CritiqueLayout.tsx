@@ -121,7 +121,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     removeCodeContent,
   } = useSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured } = useAISettings();
-  const { settings: appSettings, getFontSizes, setModeCodeFontSize, setModeChatFontSize } = useAppSettings();
+  const { settings: appSettings, getFontSizes, setModeCodeFontSize, setModeChatFontSize, getDisplayName, profile } = useAppSettings();
   const aiEnabled = aiSettings.aiEnabled;
   const router = useRouter();
 
@@ -136,7 +136,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<"code" | "appearance" | "ai" | "about">("appearance");
+  const [settingsTab, setSettingsTab] = useState<"profile" | "code" | "appearance" | "ai" | "about">("appearance");
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showModeDropdown, setShowModeDropdown] = useState(false);
@@ -762,25 +762,25 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
   // Export handlers using shared utilities
   const handleExportJSON = useCallback(() => {
-    const log = generateSessionLog(session, projectName, codeContents, generateAnnotatedCode);
+    const log = generateSessionLog(session, projectName, codeContents, generateAnnotatedCode, profile);
     const modeCode = MODE_CODES[session.mode] || "XX";
     exportSessionLogJSON(log, projectName, modeCode);
     setShowExportModal(false);
-  }, [session, projectName, codeContents]);
+  }, [session, projectName, codeContents, profile]);
 
   const handleExportText = useCallback(() => {
-    const log = generateSessionLog(session, projectName, codeContents, generateAnnotatedCode);
+    const log = generateSessionLog(session, projectName, codeContents, generateAnnotatedCode, profile);
     const modeCode = MODE_CODES[session.mode] || "XX";
     exportSessionLogText(log, projectName, modeCode);
     setShowExportModal(false);
-  }, [session, projectName, codeContents]);
+  }, [session, projectName, codeContents, profile]);
 
   const handleExportPDF = useCallback(() => {
-    const log = generateSessionLog(session, projectName, codeContents, generateAnnotatedCode);
+    const log = generateSessionLog(session, projectName, codeContents, generateAnnotatedCode, profile);
     const modeCode = MODE_CODES[session.mode] || "XX";
     exportSessionLogPDF(log, projectName, modeCode);
     setShowExportModal(false);
-  }, [session, projectName, codeContents]);
+  }, [session, projectName, codeContents, profile]);
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -1063,19 +1063,30 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                   )}
                 >
                   <div
-                    className="font-body prose max-w-none"
+                    className="font-body leading-relaxed prose prose-sm prose-slate dark:prose-invert max-w-none
+                      prose-p:my-2 prose-p:leading-relaxed prose-p:text-[1em]
+                      prose-headings:font-display prose-headings:text-ink prose-headings:mt-4 prose-headings:mb-2
+                      prose-h1:text-[1.2em] prose-h2:text-[1.1em] prose-h3:text-[1em]
+                      prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:text-[1em]
+                      prose-code:font-mono prose-code:bg-parchment prose-code:px-1 prose-code:py-0.5 prose-code:rounded-sm prose-code:!text-[0.85em] prose-code:before:content-none prose-code:after:content-none
+                      prose-pre:bg-parchment prose-pre:border prose-pre:border-parchment-dark prose-pre:rounded-sm prose-pre:my-2 prose-pre:!text-[0.85em] prose-pre:font-mono prose-pre:overflow-x-auto
+                      prose-blockquote:border-l-burgundy prose-blockquote:text-slate-muted prose-blockquote:my-2
+                      prose-strong:text-ink prose-strong:font-semibold
+                      prose-a:text-burgundy prose-a:no-underline hover:prose-a:underline"
                     style={{ fontSize: `${chatFontSize}px` }}
                   >
                     <ReactMarkdown>{message.content}</ReactMarkdown>
                   </div>
                 </div>
-                {/* Timestamp and actions inline */}
+                {/* User/Model name, timestamp, and actions inline */}
                 <div className={cn(
                   "mt-0.5 px-1 flex items-center gap-2",
                   message.role === "user" ? "flex-row-reverse" : "flex-row"
                 )}>
                   <span className="font-sans text-[9px] text-slate-muted">
+                    {message.role !== "user" && message.metadata?.model && `${message.metadata.model}, `}
                     {formatTimestamp(message.timestamp)}
+                    {message.role === "user" && getDisplayName() && `, ${getDisplayName()}`}
                   </span>
                   <div className="flex items-center gap-0.5">
                     <button

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { X, Bot, Palette, Info, Minus, Plus, Code } from "lucide-react";
+import { X, Bot, Palette, Info, Minus, Plus, Code, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIProviderSettings } from "./AIProviderSettings";
 import { useAppSettings } from "@/context/AppSettingsContext";
+import type { UserProfile } from "@/types/app-settings";
 import {
   FONT_SIZE_MIN,
   FONT_SIZE_MAX,
@@ -17,7 +18,7 @@ import {
   type AccentColourId,
 } from "@/types/app-settings";
 
-type SettingsTab = "code" | "appearance" | "ai" | "about";
+type SettingsTab = "profile" | "code" | "appearance" | "ai" | "about";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -40,11 +41,14 @@ export function SettingsModal({
     setTheme,
     setAccentColour,
     effectiveTheme,
+    profile,
+    updateProfile,
   } = useAppSettings();
 
   if (!isOpen) return null;
 
   const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
+    { id: "profile", label: "Profile", icon: <User className="h-4 w-4" /> },
     { id: "code", label: "Code", icon: <Code className="h-4 w-4" /> },
     { id: "appearance", label: "Appearance", icon: <Palette className="h-4 w-4" /> },
     { id: "ai", label: "AI", icon: <Bot className="h-4 w-4" /> },
@@ -97,6 +101,124 @@ export function SettingsModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
+          {activeTab === "profile" && (
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-display text-caption text-ink mb-1">Your Profile</h3>
+                <p className="font-sans text-[10px] text-slate-muted mb-3">
+                  Set your name and affiliation. This information is displayed in chat and can be included in session exports.
+                </p>
+
+                {/* Name */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block font-sans text-caption font-medium text-ink mb-1">
+                      Name or Initials
+                    </label>
+                    <input
+                      type="text"
+                      value={profile.name}
+                      onChange={(e) => updateProfile({ name: e.target.value })}
+                      placeholder="J. Smith"
+                      className="w-full px-3 py-2 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors placeholder:text-slate-muted"
+                    />
+                  </div>
+
+                  {/* Preferred Name */}
+                  <div>
+                    <label className="block font-sans text-caption font-medium text-ink mb-1">
+                      Preferred Name
+                    </label>
+                    <p className="font-sans text-[10px] text-slate-muted mb-1">
+                      Displayed in chat instead of full name if provided
+                    </p>
+                    <input
+                      type="text"
+                      value={profile.preferredName}
+                      onChange={(e) => updateProfile({ preferredName: e.target.value })}
+                      placeholder="Jane"
+                      className="w-full px-3 py-2 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors placeholder:text-slate-muted"
+                    />
+                  </div>
+
+                  {/* Affiliation */}
+                  <div>
+                    <label className="block font-sans text-caption font-medium text-ink mb-1">
+                      Affiliation
+                    </label>
+                    <input
+                      type="text"
+                      value={profile.affiliation}
+                      onChange={(e) => updateProfile({ affiliation: e.target.value })}
+                      placeholder="University of Sussex"
+                      className="w-full px-3 py-2 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors placeholder:text-slate-muted"
+                    />
+                  </div>
+
+                  {/* Bio */}
+                  <div>
+                    <label className="block font-sans text-caption font-medium text-ink mb-1">
+                      Bio
+                    </label>
+                    <p className="font-sans text-[10px] text-slate-muted mb-1">
+                      Brief description for session exports
+                    </p>
+                    <textarea
+                      value={profile.bio}
+                      onChange={(e) => updateProfile({ bio: e.target.value })}
+                      placeholder="Researcher in critical code studies and digital humanities..."
+                      rows={3}
+                      className="w-full px-3 py-2 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors resize-none placeholder:text-slate-muted"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Anonymous Mode */}
+              <div className="pt-3 border-t border-parchment">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="font-display text-caption text-ink">Anonymous Mode</h3>
+                    <p className="font-sans text-[10px] text-slate-muted">
+                      When enabled, your profile information will be excluded from session exports
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => updateProfile({ anonymousMode: !profile.anonymousMode })}
+                    className={cn(
+                      "relative w-10 h-5 rounded-full transition-colors flex-shrink-0",
+                      profile.anonymousMode ? "bg-burgundy" : "bg-parchment-dark"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform",
+                        profile.anonymousMode ? "translate-x-5" : "translate-x-0.5"
+                      )}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Preview */}
+              {(profile.name || profile.preferredName) && (
+                <div className="pt-3 border-t border-parchment">
+                  <h4 className="font-display text-caption text-ink mb-2">Chat Preview</h4>
+                  <div className="bg-burgundy/10 rounded-sm px-3 py-2">
+                    <p className="font-body text-caption text-ink">
+                      Your messages will be labelled like this.
+                    </p>
+                    <div className="flex items-center mt-1 justify-end">
+                      <span className="font-sans text-[9px] text-slate-muted">
+                        12:00 PM, {profile.preferredName || profile.name}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === "code" && (
             <div className="space-y-4">
               <div>
