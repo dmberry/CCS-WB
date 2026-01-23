@@ -65,7 +65,7 @@ export const ACCENT_COLOURS = [
 
 export type AccentColourId = typeof ACCENT_COLOURS[number]["id"];
 
-// Supported programming languages (top 10 most popular + Other)
+// Supported programming languages (top 10 most popular + Historical + Other)
 export const PROGRAMMING_LANGUAGES = [
   { id: "", name: "Not specified", description: "Auto-detect or unspecified" },
   { id: "python", name: "Python", description: "Python" },
@@ -77,6 +77,10 @@ export const PROGRAMMING_LANGUAGES = [
   { id: "go", name: "Go", description: "Go" },
   { id: "rust", name: "Rust", description: "Rust" },
   { id: "ruby", name: "Ruby", description: "Ruby" },
+  // Historical languages (punch card era)
+  { id: "mad", name: "MAD", description: "Michigan Algorithm Decoder (1960s)" },
+  { id: "fortran", name: "FORTRAN", description: "Formula Translation (1957+)" },
+  { id: "cobol", name: "COBOL", description: "Common Business-Oriented Language (1959+)" },
   { id: "other", name: "Other", description: "Specify in session" },
 ] as const;
 
@@ -124,7 +128,7 @@ export interface AppSettingsStorage {
 // User profile for identification and export attribution
 export interface UserProfile {
   name: string;
-  preferredName: string;
+  initials: string;  // Short identifier displayed in chat and stored with annotations
   affiliation: string;
   bio: string;
   anonymousMode: boolean; // If true, exclude profile from exports
@@ -132,7 +136,7 @@ export interface UserProfile {
 
 export const DEFAULT_USER_PROFILE: UserProfile = {
   name: "",
-  preferredName: "",
+  initials: "",
   affiliation: "",
   bio: "",
   anonymousMode: false,

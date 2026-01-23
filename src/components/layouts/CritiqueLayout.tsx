@@ -32,7 +32,6 @@ import {
   Heart,
   ArrowUp,
   SlidersHorizontal,
-  Code,
   ChevronDown,
   HelpCircle,
   Search,
@@ -45,7 +44,7 @@ import { GuidedPrompts } from "@/components/prompts";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { AISettingsPanel } from "@/components/settings/AISettingsPanel";
 import { useAppSettings } from "@/context/AppSettingsContext";
-import { FONT_SIZE_MIN, FONT_SIZE_MAX, PROGRAMMING_LANGUAGES } from "@/types/app-settings";
+import { FONT_SIZE_MIN, FONT_SIZE_MAX } from "@/types/app-settings";
 import { PROVIDER_CONFIGS } from "@/lib/ai/config";
 import {
   generateSessionLog,
@@ -126,6 +125,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     setCodeContent,
     removeCodeContent,
     addLineAnnotation,
+    clearLineAnnotations,
   } = useSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured } = useAISettings();
   const { settings: appSettings, getFontSizes, setModeCodeFontSize, setModeChatFontSize, getDisplayName, profile } = useAppSettings();
@@ -135,9 +135,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   // Get font sizes from app settings for critique mode
   const { codeFontSize, chatFontSize } = getFontSizes("critique");
 
-  // Get effective language: session override > global default > "Not specified"
+  // Get effective language for API context: session override > global default
   const effectiveLanguage = session.languageOverride || appSettings.defaultLanguage || "";
-  const languageName = PROGRAMMING_LANGUAGES.find(l => l.id === effectiveLanguage)?.name || "Not specified";
 
   // State
   const [input, setInput] = useState("");
@@ -145,7 +144,6 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settingsTab, setSettingsTab] = useState<"profile" | "code" | "appearance" | "ai" | "about">("appearance");
   const [showAIPanel, setShowAIPanel] = useState(false);
-  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showModeDropdown, setShowModeDropdown] = useState(false);
   const [showGuidedPrompts, setShowGuidedPrompts] = useState(false);
   const [showExperienceHelp, setShowExperienceHelp] = useState(false);
@@ -178,18 +176,53 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [chatCollapsed, setChatCollapsed] = useState(false);
   const [annotationFullScreen, setAnnotationFullScreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Track if user has manually resized the panel (disables auto-extend for 80-column files)
+  const userHasManuallyResized = useRef(false);
 
   // Create a Map from session.codeContents for compatibility with existing code
   const codeContents = useMemo(() => new Map(Object.entries(session.codeContents)), [session.codeContents]);
 
+  // Track original file contents for detecting modifications and enabling revert
+  const [originalContents, setOriginalContents] = useState<Map<string, string>>(new Map());
+
+  // Helper to store original content when a file is first added
+  const storeOriginalContent = useCallback((fileId: string, content: string) => {
+    setOriginalContents(prev => {
+      const next = new Map(prev);
+      // Only store if not already stored (don't overwrite original)
+      if (!next.has(fileId)) {
+        next.set(fileId, content);
+      }
+      return next;
+    });
+  }, []);
+
+  // Revert a file to its original content and clear annotations
+  const handleRevertFile = useCallback((fileId: string) => {
+    const original = originalContents.get(fileId);
+    if (original !== undefined) {
+      setCodeContent(fileId, original);
+      // Also clear annotations for a clean start
+      clearLineAnnotations(fileId);
+    }
+  }, [originalContents, setCodeContent, clearLineAnnotations]);
+
   // Reset layout to defaults when session changes (clear or load new session)
   const prevSessionIdRef = useRef(session.id);
+  // Store codeContents in a ref so we can access the current value without adding to dependencies
+  const sessionCodeContentsRef = useRef(session.codeContents);
+  sessionCodeContentsRef.current = session.codeContents;
+
   useEffect(() => {
     if (session.id !== prevSessionIdRef.current) {
       // Session changed - reset layout to defaults
       setCodePanelWidth(DEFAULT_CODE_PANEL_WIDTH);
       setProjectName("");
       setFavouriteMessages(new Set());
+      // Initialize originalContents from the loaded session's codeContents
+      // This allows modification detection to work after session restore
+      const loadedContents = new Map(Object.entries(sessionCodeContentsRef.current));
+      setOriginalContents(loadedContents);
       hasAddedOpeningMessage.current = false;
       prevSessionIdRef.current = session.id;
     }
@@ -229,6 +262,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsDragging(true);
+    // Mark that user has manually resized - disables auto-extend for 80-column files
+    userHasManuallyResized.current = true;
   }, []);
 
   useEffect(() => {
@@ -468,6 +503,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
             // Store the clean code content
             setCodeContent(fileId, code);
+            storeOriginalContent(fileId, code);
 
             // Restore annotations
             for (const ann of metadata.annotations) {
@@ -481,6 +517,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                 lineContent,
                 type: ann.type,
                 content: ann.content,
+                addedBy: ann.addedBy,
               });
             }
 
@@ -500,6 +537,10 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           js: "javascript", ts: "typescript", py: "python", rb: "ruby",
           c: "c", cpp: "cpp", h: "c", java: "java", go: "go", rs: "rust",
           lisp: "lisp", scm: "scheme", el: "elisp", bas: "basic",
+          // Historical languages (punch card era)
+          mad: "mad", for: "fortran", f: "fortran", f77: "fortran", f90: "fortran",
+          ftn: "fortran", cob: "cobol", cbl: "cobol", pli: "pli", pl1: "pli",
+          alg: "algol", sno: "snobol", apl: "apl", slip: "slip",
         };
 
         const language = languageMap[extension] || "";
@@ -514,6 +555,10 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
         // Store code content with the actual ID in session
         setCodeContent(fileId, text);
+        storeOriginalContent(fileId, text);
+
+        // Reset manual resize flag to allow 80-column auto-extend for new files
+        userHasManuallyResized.current = false;
 
         // Add message
         addMessage({
@@ -526,7 +571,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
     },
-    [addCode, addMessage, setCodeContent, addLineAnnotation]
+    [addCode, addMessage, setCodeContent, storeOriginalContent, addLineAnnotation]
   );
 
   // Handle paste code
@@ -546,6 +591,10 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
     // Store code content with the actual ID in session
     setCodeContent(fileId, codeInputText);
+    storeOriginalContent(fileId, codeInputText);
+
+    // Reset manual resize flag to allow 80-column auto-extend for new files
+    userHasManuallyResized.current = false;
 
     // Add message
     addMessage({
@@ -558,7 +607,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     setCodeInputName("");
     setCodeInputLanguage("");
     setShowCodeInput(false);
-  }, [codeInputText, codeInputName, codeInputLanguage, addCode, addMessage]);
+  }, [codeInputText, codeInputName, codeInputLanguage, addCode, addMessage, storeOriginalContent]);
 
   // Handle guided prompt selection
   const handleSelectGuidedPrompt = useCallback((prompt: string) => {
@@ -588,7 +637,12 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
       // Also include codeContentsMap for backwards compatibility with older versions
       codeContentsMap: session.codeContents,
       exportedAt: new Date().toISOString(),
-      version: "1.2", // Version with codeContents in session
+      version: "1.3", // Version with layoutState
+      // Layout state for restoring pane positions
+      layoutState: {
+        codePanelWidth,
+        chatCollapsed,
+      },
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -615,6 +669,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     setProjectName("");
     setFavouriteMessages(new Set());
     setCodePanelWidth(DEFAULT_CODE_PANEL_WIDTH);
+    setChatCollapsed(false);
     // Close modal
     setShowNewProjectModal(false);
   }, [clearModeSession, session.mode]);
@@ -751,7 +806,6 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
       if (!target.closest('[data-dropdown]')) {
         setShowModeDropdown(false);
         setShowExperienceHelp(false);
-        setShowLanguageDropdown(false);
         setShowFontSizePopover(false);
       }
       // Close code input panel if clicking outside of it
@@ -830,11 +884,31 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
         // For backwards compatibility with older saves using codeContentsMap,
         // we convert it to codeContents during import in the reducer
 
+        // Store loaded code contents as original contents for modification tracking
+        const loadedContents = importedData.codeContents || importedData.codeContentsMap || {};
+        const newOriginals = new Map<string, string>();
+        Object.entries(loadedContents).forEach(([fileId, content]) => {
+          if (typeof content === 'string') {
+            newOriginals.set(fileId, content);
+          }
+        });
+        setOriginalContents(newOriginals);
+
         // Restore favourite messages from session
         const favourites = new Set<string>(
           importedData.messages?.filter((m: { isFavourite?: boolean }) => m.isFavourite).map((m: { id: string }) => m.id) || []
         );
         setFavouriteMessages(favourites);
+
+        // Restore layout state if present (v1.3+)
+        if (importedData.layoutState) {
+          if (typeof importedData.layoutState.codePanelWidth === 'number') {
+            setCodePanelWidth(importedData.layoutState.codePanelWidth);
+          }
+          if (typeof importedData.layoutState.chatCollapsed === 'boolean') {
+            setChatCollapsed(importedData.layoutState.chatCollapsed);
+          }
+        }
 
         // Add welcome message
         addMessage({
@@ -968,51 +1042,6 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                     </span>
                   </button>
                 ))}
-              </div>
-            )}
-          </div>
-          {/* Language indicator with dropdown */}
-          <div className="relative" data-dropdown>
-            <button
-              onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
-              className="font-sans text-[10px] text-slate hover:text-ink px-2 py-0.5 border border-parchment hover:border-slate-muted rounded-sm transition-colors flex items-center gap-1"
-              title="Click to change language"
-            >
-              <Code className="h-3 w-3" strokeWidth={1.5} />
-              <span>{languageName}</span>
-              <ChevronDown className={cn("h-2.5 w-2.5 transition-transform", showLanguageDropdown && "rotate-180")} strokeWidth={1.5} />
-            </button>
-            {showLanguageDropdown && (
-              <div className="absolute top-full left-0 mt-1 w-44 bg-popover rounded-sm shadow-lg border border-parchment p-1 z-50 max-h-64 overflow-y-auto">
-                {PROGRAMMING_LANGUAGES.map((lang) => (
-                  <button
-                    key={lang.id}
-                    onClick={() => {
-                      setLanguageOverride(lang.id || undefined);
-                      setShowLanguageDropdown(false);
-                    }}
-                    className={cn(
-                      "w-full text-left px-2 py-1.5 text-[11px] rounded-sm hover:bg-cream transition-colors",
-                      effectiveLanguage === lang.id ? "bg-burgundy/10 text-burgundy" : "text-ink"
-                    )}
-                  >
-                    {lang.name}
-                  </button>
-                ))}
-                {session.languageOverride && (
-                  <>
-                    <div className="border-t border-parchment my-1" />
-                    <button
-                      onClick={() => {
-                        setLanguageOverride(undefined);
-                        setShowLanguageDropdown(false);
-                      }}
-                      className="w-full text-left px-2 py-1.5 text-[11px] text-slate-muted hover:text-burgundy rounded-sm transition-colors"
-                    >
-                      Reset to default
-                    </button>
-                  </>
-                )}
               </div>
             )}
           </div>
@@ -1185,16 +1214,46 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           <CodeEditorPanel
             codeFiles={session.codeFiles}
             codeContents={codeContents}
+            originalContents={originalContents}
             onCodeContentChange={(fileId, content) => {
               setCodeContent(fileId, content);
             }}
             onDeleteFile={handleDeleteFile}
             onRenameFile={handleRenameFile}
             onDuplicateFile={handleDuplicateFile}
+            onRevertFile={handleRevertFile}
             onLoadCode={() => fileInputRef.current?.click()}
+            onLoadSample={(filename, content, language) => {
+              // Add the sample code as a new file (same pattern as regular file upload)
+              const fileId = addCode({
+                name: filename,
+                language: language || undefined,
+                source: "sample",
+                size: content.length,
+              });
+              // Set the content and store original for revert (enables modification detection and revert)
+              setCodeContent(fileId, content);
+              storeOriginalContent(fileId, content);
+              // Reset manual resize flag to allow 80-column auto-extend for new files
+              userHasManuallyResized.current = false;
+              // Add message like regular file upload
+              addMessage({
+                role: "user",
+                content: `I've loaded the sample **${filename}**${language ? ` (${language})` : ""} for analysis.`,
+              });
+            }}
             onReorderFiles={reorderCodeFiles}
+            onUpdateFileLanguage={(fileId, language) => updateCode(fileId, { language })}
             isFullScreen={annotationFullScreen}
             onToggleFullScreen={() => setAnnotationFullScreen(prev => !prev)}
+            onRequestMinPanelWidth={(minWidth) => {
+              // Auto-extend panel for 80-column punch card files
+              // Only extend if user hasn't manually resized (respect user choice)
+              if (!userHasManuallyResized.current && minWidth > codePanelWidth) {
+                setCodePanelWidth(Math.min(85, minWidth));
+              }
+            }}
+            userInitials={profile.initials}
           />
         </div>
 
@@ -1541,7 +1600,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           type="file"
           className="hidden"
           onChange={handleFileChange}
-          accept=".js,.jsx,.ts,.tsx,.py,.rb,.c,.cpp,.h,.hpp,.java,.go,.rs,.lisp,.scm,.el,.bas,.txt,.md,.json,.yaml,.yml,.xml,.html,.css,.scss,.sh,.bash,.zsh,.pl,.php,.swift,.kt,.scala,.clj,.hs,.ml,.fs,.lua,.r,.jl,.m,.sql,.asm,.s"
+          accept=".js,.jsx,.ts,.tsx,.py,.rb,.c,.cpp,.h,.hpp,.java,.go,.rs,.lisp,.scm,.el,.bas,.txt,.md,.json,.yaml,.yml,.xml,.html,.css,.scss,.sh,.bash,.zsh,.pl,.php,.swift,.kt,.scala,.clj,.hs,.ml,.fs,.lua,.r,.jl,.m,.sql,.asm,.s,.mad,.for,.f,.f77,.f90,.ftn,.cob,.cbl,.pli,.pl1,.alg,.sno,.apl,.slip"
         />
       </div>
 

@@ -607,6 +607,10 @@ export default function ConversationPage() {
         lisp: "lisp", scm: "scheme", el: "elisp", bas: "basic",
         asm: "assembly", s: "assembly", pl: "perl", php: "php",
         sh: "bash", txt: "", md: "", html: "html", css: "css",
+        // Historical languages (punch card era)
+        mad: "mad", for: "fortran", f: "fortran", f77: "fortran", f90: "fortran",
+        ftn: "fortran", cob: "cobol", cbl: "cobol", pli: "pli", pl1: "pli",
+        alg: "algol", sno: "snobol", apl: "apl", slip: "slip",
       };
 
       const language = languageMap[extension] || detectLanguage(text);
@@ -2364,6 +2368,7 @@ export default function ConversationPage() {
               fileName={showCodeAnnotator.fileName}
               language={showCodeAnnotator.language}
               onClose={() => setShowCodeAnnotator(null)}
+              userInitials={profile.initials}
             />
           </div>
         </div>
@@ -2578,7 +2583,7 @@ export default function ConversationPage() {
               ref={fileInputRef}
               type="file"
               onChange={handleFileChange}
-              accept=".js,.jsx,.ts,.tsx,.py,.rb,.c,.cpp,.h,.hpp,.java,.go,.rs,.lisp,.scm,.el,.bas,.txt,.md,.json,.yaml,.yml,.xml,.html,.css,.scss,.sh,.bash,.zsh,.pl,.php,.swift,.kt,.scala,.clj,.hs,.ml,.fs,.lua,.r,.jl,.m,.sql,.asm,.s"
+              accept=".js,.jsx,.ts,.tsx,.py,.rb,.c,.cpp,.h,.hpp,.java,.go,.rs,.lisp,.scm,.el,.bas,.txt,.md,.json,.yaml,.yml,.xml,.html,.css,.scss,.sh,.bash,.zsh,.pl,.php,.swift,.kt,.scala,.clj,.hs,.ml,.fs,.lua,.r,.jl,.m,.sql,.asm,.s,.mad,.for,.f,.f77,.f90,.ftn,.cob,.cbl,.pli,.pl1,.alg,.sno,.apl,.slip"
               className="hidden"
             />
 

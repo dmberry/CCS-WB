@@ -71,7 +71,7 @@ interface AppSettingsContextValue {
   profile: UserProfile;
   updateProfile: (updates: Partial<UserProfile>) => void;
   clearProfile: () => void;
-  getDisplayName: () => string; // Returns preferred name or name, or empty string
+  getDisplayName: () => string; // Returns initials or name, or empty string
 }
 
 const AppSettingsContext = createContext<AppSettingsContextValue | null>(null);
@@ -128,10 +128,18 @@ export function AppSettingsProvider({
       const storedProfile = localStorage.getItem(PROFILE_STORAGE_KEY);
       if (storedProfile) {
         const parsed = JSON.parse(storedProfile);
-        setProfile({
+        // Migrate old preferredName to initials if needed
+        const migratedProfile = {
           ...DEFAULT_USER_PROFILE,
           ...parsed,
-        });
+          // If old preferredName exists and no initials, migrate it
+          initials: parsed.initials || parsed.preferredName || "",
+        };
+        // Remove old preferredName field if present
+        if ('preferredName' in migratedProfile) {
+          delete (migratedProfile as Record<string, unknown>).preferredName;
+        }
+        setProfile(migratedProfile);
       }
     } catch (e) {
       console.error("Failed to load user profile:", e);
@@ -378,16 +386,16 @@ export function AppSettingsProvider({
     localStorage.removeItem(PROFILE_STORAGE_KEY);
   }, []);
 
-  // Get display name (preferred name > name > empty)
+  // Get display name (initials > name > empty)
   const getDisplayName = useCallback(() => {
-    if (profile.preferredName.trim()) {
-      return profile.preferredName.trim();
+    if (profile.initials.trim()) {
+      return profile.initials.trim();
     }
     if (profile.name.trim()) {
       return profile.name.trim();
     }
     return "";
-  }, [profile.name, profile.preferredName]);
+  }, [profile.name, profile.initials]);
 
   return (
     <AppSettingsContext.Provider

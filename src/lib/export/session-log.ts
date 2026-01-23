@@ -76,7 +76,7 @@ export interface SessionLogData {
     // Author info (only included if not anonymous)
     author?: {
       name: string;
-      preferredName?: string;
+      initials?: string;
       affiliation?: string;
       bio?: string;
     };
@@ -101,6 +101,7 @@ export interface SessionLogData {
       type: string;
       content: string;
       createdAt: string;
+      addedBy?: string;
     }>;
   }>;
   conversationLog: Array<{
@@ -167,7 +168,7 @@ export function generateSessionLog(
   const authorInfo = profile && !profile.anonymousMode && profile.name
     ? {
         name: profile.name,
-        preferredName: profile.preferredName || undefined,
+        initials: profile.initials || undefined,
         affiliation: profile.affiliation || undefined,
         bio: profile.bio || undefined,
       }
@@ -220,6 +221,7 @@ export function generateSessionLog(
           type: ann.type,
           content: ann.content,
           createdAt: ann.createdAt,
+          addedBy: ann.addedBy,
         })),
       };
     }),
@@ -310,7 +312,7 @@ export function exportSessionLogText(
   lines.push("─".repeat(40));
   lines.push(`Project: ${log.metadata.projectName}`);
   if (log.metadata.author) {
-    lines.push(`Author: ${log.metadata.author.name}${log.metadata.author.preferredName ? ` (${log.metadata.author.preferredName})` : ""}`);
+    lines.push(`Author: ${log.metadata.author.name}${log.metadata.author.initials ? ` (${log.metadata.author.initials})` : ""}`);
     if (log.metadata.author.affiliation) {
       lines.push(`Affiliation: ${log.metadata.author.affiliation}`);
     }

@@ -25,6 +25,10 @@ export const LANGUAGE_COLORS: Record<string, { light: string; dark: string }> = 
   sql: { light: "#e38c00", dark: "#ffb347" }, // SQL amber
   markdown: { light: "#083fa1", dark: "#4a90d9" }, // Markdown blue
   plain: { light: "#6b7280", dark: "#9ca3af" }, // Plain text grey
+  // Historical languages (punch card era)
+  mad: { light: "#6a1b9a", dark: "#9c4dcc" }, // MAD purple (Michigan colors)
+  fortran: { light: "#4d148c", dark: "#7b1fa2" }, // FORTRAN deep purple
+  cobol: { light: "#0d47a1", dark: "#1976d2" }, // COBOL blue
 };
 
 /**
@@ -91,6 +95,9 @@ const languageLoaders: Record<string, LanguageLoader> = {
   // Markdown
   markdown: () =>
     import("@codemirror/lang-markdown").then((m) => m.markdown()),
+
+  // Historical languages (punch card era)
+  mad: () => import("./cm-lang-mad").then((m) => m.mad()),
 };
 
 // File extension to language name mapping
@@ -163,6 +170,39 @@ const extensionToLanguage: Record<string, string> = {
   zsh: "plain",
   ps1: "plain",
 
+  // Historical languages (punch card era)
+  // FORTRAN variants
+  for: "fortran",
+  f: "fortran",
+  f77: "fortran",
+  f90: "fortran",
+  f95: "fortran",
+  ftn: "fortran",
+  // COBOL
+  cob: "cobol",
+  cbl: "cobol",
+  // BASIC
+  bas: "plain",
+  // Assembly
+  asm: "plain",
+  s: "plain",
+  // MAD (Michigan Algorithm Decoder) - has syntax highlighting
+  mad: "mad",
+  // SLIP (Symmetric List Processor)
+  slip: "plain",
+  // PL/I
+  pli: "plain",
+  pl1: "plain",
+  // ALGOL
+  alg: "plain",
+  // LISP
+  lsp: "plain",
+  lisp: "plain",
+  // SNOBOL
+  sno: "plain",
+  // APL
+  apl: "plain",
+
   // Other
   txt: "plain",
 };
@@ -211,12 +251,18 @@ const languageAliases: Record<string, string> = {
   scheme: "plain",
   clojure: "plain",
 
-  // Other historical languages
-  fortran: "plain",
-  cobol: "plain",
+  // Other historical languages (punch card era)
+  fortran: "fortran",
+  cobol: "cobol",
   pascal: "plain",
   assembly: "plain",
   asm: "plain",
+  mad: "mad", // Michigan Algorithm Decoder - has syntax highlighting
+  slip: "plain", // Symmetric List Processor
+  pli: "plain", // PL/I
+  algol: "plain",
+  snobol: "plain",
+  apl: "plain",
 
   // Pseudocode
   pseudocode: "plain",

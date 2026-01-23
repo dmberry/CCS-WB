@@ -124,19 +124,19 @@ export function SettingsModal({
                     />
                   </div>
 
-                  {/* Preferred Name */}
+                  {/* Initials */}
                   <div>
                     <label className="block font-sans text-caption font-medium text-ink mb-1">
-                      Preferred Name
+                      Initials
                     </label>
                     <p className="font-sans text-[10px] text-slate-muted mb-1">
-                      Displayed in chat instead of full name if provided
+                      Displayed in chat and stored with annotations
                     </p>
                     <input
                       type="text"
-                      value={profile.preferredName}
-                      onChange={(e) => updateProfile({ preferredName: e.target.value })}
-                      placeholder="Jane"
+                      value={profile.initials}
+                      onChange={(e) => updateProfile({ initials: e.target.value })}
+                      placeholder="DMB"
                       className="w-full px-3 py-2 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors placeholder:text-slate-muted"
                     />
                   </div>
@@ -201,7 +201,7 @@ export function SettingsModal({
               </div>
 
               {/* Preview */}
-              {(profile.name || profile.preferredName) && (
+              {(profile.name || profile.initials) && (
                 <div className="pt-3 border-t border-parchment">
                   <h4 className="font-display text-caption text-ink mb-2">Chat Preview</h4>
                   <div className="bg-burgundy/10 rounded-sm px-3 py-2">
@@ -210,7 +210,7 @@ export function SettingsModal({
                     </p>
                     <div className="flex items-center mt-1 justify-end">
                       <span className="font-sans text-[9px] text-slate-muted">
-                        12:00 PM, {profile.preferredName || profile.name}
+                        12:00 PM, {profile.initials || profile.name}
                       </span>
                     </div>
                   </div>

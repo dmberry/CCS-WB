@@ -3,18 +3,20 @@
  * Renders annotation widgets below code lines with inline editing support
  */
 
-import { Extension } from "@codemirror/state";
+import { Extension, Range } from "@codemirror/state";
 import { EditorView, Decoration, WidgetType, gutter, GutterMarker } from "@codemirror/view";
 import type { LineAnnotation, LineAnnotationType } from "@/types";
 
 // Annotation display settings type (matches CodeEditorPanel)
 type AnnotationBrightness = "low" | "medium" | "high" | "full";
+type LineHighlightIntensity = "off" | "low" | "medium" | "high" | "full";
 
 export interface AnnotationDisplaySettings {
   visible: boolean;
   brightness: AnnotationBrightness;
   showPillBackground: boolean;
   showBadge: boolean;
+  lineHighlightIntensity: LineHighlightIntensity; // Subtle highlight on annotated lines
   highlightAnnotatedLines: boolean;
 }
 
@@ -24,6 +26,15 @@ const BRIGHTNESS_OPACITY: Record<AnnotationBrightness, number> = {
   medium: 0.45,
   high: 0.7,
   full: 1.0,
+};
+
+// Background opacity values for line highlight intensity (hex suffix for RGBA)
+// Border is always full opacity to match the annotation bar style
+const LINE_HIGHLIGHT_INTENSITY: Record<Exclude<LineHighlightIntensity, "off">, string> = {
+  low: "06",      // Very subtle background (~2%)
+  medium: "0A",   // Default subtle (~4%)
+  high: "12",     // More visible (~7%)
+  full: "1A",     // Strong highlight (~10%)
 };
 
 // Annotation type prefixes (matching CodeEditorPanel)
@@ -68,7 +79,8 @@ const ANNOTATION_COLORS: Record<LineAnnotationType, { light: string; dark: strin
  * State for inline editing - only tracks identity, not mutable values
  */
 export interface InlineEditState {
-  lineNumber: number | null; // Line being edited (for new annotation)
+  lineNumber: number | null; // Line where editor appears (end line for blocks, single line otherwise)
+  startLineNumber?: number; // Start line for block annotations (lineNumber is the end)
   annotationId: string | null; // Annotation being edited (for existing)
   initialType: LineAnnotationType; // Initial type (widget manages its own state)
   initialContent: string; // Initial content (widget manages its own state)
@@ -107,6 +119,7 @@ class InlineAnnotationEditor extends WidgetType {
     // Only compare identity, not content - widget manages its own state
     return (
       this.editState.lineNumber === other.editState.lineNumber &&
+      this.editState.startLineNumber === other.editState.startLineNumber &&
       this.editState.annotationId === other.editState.annotationId &&
       this.isDark === other.isDark &&
       this.isNew === other.isNew
@@ -147,7 +160,13 @@ class InlineAnnotationEditor extends WidgetType {
     input.type = "text";
     input.className = "cm-annotation-input";
     input.value = this.currentContent;
-    input.placeholder = this.isNew ? "Enter annotation..." : "Edit annotation...";
+    // Show line range in placeholder for block annotations
+    // For blocks: startLineNumber is the start, lineNumber is the end (where widget appears)
+    if (this.isNew && this.editState.startLineNumber && this.editState.lineNumber) {
+      input.placeholder = `Annotate lines ${this.editState.startLineNumber}-${this.editState.lineNumber}...`;
+    } else {
+      input.placeholder = this.isNew ? "Enter annotation..." : "Edit annotation...";
+    }
 
     // Submit button (needs reference for enabling/disabling)
     const submitBtn = document.createElement("button");
@@ -255,6 +274,7 @@ const DEFAULT_ANNOTATION_DISPLAY_SETTINGS: AnnotationDisplaySettings = {
   brightness: "medium",
   showPillBackground: true,
   showBadge: true,
+  lineHighlightIntensity: "medium",
   highlightAnnotatedLines: false,
 };
 
@@ -331,11 +351,17 @@ class AnnotationWidget extends WidgetType {
     }
 
     // Type badge (small pill at start of bar) - conditionally shown
-    // Includes ↑ arrow to indicate annotation applies to line above
+    // Includes ↑ arrow to indicate annotation applies to line(s) above
+    // For block annotations, shows line range (e.g., "↑L5-12 Obs")
     if (showBadge) {
       const badge = document.createElement("span");
       badge.className = "cm-annotation-type-badge";
-      badge.textContent = `↑ ${ANNOTATION_PREFIXES[this.annotation.type]}`;
+      // For block annotations, show line range
+      if (this.annotation.endLineNumber && this.annotation.endLineNumber !== this.annotation.lineNumber) {
+        badge.textContent = `↑L${this.annotation.lineNumber}-${this.annotation.endLineNumber} ${ANNOTATION_PREFIXES[this.annotation.type]}`;
+      } else {
+        badge.textContent = `↑ ${ANNOTATION_PREFIXES[this.annotation.type]}`;
+      }
       badge.style.backgroundColor = color;
       badge.style.color = this.isDark ? "hsl(0 0% 10%)" : "hsl(0 0% 100%)";
       // Make badge fully opaque when highlighted
@@ -350,9 +376,11 @@ class AnnotationWidget extends WidgetType {
     const content = document.createElement("span");
     content.className = "cm-annotation-content";
     content.textContent = this.annotation.content;
-    // If badge is hidden, prefix with type indicator
+    // If badge is hidden, prefix with type indicator (and line range for blocks)
     if (!showBadge) {
-      content.textContent = `[${ANNOTATION_PREFIXES[this.annotation.type]}] ${this.annotation.content}`;
+      const isBlock = this.annotation.endLineNumber && this.annotation.endLineNumber !== this.annotation.lineNumber;
+      const lineRange = isBlock ? `L${this.annotation.lineNumber}-${this.annotation.endLineNumber} ` : "";
+      content.textContent = `[${lineRange}${ANNOTATION_PREFIXES[this.annotation.type]}] ${this.annotation.content}`;
     }
     bar.appendChild(content);
 
@@ -419,19 +447,22 @@ export function createSimpleAnnotationsExtension(
   return EditorView.decorations.compute(["doc"], (state) => {
     const decorations: { pos: number; widget: Decoration }[] = [];
 
-    // Group annotations by line number
-    const byLine = new Map<number, LineAnnotation[]>();
+    // Group annotations by their DISPLAY line (end line for blocks, start line for single-line)
+    // Block annotations should appear under the last line they annotate
+    const byDisplayLine = new Map<number, LineAnnotation[]>();
     for (const ann of annotations) {
-      const existing = byLine.get(ann.lineNumber) || [];
-      byLine.set(ann.lineNumber, [...existing, ann]);
+      // For block annotations, use endLineNumber; for single-line, use lineNumber
+      const displayLine = ann.endLineNumber ?? ann.lineNumber;
+      const existing = byDisplayLine.get(displayLine) || [];
+      byDisplayLine.set(displayLine, [...existing, ann]);
     }
 
-    // Create widgets for each line
-    for (const [lineNumber, lineAnnotations] of byLine) {
+    // Create widgets for each display line
+    for (const [displayLine, lineAnnotations] of byDisplayLine) {
       // Check if line exists in document
-      if (lineNumber < 1 || lineNumber > state.doc.lines) continue;
+      if (displayLine < 1 || displayLine > state.doc.lines) continue;
 
-      const line = state.doc.line(lineNumber);
+      const line = state.doc.line(displayLine);
 
       // Add a widget after each code line for each annotation
       for (const ann of lineAnnotations) {
@@ -540,13 +571,13 @@ class AnnotateLineMarker extends GutterMarker {
 /**
  * Create a clickable line numbers gutter for annotate mode
  * Shows "+" on hover to indicate you can add an annotation
- * @param onLineClick - Callback when a line is clicked
+ * @param onLineClick - Callback when a line is clicked (with optional endLine for selections)
  * @param showDiscovery - If true, plays the discovery animation on mount
  * @param animationKey - Unique key that changes to force marker recreation for new animations
  * @param animationColor - Language-specific color for the discovery animation
  */
 export function createAnnotateGutter(
-  onLineClick: (lineNumber: number) => void,
+  onLineClick: (startLine: number, endLine?: number) => void,
   showDiscovery: boolean = false,
   animationKey: number = 0,
   animationColor: string = "#6b7280"
@@ -559,8 +590,27 @@ export function createAnnotateGutter(
     },
     domEventHandlers: {
       click(view, line) {
-        const lineNumber = view.state.doc.lineAt(line.from).number;
-        onLineClick(lineNumber);
+        const clickedLineNumber = view.state.doc.lineAt(line.from).number;
+
+        // Check if there's a selection spanning multiple lines
+        const selection = view.state.selection.main;
+        if (!selection.empty) {
+          const startLine = view.state.doc.lineAt(selection.from).number;
+          const endLine = view.state.doc.lineAt(selection.to).number;
+
+          // If selection spans multiple lines, pass the range
+          if (startLine !== endLine) {
+            // Ensure start < end
+            const [minLine, maxLine] = startLine < endLine
+              ? [startLine, endLine]
+              : [endLine, startLine];
+            onLineClick(minLine, maxLine);
+            return true;
+          }
+        }
+
+        // Single line click (no multi-line selection)
+        onLineClick(clickedLineNumber);
         return true;
       },
     },
@@ -568,36 +618,125 @@ export function createAnnotateGutter(
 }
 
 /**
+ * Create an extension that provides a subtle permanent highlight for annotated lines
+ * This is always visible (not toggled) - very subtle background with right-side type indicator
+ */
+export function createSubtleAnnotationHighlightExtension(
+  annotations: LineAnnotation[],
+  isDark: boolean = false,
+  intensity: Exclude<LineHighlightIntensity, "off"> = "medium"
+): Extension {
+  if (annotations.length === 0) {
+    return [];
+  }
+
+  // Get background opacity for the intensity level (border is always full opacity)
+  const bgOpacity = LINE_HIGHLIGHT_INTENSITY[intensity];
+
+  // Build a map of line numbers to their annotation types
+  // For block annotations, include all lines in the range
+  const lineToType = new Map<number, LineAnnotationType>();
+  for (const ann of annotations) {
+    const startLine = ann.lineNumber;
+    const endLine = ann.endLineNumber ?? ann.lineNumber;
+    for (let i = startLine; i <= endLine; i++) {
+      lineToType.set(i, ann.type);
+    }
+  }
+
+  return EditorView.decorations.compute(["doc"], (state) => {
+    const decorations: Range<Decoration>[] = [];
+
+    for (let i = 1; i <= state.doc.lines; i++) {
+      const annotationType = lineToType.get(i);
+      if (annotationType) {
+        const line = state.doc.line(i);
+        const color = isDark
+          ? ANNOTATION_COLORS[annotationType].dark
+          : ANNOTATION_COLORS[annotationType].light;
+        // Background opacity based on intensity, border always full opacity (matches annotation bar)
+        decorations.push(
+          Decoration.line({
+            class: "cm-line-subtle-annotated",
+            attributes: {
+              style: `background-color: ${color}${bgOpacity}; border-right: 2px solid ${color};`,
+            },
+          }).range(line.from)
+        );
+      }
+    }
+
+    return Decoration.set(decorations);
+  });
+}
+
+/**
  * Create an extension that dims non-annotated lines to highlight annotations
  * Lines with annotations remain at full opacity, others are dimmed
+ * Annotated lines get a stronger type-specific background colour with right-side indicator
  */
 export function createHighlightAnnotatedLinesExtension(
   annotations: LineAnnotation[],
-  enabled: boolean
+  enabled: boolean,
+  isDark: boolean = false
 ): Extension {
   if (!enabled) {
     return [];
   }
 
-  // Get set of line numbers that have annotations
-  const annotatedLines = new Set(annotations.map((a) => a.lineNumber));
+  // Build a map of line numbers to their annotation types
+  // For block annotations, include all lines in the range
+  const lineToType = new Map<number, LineAnnotationType>();
+  for (const ann of annotations) {
+    const startLine = ann.lineNumber;
+    const endLine = ann.endLineNumber ?? ann.lineNumber;
+    for (let i = startLine; i <= endLine; i++) {
+      // If a line has multiple annotations, later ones take precedence
+      // (could be enhanced to show mixed colours, but this is simpler)
+      lineToType.set(i, ann.type);
+    }
+  }
 
   return EditorView.decorations.compute(["doc"], (state) => {
-    const decorations: { from: number; to: number }[] = [];
+    const dimmedDecorations: { from: number }[] = [];
+    const highlightedDecorations: { from: number; type: LineAnnotationType }[] = [];
 
-    // Iterate through all lines and mark non-annotated ones for dimming
+    // Iterate through all lines
     for (let i = 1; i <= state.doc.lines; i++) {
-      if (!annotatedLines.has(i)) {
-        const line = state.doc.line(i);
-        decorations.push({ from: line.from, to: line.from });
+      const line = state.doc.line(i);
+      const annotationType = lineToType.get(i);
+
+      if (annotationType) {
+        // This line is annotated - add type-specific highlight
+        highlightedDecorations.push({ from: line.from, type: annotationType });
+      } else {
+        // Not annotated - dim it
+        dimmedDecorations.push({ from: line.from });
       }
     }
 
-    // Create line decorations for dimmed lines
-    return Decoration.set(
-      decorations.map((d) =>
+    // Create decoration set with both dimmed and highlighted lines
+    const allDecorations = [
+      ...dimmedDecorations.map((d) =>
         Decoration.line({ class: "cm-line-dimmed" }).range(d.from)
-      )
-    );
+      ),
+      ...highlightedDecorations.map((d) => {
+        // Get the background colour for this annotation type
+        const color = isDark
+          ? ANNOTATION_COLORS[d.type].dark
+          : ANNOTATION_COLORS[d.type].light;
+        // Stronger background (15 = ~8% opacity) with right-side indicator bar
+        return Decoration.line({
+          class: "cm-line-annotated",
+          attributes: {
+            style: `background-color: ${color}15; border-right: 2px solid ${color};`,
+          },
+        }).range(d.from);
+      }),
+    ];
+
+    // Sort by position for valid RangeSet
+    allDecorations.sort((a, b) => a.from - b.from);
+    return Decoration.set(allDecorations);
   });
 }

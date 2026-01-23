@@ -23,7 +23,7 @@ import { search, searchKeymap, highlightSelectionMatches } from "@codemirror/sea
 import { useAppSettings } from "@/context/AppSettingsContext";
 import { getCCSTheme, getFontSizeTheme } from "./cm-theme";
 import { loadLanguage, normaliseLanguage, getLanguageColor } from "./cm-languages";
-import { createSimpleAnnotationsExtension, createAnnotateGutter, createHighlightAnnotatedLinesExtension, InlineEditState, InlineEditCallbacks } from "./cm-annotations";
+import { createSimpleAnnotationsExtension, createAnnotateGutter, createHighlightAnnotatedLinesExtension, createSubtleAnnotationHighlightExtension, InlineEditState, InlineEditCallbacks } from "./cm-annotations";
 import type { LineAnnotation, LineAnnotationType } from "@/types";
 import type { AnnotationDisplaySettings } from "./CodeEditorPanel";
 
@@ -40,8 +40,10 @@ export interface CodeMirrorEditorProps {
   fontSize?: number;
   /** Annotations to display as widgets below lines */
   annotations?: LineAnnotation[];
-  /** Callback when a line is clicked (in read-only/annotate mode) */
-  onLineClick?: (lineNumber: number) => void;
+  /** Callback when a line is clicked (in read-only/annotate mode)
+   * If the user has selected a range of lines, endLine will be provided
+   */
+  onLineClick?: (startLine: number, endLine?: number) => void;
   /** Callback to edit an annotation */
   onEditAnnotation?: (id: string) => void;
   /** Callback to delete an annotation */
@@ -58,6 +60,8 @@ export interface CodeMirrorEditorProps {
   highlightedAnnotationType?: LineAnnotationType | null;
   /** Annotation display settings (brightness, badge visibility, etc.) */
   annotationDisplaySettings?: AnnotationDisplaySettings;
+  /** Callback when cursor position changes (line, column) */
+  onCursorPositionChange?: (line: number, column: number) => void;
   /** CSS class for the container */
   className?: string;
 }
@@ -78,6 +82,7 @@ export function CodeMirrorEditor({
   animationTriggerKey = 0,
   highlightedAnnotationType,
   annotationDisplaySettings,
+  onCursorPositionChange,
   className,
 }: CodeMirrorEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -92,12 +97,32 @@ export function CodeMirrorEditor({
   const fontSizeCompartment = useRef(new Compartment());
   const gutterCompartment = useRef(new Compartment());
   const highlightLinesCompartment = useRef(new Compartment());
+  const subtleHighlightCompartment = useRef(new Compartment());
 
   // Track if this is the initial mount to prevent double updates
   const isInitialMount = useRef(true);
 
   // Track last value to avoid unnecessary updates
   const lastValueRef = useRef(value);
+
+  // Refs for values that need to be accessed in closures
+  // This ensures the updateListener always sees current values
+  const readOnlyRef = useRef(readOnly);
+  const onChangeRef = useRef(onChange);
+  const onCursorPositionChangeRef = useRef(onCursorPositionChange);
+
+  // Keep refs in sync with props
+  useEffect(() => {
+    readOnlyRef.current = readOnly;
+  }, [readOnly]);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    onCursorPositionChangeRef.current = onCursorPositionChange;
+  }, [onCursorPositionChange]);
 
   // Memoize handlers to prevent recreation
   const stableOnEdit = useCallback(
@@ -118,9 +143,9 @@ export function CodeMirrorEditor({
     [language, isDark]
   );
 
-  // Stable onLineClick callback
+  // Stable onLineClick callback (supports single line or range selection)
   const stableOnLineClick = useCallback(
-    (lineNumber: number) => onLineClick?.(lineNumber),
+    (startLine: number, endLine?: number) => onLineClick?.(startLine, endLine),
     [onLineClick]
   );
 
@@ -175,19 +200,51 @@ export function CodeMirrorEditor({
             )
           : []
       ),
-      // Highlight annotated lines extension (dims non-annotated lines)
+      // Highlight annotated lines extension (dims non-annotated lines, colours annotated lines by type)
       highlightLinesCompartment.current.of(
         readOnly && annotationDisplaySettings?.highlightAnnotatedLines
-          ? createHighlightAnnotatedLinesExtension(annotations, true)
+          ? createHighlightAnnotatedLinesExtension(annotations, true, isDark)
+          : []
+      ),
+      // Subtle permanent highlight for annotated lines (controlled by lineHighlightIntensity setting)
+      subtleHighlightCompartment.current.of(
+        readOnly && annotationDisplaySettings?.visible && annotationDisplaySettings?.lineHighlightIntensity && annotationDisplaySettings.lineHighlightIntensity !== "off"
+          ? createSubtleAnnotationHighlightExtension(annotations, isDark, annotationDisplaySettings.lineHighlightIntensity)
           : []
       ),
       // Update listener for content changes
+      // Uses refs to ensure we always have current values (not stale closure captures)
       EditorView.updateListener.of((update) => {
-        if (update.docChanged && onChange && !readOnly) {
+        if (update.docChanged && onChangeRef.current && !readOnlyRef.current) {
           const newValue = update.state.doc.toString();
           lastValueRef.current = newValue;
-          onChange(newValue);
+          onChangeRef.current(newValue);
         }
+      }),
+      // Update listener for cursor position changes (selection moves, focus, etc.)
+      EditorView.updateListener.of((update) => {
+        // Fire on selection change OR when editor gains focus
+        if ((update.selectionSet || update.focusChanged) && onCursorPositionChangeRef.current) {
+          const pos = update.state.selection.main.head;
+          const line = update.state.doc.lineAt(pos);
+          const lineNumber = line.number;
+          const column = pos - line.from + 1; // 1-based column
+          onCursorPositionChangeRef.current(lineNumber, column);
+        }
+      }),
+      // Mouse move handler for real-time position tracking on hover
+      EditorView.domEventHandlers({
+        mousemove(event, view) {
+          if (!onCursorPositionChangeRef.current) return false;
+          // Convert mouse coordinates to document position
+          const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+          if (pos !== null) {
+            const line = view.state.doc.lineAt(pos);
+            const column = pos - line.from + 1; // 1-based column
+            onCursorPositionChangeRef.current(line.number, column);
+          }
+          return false; // Don't prevent default handling
+        },
       }),
     ];
 
@@ -204,6 +261,13 @@ export function CodeMirrorEditor({
     viewRef.current = view;
     lastValueRef.current = value;
     isInitialMount.current = false;
+
+    // Report initial cursor position
+    if (onCursorPositionChangeRef.current) {
+      const pos = view.state.selection.main.head;
+      const line = view.state.doc.lineAt(pos);
+      onCursorPositionChangeRef.current(line.number, pos - line.from + 1);
+    }
 
     // Load language support asynchronously
     if (language) {
@@ -260,7 +324,15 @@ export function CodeMirrorEditor({
 
   // Update language when language prop changes
   useEffect(() => {
-    if (isInitialMount.current || !language) return;
+    if (isInitialMount.current) return;
+
+    // If no language specified, clear syntax highlighting
+    if (!language) {
+      viewRef.current?.dispatch({
+        effects: languageCompartment.current.reconfigure([]),
+      });
+      return;
+    }
 
     const normalised = normaliseLanguage(language);
     loadLanguage(normalised).then((langSupport) => {
@@ -319,11 +391,23 @@ export function CodeMirrorEditor({
     viewRef.current?.dispatch({
       effects: highlightLinesCompartment.current.reconfigure(
         readOnly && annotationDisplaySettings?.highlightAnnotatedLines
-          ? createHighlightAnnotatedLinesExtension(annotations, true)
+          ? createHighlightAnnotatedLinesExtension(annotations, true, isDark)
           : []
       ),
     });
-  }, [annotations, readOnly, annotationDisplaySettings?.highlightAnnotatedLines]);
+  }, [annotations, readOnly, annotationDisplaySettings?.highlightAnnotatedLines, isDark]);
+
+  // Update subtle highlight extension when annotations or visibility/intensity changes
+  useEffect(() => {
+    if (isInitialMount.current) return;
+    viewRef.current?.dispatch({
+      effects: subtleHighlightCompartment.current.reconfigure(
+        readOnly && annotationDisplaySettings?.visible && annotationDisplaySettings?.lineHighlightIntensity && annotationDisplaySettings.lineHighlightIntensity !== "off"
+          ? createSubtleAnnotationHighlightExtension(annotations, isDark, annotationDisplaySettings.lineHighlightIntensity)
+          : []
+      ),
+    });
+  }, [annotations, readOnly, annotationDisplaySettings?.visible, annotationDisplaySettings?.lineHighlightIntensity, isDark]);
 
   return (
     <div

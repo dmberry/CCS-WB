@@ -26,23 +26,134 @@ import {
   Menu,
   Maximize2,
   Minimize2,
+  RotateCcw,
+  Undo2,
+  Redo2,
+  BookOpen,
 } from "lucide-react";
+import { SAMPLE_CODE_FILES, fetchSampleCode } from "@/data/sample-code";
 import type { LineAnnotation, LineAnnotationType, CodeReference } from "@/types";
+import { PROGRAMMING_LANGUAGES } from "@/types/app-settings";
 import { CodeMirrorEditor } from "./CodeMirrorEditor";
 import type { InlineEditState, InlineEditCallbacks } from "./cm-annotations";
 
 interface CodeEditorPanelProps {
   codeFiles: CodeReference[];
   codeContents: Map<string, string>; // fileId -> code content
+  originalContents?: Map<string, string>; // fileId -> original content (for detecting modifications)
   onCodeChange?: () => void;
   onCodeContentChange?: (fileId: string, content: string) => void; // Edit code content
   onDeleteFile?: (fileId: string) => void;
   onRenameFile?: (fileId: string, newName: string) => void;
   onDuplicateFile?: (fileId: string) => void;
+  onRevertFile?: (fileId: string) => void; // Revert file to original content
   onLoadCode?: () => void; // Trigger file upload from sidebar
+  onLoadSample?: (filename: string, content: string, language: string) => void; // Load a sample code file
   onReorderFiles?: (fileIds: string[]) => void; // Reorder files by new order
+  onUpdateFileLanguage?: (fileId: string, language: string | undefined) => void; // Update file's language
   isFullScreen?: boolean; // Whether annotation pane is in full screen mode
   onToggleFullScreen?: () => void; // Callback to toggle full screen mode
+  onRequestMinPanelWidth?: (minWidthPercent: number) => void; // Request minimum panel width (for auto-extend)
+  userInitials?: string; // User initials to store with annotations (for multi-user support)
+}
+
+// Historical punch card languages that typically used 80-column format
+const PUNCH_CARD_LANGUAGES = [
+  'fortran', 'cobol', 'basic', 'pascal', 'assembly', 'asm',
+  // Early variants
+  'fortran77', 'fortran90', 'f77', 'f90', 'cob', 'bas',
+  // MIT/early AI languages
+  'mad', 'slip', 'lisp',
+  // Other punch card era languages
+  'pli', 'pl1', 'algol', 'snobol', 'apl'
+];
+
+/**
+ * Detect if a file appears to be in 80-column punch card format.
+ * Returns true if:
+ * - The file uses a punch card language, OR
+ * - More than 50% of non-empty lines are exactly 72-80 characters, OR
+ * - Lines have sequence numbers in columns 73-80 (right side - FORTRAN style), OR
+ * - Lines have sequence numbers at the start (left side - MAD/SLIP style)
+ */
+function detectPunchCardFormat(code: string, language?: string): boolean {
+  // Check if it's a punch card language
+  if (language) {
+    const normalizedLang = language.toLowerCase().trim();
+    if (PUNCH_CARD_LANGUAGES.some(l => normalizedLang.includes(l))) {
+      return true;
+    }
+  }
+
+  const lines = code.split('\n');
+  const nonEmptyLines = lines.filter(line => line.trim().length > 0);
+
+  if (nonEmptyLines.length < 5) return false; // Not enough lines to determine
+
+  // Check for sequence numbers on the LEFT (MAD/SLIP/early languages)
+  // Pattern: lines starting with 5-8 digit numbers (often increments of 10)
+  // e.g., "000010", "001400", "00100"
+  const leftSequencePattern = /^\s*\d{5,8}\s/;
+  const linesWithLeftNumbers = nonEmptyLines.filter(line =>
+    leftSequencePattern.test(line)
+  ).length;
+
+  // If more than 30% of lines have left-side sequence numbers, it's punch card
+  if (linesWithLeftNumbers / nonEmptyLines.length > 0.3) {
+    return true;
+  }
+
+  // Check for sequence numbers on the right (columns 73-80)
+  // Pattern: lines ending with whitespace + 5-8 digit numbers
+  // Note: Total line length may exceed 80 due to leading whitespace (common in preserved files)
+  // e.g., "      EXTERNAL FUNCTION (KEY,MYTRAN)                                      000010"
+  const rightSequencePattern = /\s{2,}\d{5,8}\s*$/;
+  const linesWithRightNumbers = nonEmptyLines.filter(line =>
+    rightSequencePattern.test(line)
+  ).length;
+
+  // If more than 30% of lines have right-side sequence numbers, it's punch card
+  if (linesWithRightNumbers / nonEmptyLines.length > 0.3) {
+    return true;
+  }
+
+  // Count lines that are in the 72-80 character range (typical punch card)
+  const punchCardLines = nonEmptyLines.filter(line => {
+    const len = line.length;
+    return len >= 72 && len <= 80;
+  }).length;
+
+  // If more than 50% of lines are 72-80 chars, it's likely punch card format
+  return punchCardLines / nonEmptyLines.length > 0.5;
+}
+
+/**
+ * Calculate the minimum panel width percentage needed to display 80 characters
+ * without horizontal scrolling.
+ * @param containerWidth - Total available width in pixels
+ * @param fontSize - Current font size in pixels
+ * @param sidebarWidth - Width of the file tree sidebar in pixels
+ * @returns Minimum panel width as a percentage (0-100)
+ */
+function calculateMinWidthForPunchCard(
+  containerWidth: number,
+  fontSize: number,
+  sidebarWidth: number
+): number {
+  // Approximate character width for monospace font (varies by font, ~0.6em is typical)
+  const charWidth = fontSize * 0.6;
+
+  // Width needed: 80 chars + line numbers (~4 chars) + gutter padding (~32px) + scrollbar safety (~20px)
+  const lineNumberWidth = charWidth * 5; // Line numbers plus gutter
+  const padding = 32 + 20; // Left/right padding plus scrollbar safety margin
+  const codeWidth = charWidth * 80;
+  const totalNeeded = sidebarWidth + lineNumberWidth + codeWidth + padding;
+
+  // Convert to percentage of container
+  const percentNeeded = (totalNeeded / containerWidth) * 100;
+
+  // Return with a small buffer, capped at 85% (max allowed in CritiqueLayout)
+  return Math.min(85, percentNeeded + 2);
 }
 
 type FileSortOrder = "manual" | "az" | "za";
@@ -63,12 +174,15 @@ const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
 // Annotation display settings for customizing appearance
 type AnnotationBrightness = "low" | "medium" | "high" | "full";
 
+export type LineHighlightIntensity = "off" | "low" | "medium" | "high" | "full";
+
 export interface AnnotationDisplaySettings {
   visible: boolean; // Show/hide annotations in code
   brightness: AnnotationBrightness; // Opacity level
   showPillBackground: boolean; // Show colored bar background
   showBadge: boolean; // Show type badge pill
-  highlightAnnotatedLines: boolean; // Dim non-annotated lines to focus on annotations
+  lineHighlightIntensity: LineHighlightIntensity; // Subtle highlight intensity on annotated lines
+  highlightAnnotatedLines: boolean; // Dim non-annotated lines to focus on annotations (focus mode)
 }
 
 const DEFAULT_ANNOTATION_DISPLAY_SETTINGS: AnnotationDisplaySettings = {
@@ -76,6 +190,7 @@ const DEFAULT_ANNOTATION_DISPLAY_SETTINGS: AnnotationDisplaySettings = {
   brightness: "medium",
   showPillBackground: true,
   showBadge: true,
+  lineHighlightIntensity: "medium",
   highlightAnnotatedLines: false,
 };
 
@@ -226,14 +341,20 @@ const LANGUAGE_EXTENSIONS: Record<string, string> = {
 export function CodeEditorPanel({
   codeFiles,
   codeContents,
+  originalContents,
   onCodeContentChange,
   onDeleteFile,
   onRenameFile,
   onDuplicateFile,
+  onRevertFile,
   onLoadCode,
+  onLoadSample,
   onReorderFiles,
+  onUpdateFileLanguage,
   isFullScreen = false,
   onToggleFullScreen,
+  onRequestMinPanelWidth,
+  userInitials,
 }: CodeEditorPanelProps) {
   const {
     session,
@@ -249,21 +370,30 @@ export function CodeEditorPanel({
   const [editorMode, setEditorMode] = useState<EditorMode>("annotate");
   // Store the "clean" code (without embedded annotations) for edit mode
   const [editModeCode, setEditModeCode] = useState<string>("");
+  // Track previous file count to detect new files being added
+  const prevFileCountRef = useRef(codeFiles.length);
 
-  // Auto-select first file when codeFiles changes (e.g., after loading a session)
+  // Auto-select newly added files, or first file if none selected
   useEffect(() => {
     if (codeFiles.length > 0) {
-      // If no file selected or selected file no longer exists, select the first one
-      const selectedExists = codeFiles.some((f) => f.id === selectedFileId);
-      if (!selectedFileId || !selectedExists) {
-        setSelectedFileId(codeFiles[0].id);
+      // If a new file was added (count increased), select the newest one (last in array)
+      if (codeFiles.length > prevFileCountRef.current) {
+        setSelectedFileId(codeFiles[codeFiles.length - 1].id);
+      } else {
+        // If no file selected or selected file no longer exists, select the first one
+        const selectedExists = codeFiles.some((f) => f.id === selectedFileId);
+        if (!selectedFileId || !selectedExists) {
+          setSelectedFileId(codeFiles[0].id);
+        }
       }
     } else {
       setSelectedFileId(null);
     }
+    prevFileCountRef.current = codeFiles.length;
   }, [codeFiles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [editingLine, setEditingLine] = useState<number | null>(null);
+  const [editingEndLine, setEditingEndLine] = useState<number | null>(null); // For block annotations
   const [annotationType, setAnnotationType] = useState<LineAnnotationType>("observation");
   const [annotationContent, setAnnotationContent] = useState("");
   const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null);
@@ -288,8 +418,210 @@ export function CodeEditorPanel({
   const [highlightedType, setHighlightedType] = useState<LineAnnotationType | null>(null); // Type to highlight in code
   const [showToolbarMenu, setShowToolbarMenu] = useState(false); // Hamburger menu for narrow toolbar
   const [toolbarNarrow, setToolbarNarrow] = useState(false); // Track if toolbar is narrow
+  const [revertConfirmFileId, setRevertConfirmFileId] = useState<string | null>(null); // File ID to confirm revert
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false); // Language selector dropdown
+  const [showCustomLanguageInput, setShowCustomLanguageInput] = useState(false); // Show custom language text input
+  const [customLanguageValue, setCustomLanguageValue] = useState(""); // Custom language input value
+  const [cursorPosition, setCursorPosition] = useState<{ line: number; column: number } | null>(null); // Cursor position for punch card files
+  const [showSamplesDropdown, setShowSamplesDropdown] = useState(false); // Samples dropdown
+  const [loadingSample, setLoadingSample] = useState<string | null>(null); // Sample being loaded
+  const [samplesDropdownPosition, setSamplesDropdownPosition] = useState<{ top: number; left: number } | null>(null);
+  const samplesDropdownRef = useRef<HTMLDivElement>(null);
+  const samplesButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Handler for cursor position changes from CodeMirror (converts two args to object)
+  const handleCursorPositionChange = useCallback((line: number, column: number) => {
+    setCursorPosition({ line, column });
+  }, []);
+
+  // Handler for loading a sample code file
+  const handleLoadSample = useCallback(async (sampleId: string) => {
+    const sample = SAMPLE_CODE_FILES.find(s => s.id === sampleId);
+    if (!sample || !onLoadSample) return;
+
+    setLoadingSample(sampleId);
+    try {
+      const content = await fetchSampleCode(sample.filename);
+      onLoadSample(sample.filename, content, sample.language);
+      setShowSamplesDropdown(false);
+    } catch (error) {
+      console.error("Failed to load sample:", error);
+    } finally {
+      setLoadingSample(null);
+    }
+  }, [onLoadSample]);
+
+  // Reset cursor position when switching files
+  useEffect(() => {
+    setCursorPosition(null);
+  }, [selectedFileId]);
+
   const toolbarRef = useRef<HTMLDivElement>(null);
   const toolbarMenuRef = useRef<HTMLDivElement>(null);
+  const languageDropdownRef = useRef<HTMLDivElement>(null);
+  const customLanguageInputRef = useRef<HTMLInputElement>(null);
+
+  // Compute set of modified file IDs for efficient lookup
+  // Uses useMemo to ensure the file list re-renders when modifications change
+  const modifiedFileIds = useMemo(() => {
+    const modified = new Set<string>();
+    if (!originalContents) return modified;
+
+    for (const [fileId, original] of originalContents.entries()) {
+      // For the currently selected file in edit mode, compare against editModeCode
+      if (editorMode === "edit" && fileId === selectedFileId && editModeCode !== undefined) {
+        if (original !== editModeCode) {
+          modified.add(fileId);
+        }
+      } else {
+        // For other files or annotate mode, compare against saved content
+        const current = codeContents.get(fileId);
+        if (current !== undefined && original !== current) {
+          modified.add(fileId);
+        }
+      }
+    }
+    return modified;
+  }, [originalContents, codeContents, editorMode, selectedFileId, editModeCode]);
+
+  // Helper function to check if a file is modified
+  const isFileModified = useCallback((fileId: string): boolean => {
+    return modifiedFileIds.has(fileId);
+  }, [modifiedFileIds]);
+
+  // Detect if current file is punch card format (for showing column indicator)
+  const isPunchCardFormat = useMemo(() => {
+    if (!selectedFileId) return false;
+    const code = codeContents.get(selectedFileId);
+    if (!code) return false;
+    const selectedFile = codeFiles.find(f => f.id === selectedFileId);
+    return detectPunchCardFormat(code, selectedFile?.language);
+  }, [selectedFileId, codeContents, codeFiles]);
+
+  // Auto-extend panel width for 80-column punch card formatted files
+  useEffect(() => {
+    if (!selectedFileId || !onRequestMinPanelWidth || !panelContainerRef.current) return;
+
+    const code = codeContents.get(selectedFileId);
+    if (!code) return;
+
+    const selectedFile = codeFiles.find(f => f.id === selectedFileId);
+    const language = selectedFile?.language;
+
+    // Check if this file appears to be punch card format
+    if (detectPunchCardFormat(code, language)) {
+      const containerWidth = panelContainerRef.current.parentElement?.clientWidth || window.innerWidth;
+      const minWidth = calculateMinWidthForPunchCard(
+        containerWidth,
+        displaySettings.fontSize,
+        sidebarCollapsed ? 40 : sidebarWidth
+      );
+      onRequestMinPanelWidth(minWidth);
+    }
+  }, [selectedFileId, codeContents, codeFiles, displaySettings.fontSize, sidebarWidth, sidebarCollapsed, onRequestMinPanelWidth]);
+
+  // Undo/Redo history for annotations
+  // Each history entry stores the complete annotation state for a file at a point in time
+  type AnnotationHistoryEntry = {
+    fileId: string;
+    annotations: LineAnnotation[];
+  };
+  const [undoStack, setUndoStack] = useState<AnnotationHistoryEntry[]>([]);
+  const [redoStack, setRedoStack] = useState<AnnotationHistoryEntry[]>([]);
+  const MAX_HISTORY_SIZE = 50;
+
+  // Take a snapshot of current annotations for the selected file (for undo)
+  const takeAnnotationSnapshot = useCallback(() => {
+    if (!selectedFileId) return;
+    const currentAnnotations = session.lineAnnotations.filter(a => a.codeFileId === selectedFileId);
+    setUndoStack(prev => {
+      const newStack = [...prev, { fileId: selectedFileId, annotations: [...currentAnnotations] }];
+      // Limit stack size
+      if (newStack.length > MAX_HISTORY_SIZE) {
+        return newStack.slice(-MAX_HISTORY_SIZE);
+      }
+      return newStack;
+    });
+    // Clear redo stack when new action is taken
+    setRedoStack([]);
+  }, [selectedFileId, session.lineAnnotations]);
+
+  // Undo: restore previous annotation state
+  const handleUndo = useCallback(() => {
+    if (undoStack.length === 0 || !selectedFileId) return;
+
+    // Get the last snapshot
+    const lastSnapshot = undoStack[undoStack.length - 1];
+    if (lastSnapshot.fileId !== selectedFileId) return; // Snapshot must be for current file
+
+    // Save current state to redo stack
+    const currentAnnotations = session.lineAnnotations.filter(a => a.codeFileId === selectedFileId);
+    setRedoStack(prev => [...prev, { fileId: selectedFileId, annotations: [...currentAnnotations] }]);
+
+    // Remove current annotations for this file
+    const currentFileAnnotations = session.lineAnnotations.filter(a => a.codeFileId === selectedFileId);
+    currentFileAnnotations.forEach(ann => removeLineAnnotation(ann.id));
+
+    // Restore previous annotations
+    lastSnapshot.annotations.forEach(ann => {
+      addLineAnnotation({
+        codeFileId: ann.codeFileId,
+        lineNumber: ann.lineNumber,
+        endLineNumber: ann.endLineNumber,
+        lineContent: ann.lineContent,
+        type: ann.type,
+        content: ann.content,
+        addedBy: ann.addedBy,
+      });
+    });
+
+    // Pop from undo stack
+    setUndoStack(prev => prev.slice(0, -1));
+  }, [undoStack, selectedFileId, session.lineAnnotations, removeLineAnnotation, addLineAnnotation]);
+
+  // Redo: restore next annotation state
+  const handleRedo = useCallback(() => {
+    if (redoStack.length === 0 || !selectedFileId) return;
+
+    // Get the last snapshot
+    const nextSnapshot = redoStack[redoStack.length - 1];
+    if (nextSnapshot.fileId !== selectedFileId) return;
+
+    // Save current state to undo stack
+    const currentAnnotations = session.lineAnnotations.filter(a => a.codeFileId === selectedFileId);
+    setUndoStack(prev => [...prev, { fileId: selectedFileId, annotations: [...currentAnnotations] }]);
+
+    // Remove current annotations for this file
+    const currentFileAnnotations = session.lineAnnotations.filter(a => a.codeFileId === selectedFileId);
+    currentFileAnnotations.forEach(ann => removeLineAnnotation(ann.id));
+
+    // Restore next annotations
+    nextSnapshot.annotations.forEach(ann => {
+      addLineAnnotation({
+        codeFileId: ann.codeFileId,
+        lineNumber: ann.lineNumber,
+        endLineNumber: ann.endLineNumber,
+        lineContent: ann.lineContent,
+        type: ann.type,
+        content: ann.content,
+        addedBy: ann.addedBy,
+      });
+    });
+
+    // Pop from redo stack
+    setRedoStack(prev => prev.slice(0, -1));
+  }, [redoStack, selectedFileId, session.lineAnnotations, removeLineAnnotation, addLineAnnotation]);
+
+  // Check if undo/redo is available for current file
+  const canUndo = useMemo(() => {
+    if (!selectedFileId || undoStack.length === 0) return false;
+    return undoStack[undoStack.length - 1]?.fileId === selectedFileId;
+  }, [selectedFileId, undoStack]);
+
+  const canRedo = useMemo(() => {
+    if (!selectedFileId || redoStack.length === 0) return false;
+    return redoStack[redoStack.length - 1]?.fileId === selectedFileId;
+  }, [selectedFileId, redoStack]);
 
   // Sort files based on current sort order
   const sortedFiles = useMemo(() => {
@@ -358,16 +690,18 @@ export function CodeEditorPanel({
       };
     }
     if (editingLine) {
-      // Creating new annotation
+      // Creating new annotation (possibly a block annotation)
+      // Position editor at the END of the block (where the annotation widget will appear)
       return {
-        lineNumber: editingLine,
+        lineNumber: editingEndLine ?? editingLine,
+        startLineNumber: editingEndLine ? editingLine : undefined, // Store start for block annotations
         annotationId: null,
         initialType: "observation",
         initialContent: "",
       };
     }
     return undefined;
-  }, [editingAnnotationId, editingLine, fileAnnotations]);
+  }, [editingAnnotationId, editingLine, editingEndLine, fileAnnotations]);
 
   // Callbacks for inline editing - widget passes final values on submit
   const inlineEditCallbacks = useMemo((): InlineEditCallbacks | undefined => {
@@ -375,6 +709,9 @@ export function CodeEditorPanel({
 
     return {
       onSubmit: (type, content) => {
+        // Take snapshot before modifying annotations (for undo)
+        takeAnnotationSnapshot();
+
         if (editingAnnotationId) {
           // Save edited annotation with type and content from widget
           if (content.trim()) {
@@ -384,15 +721,22 @@ export function CodeEditorPanel({
           setEditContent("");
         } else if (editingLine && selectedFileId && content.trim()) {
           // Add new annotation with type and content from widget
+          // For block annotations, capture all lines in the range
+          const lineContent = editingEndLine
+            ? lines.slice(editingLine - 1, editingEndLine).join('\n')
+            : lines[editingLine - 1] || "";
           addLineAnnotation({
             codeFileId: selectedFileId,
             lineNumber: editingLine,
-            lineContent: lines[editingLine - 1] || "",
+            endLineNumber: editingEndLine ?? undefined,
+            lineContent,
             type: type,
             content: content.trim(),
+            addedBy: userInitials || undefined,
           });
           setAnnotationContent("");
           setEditingLine(null);
+          setEditingEndLine(null);
         }
       },
       onCancel: () => {
@@ -401,19 +745,21 @@ export function CodeEditorPanel({
           setEditContent("");
         } else {
           setEditingLine(null);
+          setEditingEndLine(null);
           setAnnotationContent("");
         }
       },
     };
-  }, [editingAnnotationId, editingLine, selectedFileId, lines, updateLineAnnotation, addLineAnnotation]);
+  }, [editingAnnotationId, editingLine, editingEndLine, selectedFileId, lines, updateLineAnnotation, addLineAnnotation, takeAnnotationSnapshot]);
 
-  const handleLineClick = useCallback((lineNumber: number) => {
+  const handleLineClick = useCallback((startLine: number, endLine?: number) => {
     // Stop discovery animation when user interacts
     setShowDiscoveryAnimation(false);
     // Ensure annotations are visible when adding a new one
     // (otherwise the inline editor won't show)
     setAnnotationDisplaySettings(prev => prev.visible ? prev : { ...prev, visible: true });
-    setEditingLine(lineNumber);
+    setEditingLine(startLine);
+    setEditingEndLine(endLine ?? null); // null for single-line, number for block
     setAnnotationContent("");
     setAnnotationType("observation");
   }, []);
@@ -608,8 +954,10 @@ export function CodeEditorPanel({
 
   // Handle delete annotation from CodeMirror widget
   const handleDeleteAnnotation = useCallback((annotationId: string) => {
+    // Take snapshot before deleting (for undo)
+    takeAnnotationSnapshot();
     removeLineAnnotation(annotationId);
-  }, [removeLineAnnotation]);
+  }, [removeLineAnnotation, takeAnnotationSnapshot]);
 
   // Handle clicking on an annotation type pill to highlight annotations of that type
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -622,8 +970,9 @@ export function CodeEditorPanel({
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        // Collapse tools when toolbar width < 350px
-        setToolbarNarrow(entry.contentRect.width < 350);
+        // Collapse tools when toolbar width < 320px (contentRect excludes padding)
+        // The toolbar has px-4 (32px total padding), so 320 + 32 = 352px actual width threshold
+        setToolbarNarrow(entry.contentRect.width < 320);
       }
     });
 
@@ -650,6 +999,91 @@ export function CodeEditorPanel({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showToolbarMenu]);
+
+  // Close language dropdown when clicking outside
+  useEffect(() => {
+    if (!showLanguageDropdown) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (languageDropdownRef.current && !languageDropdownRef.current.contains(e.target as Node)) {
+        setShowLanguageDropdown(false);
+        setShowCustomLanguageInput(false);
+        setCustomLanguageValue("");
+      }
+    };
+
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 10);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showLanguageDropdown]);
+
+  // Close samples dropdown when clicking outside
+  useEffect(() => {
+    if (!showSamplesDropdown) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      // Don't close if clicking the button or the dropdown itself
+      if (samplesButtonRef.current?.contains(target)) return;
+      if (samplesDropdownRef.current?.contains(target)) return;
+      setShowSamplesDropdown(false);
+    };
+
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 10);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showSamplesDropdown]);
+
+  // Calculate dropdown position when opening
+  useEffect(() => {
+    if (showSamplesDropdown && samplesButtonRef.current) {
+      const rect = samplesButtonRef.current.getBoundingClientRect();
+      setSamplesDropdownPosition({
+        top: rect.bottom + 4,
+        left: rect.left,
+      });
+    }
+  }, [showSamplesDropdown]);
+
+  // Close file menu dropdown when clicking outside
+  useEffect(() => {
+    if (!fileMenuOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      // Find the menu element by its class
+      const target = e.target as Node;
+      const menu = document.querySelector('[data-file-menu]');
+      if (menu && !menu.contains(target)) {
+        setFileMenuOpen(null);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 10);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [fileMenuOpen]);
+
+  // Focus custom language input when it appears
+  useEffect(() => {
+    if (showCustomLanguageInput && customLanguageInputRef.current) {
+      customLanguageInputRef.current.focus();
+    }
+  }, [showCustomLanguageInput]);
 
   const handleHighlightType = useCallback((type: LineAnnotationType) => {
     // Clear any existing timeout
@@ -723,6 +1157,20 @@ export function CodeEditorPanel({
                     title="Load code file"
                   >
                     <Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  </button>
+                )}
+                {/* Load sample code button - dropdown rendered outside overflow container */}
+                {onLoadSample && SAMPLE_CODE_FILES.length > 0 && (
+                  <button
+                    ref={samplesButtonRef}
+                    onClick={() => setShowSamplesDropdown(!showSamplesDropdown)}
+                    className={cn(
+                      "p-1 transition-colors",
+                      showSamplesDropdown ? "text-burgundy" : "text-slate-muted hover:text-burgundy"
+                    )}
+                    title="Load sample code"
+                  >
+                    <BookOpen className="h-3.5 w-3.5" strokeWidth={1.5} />
                   </button>
                 )}
                 {/* Download annotated code button */}
@@ -830,7 +1278,7 @@ export function CodeEditorPanel({
                           <MoreVertical className="h-3 w-3" strokeWidth={1.5} />
                         </button>
                         {fileMenuOpen === file.id && (
-                          <div className="absolute left-0 top-full mt-1 w-28 bg-popover rounded-sm shadow-lg border border-parchment py-1 z-50">
+                          <div data-file-menu className="absolute left-0 top-full mt-1 w-28 bg-popover rounded-sm shadow-lg border border-parchment py-1 z-50">
                             {/* Move up/down buttons - only shown in manual sort mode */}
                             {fileSortOrder === "manual" && onReorderFiles && sortedFiles.length > 1 && (
                               <>
@@ -884,6 +1332,20 @@ export function CodeEditorPanel({
                               <Copy className="h-3 w-3" strokeWidth={1.5} />
                               Duplicate
                             </button>
+                            {/* Revert option - only show if file is modified */}
+                            {isFileModified(file.id) && onRevertFile && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRevertConfirmFileId(file.id);
+                                  setFileMenuOpen(null);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-amber-600 hover:bg-amber-50"
+                              >
+                                <RotateCcw className="h-3 w-3" strokeWidth={1.5} />
+                                Revert changes
+                              </button>
+                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -906,11 +1368,57 @@ export function CodeEditorPanel({
                       {/* Filename button */}
                       <button
                         onClick={() => setSelectedFileId(file.id)}
-                        className="flex-1 min-w-0 py-1 pr-2 text-left overflow-hidden"
+                        className="flex-1 min-w-0 py-1 pr-2 text-left overflow-hidden flex items-center gap-1"
                         title={file.name}
                       >
-                        <span className={cn("font-mono text-[10px] truncate", getFileColourClass(file.language))}>
+                        <span className={cn("font-mono text-[10px] truncate flex-1", getFileColourClass(file.language))}>
                           {file.name}
+                        </span>
+                        {/* File status indicators */}
+                        <span className="flex items-center gap-1 flex-shrink-0">
+                          {/* Annotated indicator - clickable to highlight annotations */}
+                          {session.lineAnnotations.some(a => a.codeFileId === file.id) && (
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Select file and briefly highlight annotations
+                                setSelectedFileId(file.id);
+                                setAnnotationDisplaySettings(prev => ({ ...prev, highlightAnnotatedLines: true }));
+                                // Reset after a short delay
+                                setTimeout(() => {
+                                  setAnnotationDisplaySettings(prev => ({ ...prev, highlightAnnotatedLines: false }));
+                                }, 2000);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSelectedFileId(file.id);
+                                  setAnnotationDisplaySettings(prev => ({ ...prev, highlightAnnotatedLines: true }));
+                                  setTimeout(() => {
+                                    setAnnotationDisplaySettings(prev => ({ ...prev, highlightAnnotatedLines: false }));
+                                  }, 2000);
+                                }
+                              }}
+                              className={cn(
+                                "px-1 py-0.5 text-[8px] font-mono rounded transition-colors cursor-pointer",
+                                annotationDisplaySettings.highlightAnnotatedLines
+                                  ? "text-white bg-burgundy border border-burgundy shadow-sm"
+                                  : "text-burgundy/80 border border-burgundy/30 hover:bg-burgundy/10"
+                              )}
+                              title={annotationDisplaySettings.highlightAnnotatedLines ? "Focus mode active (click to refresh)" : "Has annotations (click to highlight)"}
+                            >
+                              A
+                            </span>
+                          )}
+                          {/* Modified indicator */}
+                          {isFileModified(file.id) && (
+                            <span className="px-1 py-0.5 text-[8px] font-mono text-amber-600/70 dark:text-amber-500/60 border border-amber-500/30 rounded" title="Modified">
+                              M
+                            </span>
+                          )}
                         </span>
                       </button>
                     </div>
@@ -984,6 +1492,41 @@ export function CodeEditorPanel({
       </div>
       )}
 
+      {/* Samples dropdown - rendered outside overflow container with fixed positioning */}
+      {showSamplesDropdown && samplesDropdownPosition && (
+        <div
+          ref={samplesDropdownRef}
+          className="fixed z-50 bg-card border border-parchment rounded-md shadow-lg py-1 min-w-[200px] max-w-[280px]"
+          style={{
+            top: samplesDropdownPosition.top,
+            left: samplesDropdownPosition.left,
+          }}
+        >
+          <div className="px-2 py-1 border-b border-parchment">
+            <span className="text-[9px] font-semibold text-slate-muted uppercase tracking-wide">Sample Code</span>
+          </div>
+          <div className="max-h-[300px] overflow-y-auto">
+            {SAMPLE_CODE_FILES.map((sample) => (
+              <button
+                key={sample.id}
+                onClick={() => handleLoadSample(sample.id)}
+                disabled={loadingSample === sample.id}
+                className="w-full text-left px-2 py-1.5 hover:bg-cream/50 transition-colors disabled:opacity-50"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-burgundy">{sample.name}</span>
+                  <span className="text-[8px] px-1 py-0.5 bg-slate-muted/20 rounded text-slate-muted">{sample.era}</span>
+                </div>
+                <p className="text-[9px] text-slate-muted mt-0.5 leading-snug">{sample.description}</p>
+                {sample.source && (
+                  <p className="text-[8px] text-slate-muted/70 mt-0.5 italic">Source: {sample.source}</p>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Resizable divider - only show when sidebar not collapsed and not fullscreen */}
       {!isFullScreen && !sidebarCollapsed && (
         <div
@@ -1036,6 +1579,111 @@ export function CodeEditorPanel({
                 </button>
               </div>
 
+              {/* Language selector - always visible */}
+              <div className="relative" ref={languageDropdownRef}>
+                <button
+                  onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+                  className="font-sans text-[9px] text-slate hover:text-ink px-2 py-0.5 border border-parchment hover:border-slate-muted rounded-sm transition-colors flex items-center gap-1"
+                  title="Click to change language"
+                >
+                  <span>{selectedFile?.language
+                    ? PROGRAMMING_LANGUAGES.find(l => l.id === selectedFile.language)?.name
+                      || selectedFile.language // Show custom language name directly
+                    : "Language"}</span>
+                  <ChevronDown className={cn("h-2.5 w-2.5 transition-transform", showLanguageDropdown && "rotate-180")} strokeWidth={1.5} />
+                </button>
+                {showLanguageDropdown && (
+                  <div className="absolute top-full left-0 mt-1 w-44 bg-popover rounded-sm shadow-lg border border-parchment p-1 z-50 max-h-64 overflow-y-auto">
+                    {showCustomLanguageInput ? (
+                      // Custom language input mode
+                      <div className="p-1">
+                        <input
+                          ref={customLanguageInputRef}
+                          type="text"
+                          value={customLanguageValue}
+                          onChange={(e) => setCustomLanguageValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && customLanguageValue.trim()) {
+                              if (selectedFileId && onUpdateFileLanguage) {
+                                onUpdateFileLanguage(selectedFileId, customLanguageValue.trim());
+                              }
+                              setShowLanguageDropdown(false);
+                              setShowCustomLanguageInput(false);
+                              setCustomLanguageValue("");
+                            } else if (e.key === "Escape") {
+                              setShowCustomLanguageInput(false);
+                              setCustomLanguageValue("");
+                            }
+                          }}
+                          placeholder="Enter language name..."
+                          className="w-full px-2 py-1.5 text-[11px] border border-parchment rounded-sm focus:outline-none focus:border-burgundy"
+                        />
+                        <div className="flex gap-1 mt-1">
+                          <button
+                            onClick={() => {
+                              if (customLanguageValue.trim() && selectedFileId && onUpdateFileLanguage) {
+                                onUpdateFileLanguage(selectedFileId, customLanguageValue.trim());
+                              }
+                              setShowLanguageDropdown(false);
+                              setShowCustomLanguageInput(false);
+                              setCustomLanguageValue("");
+                            }}
+                            disabled={!customLanguageValue.trim()}
+                            className="flex-1 px-2 py-1 text-[10px] bg-burgundy text-ivory rounded-sm hover:bg-burgundy/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Set
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowCustomLanguageInput(false);
+                              setCustomLanguageValue("");
+                            }}
+                            className="px-2 py-1 text-[10px] text-slate hover:bg-cream rounded-sm"
+                          >
+                            Back
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Language list
+                      <>
+                        {PROGRAMMING_LANGUAGES.filter(lang => lang.id !== "other").map((lang) => (
+                          <button
+                            key={lang.id}
+                            onClick={() => {
+                              if (selectedFileId && onUpdateFileLanguage) {
+                                onUpdateFileLanguage(selectedFileId, lang.id || undefined);
+                              }
+                              setShowLanguageDropdown(false);
+                            }}
+                            className={cn(
+                              "w-full text-left px-2 py-1.5 text-[11px] rounded-sm hover:bg-cream transition-colors",
+                              selectedFile?.language === lang.id && "text-burgundy font-medium"
+                            )}
+                          >
+                            {lang.name}
+                          </button>
+                        ))}
+                        <div className="border-t border-parchment my-1" />
+                        <button
+                          onClick={() => {
+                            setShowCustomLanguageInput(true);
+                            setCustomLanguageValue("");
+                          }}
+                          className={cn(
+                            "w-full text-left px-2 py-1.5 text-[11px] rounded-sm hover:bg-cream transition-colors",
+                            // Highlight if current language is a custom value (not in the standard list)
+                            selectedFile?.language && !PROGRAMMING_LANGUAGES.find(l => l.id === selectedFile.language) && "text-burgundy font-medium"
+                          )}
+                        >
+                          Other...
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Tools - hide when narrow, show in hamburger menu instead */}
               {!toolbarNarrow && (
                 <>
@@ -1056,12 +1704,12 @@ export function CodeEditorPanel({
                       <button
                         onClick={() => setAnnotationDisplaySettings(prev => ({ ...prev, highlightAnnotatedLines: !prev.highlightAnnotatedLines }))}
                         className={cn(
-                          "p-1 transition-colors",
+                          "p-1 rounded transition-all",
                           annotationDisplaySettings.highlightAnnotatedLines
-                            ? "text-burgundy"
-                            : "text-slate-muted hover:text-ink"
+                            ? "text-white bg-burgundy shadow-sm"
+                            : "text-slate-muted hover:text-ink hover:bg-cream/50"
                         )}
-                        title={annotationDisplaySettings.highlightAnnotatedLines ? "Show all code equally" : "Highlight annotated lines (dim others)"}
+                        title={annotationDisplaySettings.highlightAnnotatedLines ? "Exit focus mode (show all code equally)" : "Focus mode: highlight annotated lines"}
                       >
                         <Highlighter className="h-3.5 w-3.5" strokeWidth={1.5} />
                       </button>
@@ -1084,6 +1732,24 @@ export function CodeEditorPanel({
                           )}
                         </button>
                       )}
+                      {/* Undo/Redo buttons */}
+                      <div className="h-4 w-px bg-parchment mx-1" />
+                      <button
+                        onClick={handleUndo}
+                        disabled={!canUndo}
+                        className="p-1 text-slate-muted hover:text-ink transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Undo (⌘Z)"
+                      >
+                        <Undo2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      </button>
+                      <button
+                        onClick={handleRedo}
+                        disabled={!canRedo}
+                        className="p-1 text-slate-muted hover:text-ink transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Redo (⌘⇧Z)"
+                      >
+                        <Redo2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      </button>
                     </>
                   )}
 
@@ -1111,6 +1777,15 @@ export function CodeEditorPanel({
 
             {/* Right group: hamburger menu (narrow) or help and settings (wide) */}
             <div className="flex items-center gap-2">
+              {/* Cursor position indicator for punch card files - shown in both narrow and wide */}
+              {toolbarNarrow && isPunchCardFormat && cursorPosition && (
+                <span
+                  className="font-mono text-[9px] text-slate-muted px-1.5 py-0.5 bg-cream/50 rounded"
+                  title="Line : Column (for 80-column punch card code)"
+                >
+                  L{cursorPosition.line}:C{cursorPosition.column}
+                </span>
+              )}
               {toolbarNarrow ? (
                 /* Hamburger menu for narrow toolbar */
                 <div className="relative" ref={toolbarMenuRef}>
@@ -1148,10 +1823,15 @@ export function CodeEditorPanel({
                               setAnnotationDisplaySettings(prev => ({ ...prev, highlightAnnotatedLines: !prev.highlightAnnotatedLines }));
                               setShowToolbarMenu(false);
                             }}
-                            className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-slate hover:bg-cream"
+                            className={cn(
+                              "w-full flex items-center gap-2 px-3 py-1.5 text-[10px]",
+                              annotationDisplaySettings.highlightAnnotatedLines
+                                ? "bg-burgundy text-white font-medium"
+                                : "text-slate hover:bg-cream"
+                            )}
                           >
                             <Highlighter className="h-3 w-3" strokeWidth={1.5} />
-                            {annotationDisplaySettings.highlightAnnotatedLines ? "Show all lines" : "Highlight annotated"}
+                            {annotationDisplaySettings.highlightAnnotatedLines ? "Exit focus mode" : "Focus mode"}
                           </button>
                           {onToggleFullScreen && (
                             <button
@@ -1169,6 +1849,29 @@ export function CodeEditorPanel({
                               {isFullScreen ? "Exit full screen" : "Full screen"}
                             </button>
                           )}
+                          {/* Undo/Redo in menu */}
+                          <button
+                            onClick={() => {
+                              handleUndo();
+                              setShowToolbarMenu(false);
+                            }}
+                            disabled={!canUndo}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-slate hover:bg-cream disabled:opacity-30"
+                          >
+                            <Undo2 className="h-3 w-3" strokeWidth={1.5} />
+                            Undo
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleRedo();
+                              setShowToolbarMenu(false);
+                            }}
+                            disabled={!canRedo}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-slate hover:bg-cream disabled:opacity-30"
+                          >
+                            <Redo2 className="h-3 w-3" strokeWidth={1.5} />
+                            Redo
+                          </button>
                           <div className="my-1 border-t border-parchment" />
                         </>
                       )}
@@ -1210,6 +1913,16 @@ export function CodeEditorPanel({
               ) : (
                 /* Normal toolbar buttons when wide */
                 <>
+              {/* Cursor position indicator for punch card files */}
+              {isPunchCardFormat && cursorPosition && (
+                <span
+                  className="font-mono text-[9px] text-slate-muted px-1.5 py-0.5 bg-cream/50 rounded"
+                  title="Line : Column (for 80-column punch card code)"
+                >
+                  L{cursorPosition.line}:C{cursorPosition.column}
+                </span>
+              )}
+
               {/* Help - annotation types */}
               <div className="relative">
                 <button
@@ -1360,7 +2073,7 @@ export function CodeEditorPanel({
                         </div>
 
                         {/* Show bar background */}
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
                           <span className="font-sans text-[10px] text-slate">Bar background</span>
                           <input
                             type="checkbox"
@@ -1368,6 +2081,22 @@ export function CodeEditorPanel({
                             onChange={(e) => setAnnotationDisplaySettings(prev => ({ ...prev, showPillBackground: e.target.checked }))}
                             className="rounded border-parchment text-burgundy focus:ring-burgundy h-3.5 w-3.5 cursor-pointer"
                           />
+                        </div>
+
+                        {/* Line highlight intensity */}
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="font-sans text-[10px] text-slate">Line highlight</span>
+                          <select
+                            value={annotationDisplaySettings.lineHighlightIntensity}
+                            onChange={(e) => setAnnotationDisplaySettings(prev => ({ ...prev, lineHighlightIntensity: e.target.value as LineHighlightIntensity }))}
+                            className="px-1.5 py-0.5 text-[10px] font-sans bg-card text-foreground border border-parchment rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy cursor-pointer"
+                          >
+                            <option value="off">Off</option>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="full">Full</option>
+                          </select>
                         </div>
                       </>
                     )}
@@ -1394,6 +2123,7 @@ export function CodeEditorPanel({
               language={selectedFile.language}
               readOnly={false}
               fontSize={displaySettings.fontSize}
+              onCursorPositionChange={isPunchCardFormat ? handleCursorPositionChange : undefined}
               className="flex-1"
             />
           ) : (
@@ -1413,11 +2143,42 @@ export function CodeEditorPanel({
               animationTriggerKey={animationTriggerKey}
               highlightedAnnotationType={highlightedType}
               annotationDisplaySettings={annotationDisplaySettings}
+              onCursorPositionChange={isPunchCardFormat ? handleCursorPositionChange : undefined}
               className="flex-1"
             />
           )}
         </div>
       </div>
+
+      {/* Revert confirmation modal */}
+      {revertConfirmFileId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-card rounded-lg shadow-xl border border-parchment p-4 max-w-sm mx-4">
+            <h3 className="font-display text-sm text-ink mb-2">Revert Changes?</h3>
+            <p className="font-body text-xs text-slate mb-4">
+              This will discard all changes to &ldquo;{codeFiles.find(f => f.id === revertConfirmFileId)?.name}&rdquo;
+              and restore it to the original content. This cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setRevertConfirmFileId(null)}
+                className="px-3 py-1.5 text-[10px] font-sans text-slate hover:bg-cream rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  onRevertFile?.(revertConfirmFileId);
+                  setRevertConfirmFileId(null);
+                }}
+                className="px-3 py-1.5 text-[10px] font-sans bg-amber-600 text-white hover:bg-amber-700 rounded transition-colors"
+              >
+                Revert
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1444,7 +2205,12 @@ export function generateAnnotatedCode(
     const lineAnnotations = annotationsByLine.get(lineNumber) || [];
     lineAnnotations.forEach((ann) => {
       // Indent annotations with two tabs for readability in edit mode
-      result.push(`\t\t// An:${ANNOTATION_PREFIXES[ann.type]}: ${ann.content}`);
+      // For block annotations, include line range: // An:Type[L5-12]: content
+      if (ann.endLineNumber && ann.endLineNumber !== ann.lineNumber) {
+        result.push(`\t\t// An:${ANNOTATION_PREFIXES[ann.type]}[L${ann.lineNumber}-${ann.endLineNumber}]: ${ann.content}`);
+      } else {
+        result.push(`\t\t// An:${ANNOTATION_PREFIXES[ann.type]}: ${ann.content}`);
+      }
     });
   });
 
@@ -1460,8 +2226,10 @@ export interface AnnotatedMarkdownMetadata {
   exportedAt: string;
   annotations: Array<{
     line: number;
+    endLine?: number; // For block annotations
     type: LineAnnotationType;
     content: string;
+    addedBy?: string; // User initials who added this annotation
   }>;
 }
 
@@ -1483,8 +2251,10 @@ export function generateAnnotatedMarkdown(
   // Build annotation list for YAML
   const annotationList = annotations.map((ann) => ({
     line: ann.lineNumber,
+    endLine: ann.endLineNumber && ann.endLineNumber !== ann.lineNumber ? ann.endLineNumber : undefined,
     type: ann.type,
     content: ann.content,
+    addedBy: ann.addedBy,
   }));
 
   // Escape special characters in YAML strings
@@ -1509,8 +2279,14 @@ export function generateAnnotatedMarkdown(
     yamlLines.push("annotations:");
     annotationList.forEach((ann) => {
       yamlLines.push(`  - line: ${ann.line}`);
+      if (ann.endLine) {
+        yamlLines.push(`    endLine: ${ann.endLine}`);
+      }
       yamlLines.push(`    type: ${ann.type}`);
       yamlLines.push(`    content: ${escapeYaml(ann.content)}`);
+      if (ann.addedBy) {
+        yamlLines.push(`    addedBy: ${escapeYaml(ann.addedBy)}`);
+      }
     });
   }
 
@@ -1558,9 +2334,9 @@ export function parseAnnotatedMarkdown(content: string): ParsedAnnotatedMarkdown
   let filename = "";
   let language = "";
   let exportedAt = "";
-  const annotations: Array<{ line: number; type: LineAnnotationType; content: string }> = [];
+  const annotations: Array<{ line: number; endLine?: number; type: LineAnnotationType; content: string; addedBy?: string }> = [];
 
-  let currentAnnotation: { line?: number; type?: LineAnnotationType; content?: string } | null = null;
+  let currentAnnotation: { line?: number; endLine?: number; type?: LineAnnotationType; content?: string; addedBy?: string } | null = null;
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -1572,8 +2348,10 @@ export function parseAnnotatedMarkdown(content: string): ParsedAnnotatedMarkdown
       if (currentAnnotation?.line && currentAnnotation?.type && currentAnnotation?.content !== undefined) {
         annotations.push({
           line: currentAnnotation.line,
+          endLine: currentAnnotation.endLine,
           type: currentAnnotation.type,
           content: currentAnnotation.content,
+          addedBy: currentAnnotation.addedBy,
         });
       }
       currentAnnotation = { line: parseInt(trimmed.replace("- line:", "").trim(), 10) };
@@ -1581,6 +2359,10 @@ export function parseAnnotatedMarkdown(content: string): ParsedAnnotatedMarkdown
     }
 
     if (currentAnnotation) {
+      if (trimmed.startsWith("endLine:")) {
+        currentAnnotation.endLine = parseInt(trimmed.replace("endLine:", "").trim(), 10);
+        continue;
+      }
       if (trimmed.startsWith("type:")) {
         const typeValue = trimmed.replace("type:", "").trim() as LineAnnotationType;
         if (["observation", "question", "metaphor", "pattern", "context", "critique"].includes(typeValue)) {
@@ -1595,6 +2377,15 @@ export function parseAnnotatedMarkdown(content: string): ParsedAnnotatedMarkdown
           contentValue = contentValue.slice(1, -1).replace(/\\"/g, '"');
         }
         currentAnnotation.content = contentValue;
+        continue;
+      }
+      if (trimmed.startsWith("addedBy:")) {
+        let addedByValue = trimmed.replace("addedBy:", "").trim();
+        // Unescape YAML strings
+        if (addedByValue.startsWith('"') && addedByValue.endsWith('"')) {
+          addedByValue = addedByValue.slice(1, -1).replace(/\\"/g, '"');
+        }
+        currentAnnotation.addedBy = addedByValue;
         continue;
       }
     }
@@ -1617,8 +2408,10 @@ export function parseAnnotatedMarkdown(content: string): ParsedAnnotatedMarkdown
   if (currentAnnotation?.line && currentAnnotation?.type && currentAnnotation?.content !== undefined) {
     annotations.push({
       line: currentAnnotation.line,
+      endLine: currentAnnotation.endLine,
       type: currentAnnotation.type,
       content: currentAnnotation.content,
+      addedBy: currentAnnotation.addedBy,
     });
   }
 

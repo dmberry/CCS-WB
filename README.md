@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 2.2.0** | CCS Methodology v2.5
+**Version 2.3.0** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -43,11 +43,14 @@ The critique mode features a three-panel layout for focused code analysis:
 
 2. **Centre panel**: Code editor with line numbers
    - Toggle between Edit and Annotate modes
-   - Click any line to add an annotation
+   - Click any line (or select a range) to add an annotation
    - Six annotation types: Observation, Question, Metaphor, Pattern, Context, Critique
    - Annotations display inline with colour-coded type badges (pills)
    - Annotations fade into background for distraction-free reading, brighten on hover
+   - **Line highlighting**: Adjustable intensity (off/low/medium/high/full) with type-coloured right-side bars
+   - **Focus mode**: Dims unannotated code to spotlight annotations (toggle with highlighter button)
    - Full screen mode hides files pane and chat for focused annotation work
+   - Real-time line and column indicator (updates on hover)
    - Download annotated code with annotations preserved
    - Customisable font size and display settings
 
@@ -281,6 +284,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 2.3.0 | **Enhanced annotation highlighting**: Line highlight with adjustable intensity (off/low/medium/high/full), type-coloured right-side indicator bars matching annotation colours, focus mode toggle with prominent burgundy button to dim unannotated code, block annotations now position editor at end of block, auto-select newly loaded files, 80-column auto-extend respects user panel resizing, real-time line/column display on hover |
 | 2.2.0 | **Flexible layout**: Collapsible chat panel with vertical label, collapsible and resizable code files pane, full screen mode for annotation pane (hides files and chat for focused work), streamlined chat header showing AI model, updated help with keyboard shortcuts |
 | 2.1.0 | **Search functionality**: Code search (Cmd+F) in editor, chat search (Cmd+Shift+F) to filter messages; Help popover (?) with interface guide and keyboard shortcuts; PDF export includes coloured annotation type pills |
 | 2.0.0 | **New annotation system**: Type badge pills with colour coding, annotations fade into background and brighten on hover, annotation summary panel in file tree showing counts by type in a grid layout, improved visual hierarchy for distraction-free reading |

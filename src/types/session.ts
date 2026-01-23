@@ -105,12 +105,14 @@ export interface InterpretationNote {
 export interface LineAnnotation {
   id: string;
   codeFileId: string;       // Which code file this annotation belongs to
-  lineNumber: number;       // The line number being annotated
-  lineContent: string;      // The actual content of the line (for reference)
+  lineNumber: number;       // The line number being annotated (start line for blocks)
+  endLineNumber?: number;   // End line for block annotations (undefined = single line)
+  lineContent: string;      // The actual content of the line(s) (for reference)
   type: 'observation' | 'question' | 'metaphor' | 'pattern' | 'context' | 'critique';
   content: string;          // The annotation text
   createdAt: string;
   orphaned?: boolean;       // True if the annotated line was deleted during editing
+  addedBy?: string;         // Initials of the user who added this annotation (for future multi-user support)
 }
 
 export type LineAnnotationType = LineAnnotation['type'];

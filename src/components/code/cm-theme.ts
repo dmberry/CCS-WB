@@ -60,7 +60,7 @@ const ccsLightTheme = EditorView.theme(
     },
     // Annotation widget styling - improved visibility
     ".cm-annotation-widget": {
-      borderRight: "3px solid", // Color set inline by widget
+      borderRight: "2px solid", // Color set inline by widget (matches line highlight)
       backgroundColor: "transparent",
       padding: "2px 12px 2px 56px", // Extra left indent (offset from code)
       display: "flex",
@@ -227,13 +227,13 @@ const ccsLightTheme = EditorView.theme(
     ".cm-annotate-gutter .cm-gutterElement:hover": {
       backgroundColor: "hsl(var(--burgundy) / 0.15)",
     },
-    // Dimmed lines for highlight annotations mode
+    // Dimmed lines for highlight annotations mode - strong dimming to focus on annotations
     ".cm-line-dimmed": {
-      opacity: "0.35",
+      opacity: "0.12",
       transition: "opacity 0.15s",
     },
     ".cm-line-dimmed:hover": {
-      opacity: "0.7",
+      opacity: "0.4",
     },
   },
   { dark: false }
@@ -291,7 +291,7 @@ const ccsDarkTheme = EditorView.theme(
     },
     // Annotation widget styling for dark mode - improved visibility
     ".cm-annotation-widget": {
-      borderRight: "3px solid", // Color set inline by widget
+      borderRight: "2px solid", // Color set inline by widget (matches line highlight)
       backgroundColor: "transparent",
       padding: "2px 12px 2px 56px", // Extra left indent (offset from code)
       display: "flex",
@@ -458,13 +458,13 @@ const ccsDarkTheme = EditorView.theme(
     ".cm-annotate-gutter .cm-gutterElement:hover": {
       backgroundColor: "hsl(var(--burgundy) / 0.2)",
     },
-    // Dimmed lines for highlight annotations mode
+    // Dimmed lines for highlight annotations mode - strong dimming to focus on annotations
     ".cm-line-dimmed": {
-      opacity: "0.3",
+      opacity: "0.10",
       transition: "opacity 0.15s",
     },
     ".cm-line-dimmed:hover": {
-      opacity: "0.65",
+      opacity: "0.35",
     },
   },
   { dark: true }
@@ -535,6 +535,12 @@ const ccsHighlightStyleLight = HighlightStyle.define([
 
   // Invalid/error
   { tag: t.invalid, color: "hsl(0 80% 50%)" },
+
+  // Meta tokens (sequence numbers, column markers) - very subtle grey
+  { tag: t.meta, color: "hsl(0 0% 78%)" },
+
+  // Labels - slightly emphasized
+  { tag: t.labelName, color: "hsl(220 40% 40%)", fontWeight: "500" },
 ]);
 
 // Dark mode highlight style
@@ -601,6 +607,12 @@ const ccsHighlightStyleDark = HighlightStyle.define([
 
   // Invalid/error
   { tag: t.invalid, color: "hsl(0 70% 60%)" },
+
+  // Meta tokens (sequence numbers, column markers) - very subtle grey
+  { tag: t.meta, color: "hsl(0 0% 38%)" },
+
+  // Labels - slightly emphasized
+  { tag: t.labelName, color: "hsl(210 50% 65%)", fontWeight: "500" },
 ]);
 
 /**

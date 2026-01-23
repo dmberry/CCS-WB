@@ -24,6 +24,7 @@ interface AnnotatedCodeViewerProps {
   language?: string;
   fileName?: string;
   onClose?: () => void;
+  userInitials?: string; // User initials to store with annotations
 }
 
 export function AnnotatedCodeViewer({
@@ -32,6 +33,7 @@ export function AnnotatedCodeViewer({
   language,
   fileName,
   onClose,
+  userInitials,
 }: AnnotatedCodeViewerProps) {
   const {
     session,
@@ -85,6 +87,7 @@ export function AnnotatedCodeViewer({
       lineContent: lines[selectedLine - 1] || "",
       type: annotationType,
       content: annotationContent.trim(),
+      addedBy: userInitials || undefined,
     });
 
     setAnnotationContent("");
