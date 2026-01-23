@@ -25,6 +25,7 @@ interface AISettingsContextValue {
   settings: AISettings;
   isLoaded: boolean;
   isConfigured: boolean;
+  isAiReady: boolean; // AI enabled AND connection verified - use this for sending messages
   connectionStatus: ConnectionStatus;
   connectionError: string | null;
   setConnectionStatus: (status: ConnectionStatus, error?: string | null) => void;
@@ -197,12 +198,16 @@ export function AISettingsProvider({
     return headers;
   }, [settings]);
 
+  // AI is ready to use when enabled AND connection has been verified
+  const isAiReady = settings.aiEnabled && connectionStatus === "success";
+
   return (
     <AISettingsContext.Provider
       value={{
         settings,
         isLoaded,
         isConfigured: isConfigured(),
+        isAiReady,
         connectionStatus,
         connectionError,
         setConnectionStatus,

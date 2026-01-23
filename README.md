@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 2.3.3** | CCS Methodology v2.5
+**Version 2.3.4** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -284,6 +284,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 2.3.4 | **Require connection test**: AI chat only works after successful connection test; clear messaging guides users to test connection before chatting |
 | 2.3.3 | **Onboarding improvements**: AI disabled by default (user must configure and enable), PDF export now highlights annotation lines too, copy button fixed dimensions prevent toolbar height glitch |
 | 2.3.2 | **PDF export enhancement**: Annotated code lines now have subtle type-coloured background highlighting matching the code editor, coloured right-side indicator bars, and improved annotation pills |
 | 2.3.1 | **AI status indicator fix**: Status now shows yellow/amber until connection is verified with successful test; green only appears after "Test Connection" succeeds; status resets when provider, model, API key, or base URL changes |

@@ -228,6 +228,7 @@ export function generateSessionLog(
         annotations: fileAnnotations.map((ann) => ({
           id: ann.id,
           lineNumber: ann.lineNumber,
+          endLineNumber: ann.endLineNumber,
           lineContent: ann.lineContent,
           type: ann.type,
           content: ann.content,
@@ -727,9 +728,8 @@ export function exportSessionLogPDF(
           file.annotations.forEach(ann => {
             lineAnnotationTypes.set(ann.lineNumber, ann.type);
             // For block annotations, highlight all lines in the range
-            const endLine = (ann as { endLine?: number }).endLine;
-            if (endLine && endLine > ann.lineNumber) {
-              for (let i = ann.lineNumber; i <= endLine; i++) {
+            if (ann.endLineNumber && ann.endLineNumber > ann.lineNumber) {
+              for (let i = ann.lineNumber; i <= ann.endLineNumber; i++) {
                 lineAnnotationTypes.set(i, ann.type);
               }
             }
@@ -757,9 +757,9 @@ export function exportSessionLogPDF(
             doc.setFillColor(bgColor.r, bgColor.g, bgColor.b);
             doc.rect(margin - 1, yPos - 2.5, contentWidth + 2, 3.5, "F");
 
-            // Draw right-side indicator bar
+            // Draw right-side indicator bar (thin)
             doc.setFillColor(color.r, color.g, color.b);
-            doc.rect(margin + contentWidth - 1, yPos - 2.5, 1.5, 3.5, "F");
+            doc.rect(margin + contentWidth - 0.5, yPos - 2.5, 0.75, 3.5, "F");
 
             // Calculate indent width
             const indentWidth = indent ? doc.getTextWidth(indent) : 0;
@@ -791,7 +791,7 @@ export function exportSessionLogPDF(
               // Draw a thin colored bar on the right side (like the code editor)
               const barColor = ANNOTATION_COLORS[annotationType] || ANNOTATION_COLORS.observation;
               doc.setFillColor(barColor.r, barColor.g, barColor.b);
-              doc.rect(margin + contentWidth - 1, yPos - 2.5, 1.5, 3.5, "F");
+              doc.rect(margin + contentWidth - 0.5, yPos - 2.5, 0.75, 3.5, "F");
             }
 
             doc.setFont("courier", "normal");

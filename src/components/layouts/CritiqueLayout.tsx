@@ -127,7 +127,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     addLineAnnotation,
     clearLineAnnotations,
   } = useSession();
-  const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured, connectionStatus } = useAISettings();
+  const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured, connectionStatus, isAiReady } = useAISettings();
   const { settings: appSettings, getFontSizes, setModeCodeFontSize, setModeChatFontSize, getDisplayName, profile } = useAppSettings();
   const aiEnabled = aiSettings.aiEnabled;
   const router = useRouter();
@@ -360,7 +360,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
   // Handle send message
   const handleSend = useCallback(async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !isAiReady) return;
 
     const userMessage = input.trim();
     setInput("");
@@ -445,7 +445,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     } finally {
       setIsLoading(false);
     }
-  }, [input, isLoading, session, addMessage, getRequestHeaders, codeContents]);
+  }, [input, isLoading, isAiReady, session, addMessage, getRequestHeaders, codeContents]);
 
   // Handle key down
   const handleKeyDown = useCallback(
@@ -1572,10 +1572,10 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                   {/* Send button */}
                   <button
                     onClick={handleSend}
-                    disabled={!input.trim() || isLoading}
+                    disabled={!input.trim() || isLoading || !isAiReady}
                     className={cn(
                       "p-2 rounded-lg flex items-center justify-center transition-colors",
-                      input.trim() && !isLoading
+                      input.trim() && !isLoading && isAiReady
                         ? "bg-burgundy text-ivory hover:bg-burgundy-dark"
                         : "bg-parchment text-slate-muted cursor-not-allowed"
                     )}

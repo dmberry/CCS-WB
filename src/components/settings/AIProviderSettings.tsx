@@ -379,6 +379,12 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
             Please enter your API key to test the connection.
           </p>
         )}
+
+        {isConfigured && settings.aiEnabled && connectionStatus !== "success" && connectionStatus !== "testing" && (
+          <p className="mt-1.5 font-sans text-[10px] text-amber-600 dark:text-amber-400">
+            Please test connection to enable AI features.
+          </p>
+        )}
       </div>
 
       {/* Conversation Style Settings */}

@@ -73,7 +73,7 @@ const openingPrompts: Record<string, string> = {
 export default function ConversationPage() {
   const router = useRouter();
   const { session, addMessage, updateMessage, updateSettings, addCode, removeCode, addReferences, clearReferences, addArtifact, importSession, setCreateLanguage, setLanguageOverride, setExperienceLevel, switchMode, clearModeSession, hasSavedSession } = useSession();
-  const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured, connectionStatus } = useAISettings();
+  const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured, connectionStatus, isAiReady } = useAISettings();
   const { settings: appSettings, getFontSizes, setModeChatFontSize, getDisplayName, profile } = useAppSettings();
   const aiEnabled = aiSettings.aiEnabled;
   const [input, setInput] = useState("");
@@ -298,7 +298,7 @@ export default function ConversationPage() {
   }, [session.messages, updateMessage]);
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !isAiReady) return;
 
     const userMessage = input.trim();
     setInput("");
@@ -2610,11 +2610,13 @@ export default function ConversationPage() {
               </div>
             )}
 
-            {/* AI disabled banner */}
-            {!aiEnabled && (
+            {/* AI disabled or not ready banner */}
+            {!isAiReady && (
               <div className="mb-3 p-3 bg-slate/5 border border-slate/20 rounded-lg">
                 <p className="font-body text-body-sm text-slate text-center">
-                  AI assistant is disabled. You can still add code, search references, and manage your session.
+                  {!aiEnabled
+                    ? "AI assistant is disabled. You can still add code, search references, and manage your session."
+                    : "AI is enabled but connection not verified. Please test connection to start chatting."}
                   <button
                     onClick={() => {
                       setSettingsTab("ai");
@@ -2622,7 +2624,7 @@ export default function ConversationPage() {
                     }}
                     className="ml-2 text-burgundy hover:text-burgundy-dark underline"
                   >
-                    Enable in Settings
+                    {!aiEnabled ? "Enable in Settings" : "Open Settings"}
                   </button>
                 </p>
               </div>
@@ -2631,7 +2633,7 @@ export default function ConversationPage() {
             {/* Claude-style input container */}
             <div className={cn(
               "bg-card rounded-2xl border border-parchment shadow-sm",
-              !aiEnabled && "opacity-50"
+              !isAiReady && "opacity-50"
             )}>
               {/* Textarea */}
               <textarea
@@ -2639,11 +2641,11 @@ export default function ConversationPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder={aiEnabled ? "Reply..." : "AI assistant disabled"}
-                disabled={!aiEnabled}
+                placeholder={!aiEnabled ? "AI assistant disabled" : !isAiReady ? "Test connection in Settings to chat..." : "Reply..."}
+                disabled={!isAiReady}
                 className={cn(
                   "w-full resize-none rounded-t-2xl px-4 py-3 font-body bg-transparent focus:outline-none placeholder:text-slate-muted overflow-hidden",
-                  !aiEnabled && "cursor-not-allowed"
+                  !isAiReady && "cursor-not-allowed"
                 )}
                 style={{ fontSize: `${chatFontSize}px`, minHeight: '44px' }}
                 rows={1}
@@ -2696,14 +2698,14 @@ export default function ConversationPage() {
                   </button>
                   <button
                     onClick={handleGenerateOutput}
-                    disabled={!aiEnabled}
+                    disabled={!isAiReady}
                     className={cn(
                       "p-1.5 rounded-md transition-colors",
-                      aiEnabled
+                      isAiReady
                         ? "text-slate hover:text-ink"
                         : "text-slate-muted cursor-not-allowed"
                     )}
-                    title={aiEnabled ? "Generate output" : "AI disabled"}
+                    title={isAiReady ? "Generate output" : "AI not ready"}
                   >
                     <FileOutput className="h-4 w-4" strokeWidth={1.5} />
                   </button>
@@ -2798,10 +2800,10 @@ export default function ConversationPage() {
                   {/* Send button */}
                   <button
                     onClick={handleSend}
-                    disabled={!input.trim() || isLoading || !aiEnabled}
+                    disabled={!input.trim() || isLoading || !isAiReady}
                     className={cn(
                       "p-2 rounded-lg flex items-center justify-center transition-colors",
-                      input.trim() && !isLoading && aiEnabled
+                      input.trim() && !isLoading && isAiReady
                         ? "bg-burgundy text-ivory hover:bg-burgundy-dark"
                         : "bg-parchment text-slate-muted cursor-not-allowed"
                     )}
