@@ -127,7 +127,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     addLineAnnotation,
     clearLineAnnotations,
   } = useSession();
-  const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured } = useAISettings();
+  const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured, connectionStatus } = useAISettings();
   const { settings: appSettings, getFontSizes, setModeCodeFontSize, setModeChatFontSize, getDisplayName, profile } = useAppSettings();
   const aiEnabled = aiSettings.aiEnabled;
   const router = useRouter();
@@ -1108,19 +1108,21 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
               "font-sans text-[10px] px-2 py-0.5 border rounded-sm transition-colors",
               !aiEnabled
                 ? "text-red-700 bg-red-50 border-red-200 hover:border-red-400 dark:text-red-400 dark:bg-red-950 dark:border-red-800 dark:hover:border-red-600"
-                : isAIConfigured
+                : connectionStatus === "success"
                   ? "text-green-700 bg-green-50 border-green-200 hover:border-green-400 dark:text-green-400 dark:bg-green-950 dark:border-green-800 dark:hover:border-green-600"
                   : "text-amber-700 bg-amber-50 border-amber-200 hover:border-amber-400 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800 dark:hover:border-amber-600"
             )}
             title={
               !aiEnabled
                 ? "AI disabled - click to enable"
-                : isAIConfigured
+                : connectionStatus === "success"
                   ? "AI connected - click to configure"
-                  : "AI not configured - click to set up"
+                  : connectionStatus === "error"
+                    ? "Connection failed - click to configure"
+                    : "AI not verified - click to test connection"
             }
           >
-            {!aiEnabled ? "AI: Off" : isAIConfigured ? "AI: On" : "AI: ??"}
+            {!aiEnabled ? "AI: Off" : connectionStatus === "success" ? "AI: On" : "AI: ??"}
           </button>
           <div className="w-px h-4 bg-parchment mx-1" />
           {/* Help button - opens help popover */}

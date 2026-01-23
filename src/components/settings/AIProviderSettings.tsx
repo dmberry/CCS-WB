@@ -30,15 +30,14 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
     setBeDirectMode,
     setTeachMeMode,
     isConfigured,
+    connectionStatus,
+    connectionError,
+    setConnectionStatus,
   } = useAISettings();
 
   const [showApiKey, setShowApiKey] = useState(false);
   const [isProviderDropdownOpen, setIsProviderDropdownOpen] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
-  const [testStatus, setTestStatus] = useState<
-    "idle" | "testing" | "success" | "error"
-  >("idle");
-  const [testError, setTestError] = useState<string | null>(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
 
   // Load dynamic models from models.md on mount
@@ -55,8 +54,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
   const handleProviderChange = (provider: AIProvider) => {
     setProvider(provider);
     setIsProviderDropdownOpen(false);
-    setTestStatus("idle");
-    setTestError(null);
+    // Connection status is reset automatically by setProvider in context
   };
 
   const handleModelChange = (model: string) => {
@@ -65,8 +63,7 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
   };
 
   const handleTestConnection = async () => {
-    setTestStatus("testing");
-    setTestError(null);
+    setConnectionStatus("testing");
 
     try {
       const response = await fetch("/api/test-connection", {
@@ -84,14 +81,13 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
       const data = await response.json();
 
       if (data.success) {
-        setTestStatus("success");
+        setConnectionStatus("success");
       } else {
-        setTestStatus("error");
-        setTestError(data.error || "Connection test failed");
+        setConnectionStatus("error", data.error || "Connection test failed");
       }
     } catch (error) {
-      setTestStatus("error");
-      setTestError(
+      setConnectionStatus(
+        "error",
         error instanceof Error ? error.message : "Connection test failed"
       );
     }
@@ -341,30 +337,30 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
       <div className={cn("pt-1", !settings.aiEnabled && "opacity-50 pointer-events-none")}>
         <button
           onClick={handleTestConnection}
-          disabled={testStatus === "testing" || !isConfigured || !settings.aiEnabled}
+          disabled={connectionStatus === "testing" || !isConfigured || !settings.aiEnabled}
           className={cn(
             "w-full flex items-center justify-center gap-2 px-2.5 py-1.5",
             "font-sans text-[11px] rounded-sm transition-all",
-            testStatus === "success"
+            connectionStatus === "success"
               ? "bg-success/10 text-success border border-success/30"
-              : testStatus === "error"
+              : connectionStatus === "error"
                 ? "bg-error/10 text-error border border-error/30"
                 : "bg-cream text-ink border border-parchment-dark hover:border-burgundy",
-            (testStatus === "testing" || !isConfigured) &&
+            (connectionStatus === "testing" || !isConfigured) &&
               "opacity-50 cursor-not-allowed"
           )}
         >
-          {testStatus === "testing" ? (
+          {connectionStatus === "testing" ? (
             <>
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Testing connection...
             </>
-          ) : testStatus === "success" ? (
+          ) : connectionStatus === "success" ? (
             <>
               <CheckCircle className="h-3.5 w-3.5" />
               Connection successful
             </>
-          ) : testStatus === "error" ? (
+          ) : connectionStatus === "error" ? (
             <>
               <XCircle className="h-3.5 w-3.5" />
               Connection failed
@@ -374,8 +370,8 @@ export function AIProviderSettings({ onClose }: AIProviderSettingsProps) {
           )}
         </button>
 
-        {testError && (
-          <p className="mt-1.5 font-sans text-[10px] text-error">{testError}</p>
+        {connectionError && (
+          <p className="mt-1.5 font-sans text-[10px] text-error">{connectionError}</p>
         )}
 
         {!isConfigured && (

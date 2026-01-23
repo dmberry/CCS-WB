@@ -18,10 +18,16 @@ import { getDefaultModel, PROVIDER_CONFIGS } from "@/lib/ai/config";
 const STORAGE_KEY = "ccs-wb-ai-settings";
 const STORAGE_VERSION = "1.0";
 
+// Connection test status - tracks whether AI connection has been verified
+export type ConnectionStatus = "unknown" | "testing" | "success" | "error";
+
 interface AISettingsContextValue {
   settings: AISettings;
   isLoaded: boolean;
   isConfigured: boolean;
+  connectionStatus: ConnectionStatus;
+  connectionError: string | null;
+  setConnectionStatus: (status: ConnectionStatus, error?: string | null) => void;
   updateSettings: (updates: Partial<AISettings>) => void;
   setProvider: (provider: AIProvider) => void;
   setModel: (model: string) => void;
@@ -44,6 +50,8 @@ export function AISettingsProvider({
 }) {
   const [settings, setSettings] = useState<AISettings>(DEFAULT_AI_SETTINGS);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [connectionStatus, setConnectionStatusState] = useState<ConnectionStatus>("unknown");
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -93,9 +101,25 @@ export function AISettingsProvider({
     return true;
   }, [settings.provider, settings.apiKey]);
 
+  // Set connection status with optional error message
+  const setConnectionStatus = useCallback((status: ConnectionStatus, error: string | null = null) => {
+    setConnectionStatusState(status);
+    setConnectionError(error);
+  }, []);
+
+  // Reset connection status when connection-affecting settings change
+  const resetConnectionStatus = useCallback(() => {
+    setConnectionStatusState("unknown");
+    setConnectionError(null);
+  }, []);
+
   const updateSettings = useCallback((updates: Partial<AISettings>) => {
     setSettings((prev) => ({ ...prev, ...updates }));
-  }, []);
+    // Reset connection status if any connection-affecting setting changed
+    if (updates.provider || updates.model || updates.apiKey || updates.baseUrl || updates.customModelId) {
+      resetConnectionStatus();
+    }
+  }, [resetConnectionStatus]);
 
   const setProvider = useCallback((provider: AIProvider) => {
     setSettings((prev) => ({
@@ -109,23 +133,28 @@ export function AISettingsProvider({
           : undefined,
       customModelId: undefined,
     }));
-  }, []);
+    resetConnectionStatus();
+  }, [resetConnectionStatus]);
 
   const setModel = useCallback((model: string) => {
     setSettings((prev) => ({ ...prev, model }));
-  }, []);
+    resetConnectionStatus();
+  }, [resetConnectionStatus]);
 
   const setApiKey = useCallback((apiKey: string) => {
     setSettings((prev) => ({ ...prev, apiKey }));
-  }, []);
+    resetConnectionStatus();
+  }, [resetConnectionStatus]);
 
   const setBaseUrl = useCallback((baseUrl: string) => {
     setSettings((prev) => ({ ...prev, baseUrl }));
-  }, []);
+    resetConnectionStatus();
+  }, [resetConnectionStatus]);
 
   const setCustomModelId = useCallback((customModelId: string) => {
     setSettings((prev) => ({ ...prev, customModelId }));
-  }, []);
+    resetConnectionStatus();
+  }, [resetConnectionStatus]);
 
   const setAiEnabled = useCallback((aiEnabled: boolean) => {
     setSettings((prev) => ({ ...prev, aiEnabled }));
@@ -174,6 +203,9 @@ export function AISettingsProvider({
         settings,
         isLoaded,
         isConfigured: isConfigured(),
+        connectionStatus,
+        connectionError,
+        setConnectionStatus,
         updateSettings,
         setProvider,
         setModel,
