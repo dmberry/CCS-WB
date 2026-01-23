@@ -35,6 +35,7 @@ import {
   SlidersHorizontal,
   Code,
   ChevronDown,
+  HelpCircle,
 } from "lucide-react";
 import { CodeEditorPanel, generateAnnotatedCode, parseAnnotatedMarkdown } from "@/components/code";
 import { ContextPreview } from "@/components/chat";
@@ -154,6 +155,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [showExportModal, setShowExportModal] = useState(false);
   const [showSendContextModal, setShowSendContextModal] = useState(false);
   const [showFontSizePopover, setShowFontSizePopover] = useState(false);
+  const [showHelpPopover, setShowHelpPopover] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveModalName, setSaveModalName] = useState("");
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
@@ -1069,6 +1071,69 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             {!aiEnabled ? "AI: Off" : isAIConfigured ? "AI: On" : "AI: ??"}
           </button>
           <div className="w-px h-4 bg-parchment mx-1" />
+          {/* Help button - opens help popover */}
+          <div className="relative">
+            <button
+              onClick={() => setShowHelpPopover(!showHelpPopover)}
+              className={cn(
+                "p-1.5 rounded-sm text-slate hover:text-ink hover:bg-cream transition-colors",
+                showHelpPopover && "bg-cream text-ink"
+              )}
+              title="Interface guide"
+            >
+              <HelpCircle className="h-4 w-4" strokeWidth={1.5} />
+            </button>
+            {showHelpPopover && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowHelpPopover(false)} />
+                <div className="absolute right-0 top-full mt-1 z-50 w-80 bg-cream border border-parchment rounded-md shadow-lg p-4 text-xs">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-ink text-sm">Interface Guide</h3>
+                    <button onClick={() => setShowHelpPopover(false)} className="text-slate hover:text-ink">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div className="space-y-3 text-slate-muted">
+                    <div>
+                      <h4 className="font-medium text-ink text-[11px] uppercase tracking-wide mb-1">Left Panel: Files</h4>
+                      <p>File tree with colour-coded types. Click to select. Annotation summary at bottom shows counts by type.</p>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-ink text-[11px] uppercase tracking-wide mb-1">Centre Panel: Code Editor</h4>
+                      <p><strong>Edit mode:</strong> Modify code directly.<br/>
+                      <strong>Annotate mode:</strong> Click any line to add annotations (Obs, Q, Met, Pat, Ctx, Crit). Annotations fade until hovered.</p>
+                    </div>
+                    {aiEnabled && (
+                      <div>
+                        <h4 className="font-medium text-ink text-[11px] uppercase tracking-wide mb-1">Right Panel: AI Chat</h4>
+                        <p>Dialogue with AI assistant. Guided prompts suggest phase-appropriate questions. "Help Annotate" asks AI to suggest annotations.</p>
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-medium text-ink text-[11px] uppercase tracking-wide mb-1">Annotation Types</h4>
+                      <div className="grid grid-cols-2 gap-1 text-[10px]">
+                        <span><strong>Obs</strong> - Observation</span>
+                        <span><strong>Q</strong> - Question</span>
+                        <span><strong>Met</strong> - Metaphor</span>
+                        <span><strong>Pat</strong> - Pattern</span>
+                        <span><strong>Ctx</strong> - Context</span>
+                        <span><strong>Crit</strong> - Critique</span>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-ink text-[11px] uppercase tracking-wide mb-1">Shortcuts</h4>
+                      <div className="grid grid-cols-2 gap-1 text-[10px]">
+                        <span><strong>⌘S</strong> - Save project</span>
+                        <span><strong>⌘O</strong> - Open project</span>
+                        <span><strong>⌘E</strong> - Export log</span>
+                        <span><strong>⌘/</strong> - Focus chat</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           {/* Settings button - opens full settings modal */}
           <button
             onClick={() => {

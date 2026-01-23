@@ -77,6 +77,11 @@ const ccsLightTheme = EditorView.theme(
       whiteSpace: "nowrap",
       textTransform: "uppercase",
       letterSpacing: "0.3px",
+      opacity: "0.4",
+      transition: "opacity 0.15s",
+    },
+    ".cm-annotation-widget:hover .cm-annotation-type-badge": {
+      opacity: "1",
     },
     ".cm-annotation-prefix": {
       fontFamily: "system-ui, sans-serif",
@@ -89,13 +94,17 @@ const ccsLightTheme = EditorView.theme(
       flex: "1",
       fontStyle: "italic",
       color: "hsl(var(--slate))",
-      opacity: "0.75",
+      opacity: "0.5",
+      transition: "opacity 0.15s",
+    },
+    ".cm-annotation-widget:hover .cm-annotation-content": {
+      opacity: "0.85",
     },
     ".cm-annotation-actions": {
       display: "flex",
       gap: "4px",
       flexShrink: "0",
-      opacity: "0.4",
+      opacity: "0.3",
       transition: "opacity 0.15s",
     },
     ".cm-annotation-widget:hover .cm-annotation-actions": {
@@ -282,6 +291,11 @@ const ccsDarkTheme = EditorView.theme(
       whiteSpace: "nowrap",
       textTransform: "uppercase",
       letterSpacing: "0.3px",
+      opacity: "0.4",
+      transition: "opacity 0.15s",
+    },
+    ".cm-annotation-widget:hover .cm-annotation-type-badge": {
+      opacity: "1",
     },
     ".cm-annotation-prefix": {
       fontFamily: "system-ui, sans-serif",
@@ -294,13 +308,17 @@ const ccsDarkTheme = EditorView.theme(
       flex: "1",
       fontStyle: "italic",
       color: "hsl(var(--slate))",
-      opacity: "0.8",
+      opacity: "0.5",
+      transition: "opacity 0.15s",
+    },
+    ".cm-annotation-widget:hover .cm-annotation-content": {
+      opacity: "0.9",
     },
     ".cm-annotation-actions": {
       display: "flex",
       gap: "4px",
       flexShrink: "0",
-      opacity: "0.4",
+      opacity: "0.3",
       transition: "opacity 0.15s",
     },
     ".cm-annotation-widget:hover .cm-annotation-actions": {
