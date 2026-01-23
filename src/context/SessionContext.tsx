@@ -15,6 +15,7 @@ import type {
   CreateLanguage,
   ExperienceLevel,
   LineAnnotation,
+  LineAnnotationType,
 } from "@/types";
 import { generateId, getCurrentTimestamp } from "@/lib/utils";
 import {
@@ -23,6 +24,8 @@ import {
   clearSessionForMode,
   clearAllSessions,
   hasSessionForMode,
+  saveLastMode,
+  getLastMode,
 } from "@/lib/session-storage";
 
 // Action types
@@ -33,6 +36,7 @@ type SessionAction =
   | { type: "ADD_CODE"; payload: CodeReference }
   | { type: "REMOVE_CODE"; payload: string }
   | { type: "UPDATE_CODE"; payload: { id: string; updates: Partial<CodeReference> } }
+  | { type: "REORDER_CODE"; payload: string[] } // New order of file IDs
   | { type: "ADD_ANALYSIS"; payload: AnalysisResult }
   | { type: "ADD_REFERENCES"; payload: ReferenceResult[] }
   | { type: "CLEAR_REFERENCES" }
@@ -54,7 +58,7 @@ type SessionAction =
   | { type: "TRANSFER_TO_CRITIQUE"; payload: string } // version id to transfer
   // Line annotation actions
   | { type: "ADD_LINE_ANNOTATION"; payload: LineAnnotation }
-  | { type: "UPDATE_LINE_ANNOTATION"; payload: { id: string; content: string } }
+  | { type: "UPDATE_LINE_ANNOTATION"; payload: { id: string; updates: Partial<Omit<LineAnnotation, "id" | "codeFileId" | "createdAt">> } }
   | { type: "REMOVE_LINE_ANNOTATION"; payload: string }
   | { type: "CLEAR_LINE_ANNOTATIONS"; payload?: string } // optional codeFileId to clear only that file's annotations
   // Code contents actions
@@ -138,6 +142,20 @@ function sessionReducer(state: Session, action: SessionAction): Session {
         ),
         lastModified: now,
       };
+
+    case "REORDER_CODE": {
+      // Reorder files based on the provided array of IDs
+      const orderedIds = action.payload;
+      const fileMap = new Map(state.codeFiles.map(f => [f.id, f]));
+      const reorderedFiles = orderedIds
+        .map(id => fileMap.get(id))
+        .filter((f): f is CodeReference => f !== undefined);
+      return {
+        ...state,
+        codeFiles: reorderedFiles,
+        lastModified: now,
+      };
+    }
 
     case "ADD_ANALYSIS":
       return {
@@ -376,7 +394,7 @@ function sessionReducer(state: Session, action: SessionAction): Session {
         ...state,
         lineAnnotations: state.lineAnnotations.map((ann) =>
           ann.id === action.payload.id
-            ? { ...ann, content: action.payload.content }
+            ? { ...ann, ...action.payload.updates }
             : ann
         ),
         lastModified: now,
@@ -434,6 +452,7 @@ interface SessionContextType {
   addCode: (code: Omit<CodeReference, "id" | "uploadedAt">) => string;
   removeCode: (codeId: string) => void;
   updateCode: (codeId: string, updates: Partial<CodeReference>) => void;
+  reorderCodeFiles: (fileIds: string[]) => void;
   addAnalysis: (analysis: Omit<AnalysisResult, "id" | "createdAt">) => void;
   addReferences: (refs: ReferenceResult[]) => void;
   clearReferences: () => void;
@@ -460,7 +479,7 @@ interface SessionContextType {
   hasSavedSession: (mode: EntryMode) => boolean;
   // Line annotation functions
   addLineAnnotation: (annotation: Omit<LineAnnotation, "id" | "createdAt">) => void;
-  updateLineAnnotation: (id: string, content: string) => void;
+  updateLineAnnotation: (id: string, updates: Partial<Omit<LineAnnotation, "id" | "codeFileId" | "createdAt">>) => void;
   removeLineAnnotation: (id: string) => void;
   clearLineAnnotations: (codeFileId?: string) => void;
   // Code contents functions
@@ -473,6 +492,26 @@ const SessionContext = createContext<SessionContextType | null>(null);
 // Provider component
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [session, dispatch] = useReducer(sessionReducer, null, createInitialSession);
+  const hasLoadedRef = useRef(false);
+
+  // Load saved session on mount
+  useEffect(() => {
+    if (hasLoadedRef.current) return;
+    hasLoadedRef.current = true;
+
+    // Get the last active mode, defaulting to critique
+    const lastMode = getLastMode() || "critique";
+
+    // Try to load saved session for the last mode
+    // This ensures the session is restored when the app is reopened
+    const savedSession = loadSessionForMode(lastMode);
+    if (savedSession) {
+      dispatch({ type: "LOAD_SAVED_SESSION", payload: savedSession });
+    } else if (lastMode !== "critique") {
+      // If no saved session for last mode, initialize with that mode
+      dispatch({ type: "INIT_SESSION", payload: { mode: lastMode } });
+    }
+  }, []);
 
   const initSession = useCallback((mode: EntryMode, experienceLevel?: ExperienceLevel) => {
     dispatch({ type: "INIT_SESSION", payload: { mode, experienceLevel } });
@@ -514,6 +553,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const updateCode = useCallback((codeId: string, updates: Partial<CodeReference>) => {
     dispatch({ type: "UPDATE_CODE", payload: { id: codeId, updates } });
+  }, []);
+
+  const reorderCodeFiles = useCallback((fileIds: string[]) => {
+    dispatch({ type: "REORDER_CODE", payload: fileIds });
   }, []);
 
   const addAnalysis = useCallback(
@@ -619,6 +662,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     // Save current session before switching
     saveSessionForMode(session.mode, session);
 
+    // Save the target mode as the last active mode
+    saveLastMode(targetMode);
+
     // Try to load saved session for target mode
     const savedSession = loadSessionForMode(targetMode);
     if (savedSession) {
@@ -675,8 +721,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const updateLineAnnotation = useCallback((id: string, content: string) => {
-    dispatch({ type: "UPDATE_LINE_ANNOTATION", payload: { id, content } });
+  const updateLineAnnotation = useCallback((id: string, updates: Partial<Omit<LineAnnotation, "id" | "codeFileId" | "createdAt">>) => {
+    dispatch({ type: "UPDATE_LINE_ANNOTATION", payload: { id, updates } });
   }, []);
 
   const removeLineAnnotation = useCallback((id: string) => {
@@ -704,6 +750,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     addCode,
     removeCode,
     updateCode,
+    reorderCodeFiles,
     addAnalysis,
     addReferences,
     clearReferences,

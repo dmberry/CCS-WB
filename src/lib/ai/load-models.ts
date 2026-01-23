@@ -1,7 +1,5 @@
 // Load models from the user-editable markdown configuration file
 
-import type { AIProvider } from "@/types/ai-settings";
-
 export interface ModelDefinition {
   id: string;
   name: string;
@@ -14,8 +12,11 @@ export interface LoadedModels {
   google: ModelDefinition[];
 }
 
+// Provider keys that can be loaded from markdown
+type LoadableProvider = keyof LoadedModels;
+
 // Map markdown section headers to provider IDs
-const SECTION_TO_PROVIDER: Record<string, AIProvider> = {
+const SECTION_TO_PROVIDER: Record<string, LoadableProvider> = {
   "Ollama (Local)": "ollama",
   "Anthropic (Claude)": "anthropic",
   "OpenAI": "openai",
@@ -35,7 +36,7 @@ export function parseModelsMarkdown(content: string): LoadedModels {
     google: [],
   };
 
-  let currentProvider: AIProvider | null = null;
+  let currentProvider: LoadableProvider | null = null;
 
   const lines = content.split("\n");
 

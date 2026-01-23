@@ -93,7 +93,7 @@ export function AnnotatedCodeViewer({
 
   const handleUpdateAnnotation = (id: string) => {
     if (!editContent.trim()) return;
-    updateLineAnnotation(id, editContent.trim());
+    updateLineAnnotation(id, { content: editContent.trim() });
     setEditingAnnotation(null);
     setEditContent("");
   };

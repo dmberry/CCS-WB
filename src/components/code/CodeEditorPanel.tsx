@@ -4,10 +4,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSession } from "@/context/SessionContext";
 import { cn } from "@/lib/utils";
 import {
-  MessageSquarePlus,
   X,
-  ChevronDown,
-  ChevronRight,
   Download,
   HelpCircle,
   MoreVertical,
@@ -18,12 +15,15 @@ import {
   Settings2,
   Minus,
   Plus,
+  PanelLeft,
+  PanelLeftClose,
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import type { LineAnnotation, LineAnnotationType, CodeReference } from "@/types";
-import {
-  LINE_ANNOTATION_TYPES,
-  LINE_ANNOTATION_LABELS,
-} from "@/types";
+import { CodeMirrorEditor } from "./CodeMirrorEditor";
+import type { InlineEditState, InlineEditCallbacks } from "./cm-annotations";
 
 interface CodeEditorPanelProps {
   codeFiles: CodeReference[];
@@ -34,7 +34,10 @@ interface CodeEditorPanelProps {
   onRenameFile?: (fileId: string, newName: string) => void;
   onDuplicateFile?: (fileId: string) => void;
   onLoadCode?: () => void; // Trigger file upload from sidebar
+  onReorderFiles?: (fileIds: string[]) => void; // Reorder files by new order
 }
+
+type FileSortOrder = "manual" | "az" | "za";
 
 type EditorMode = "annotate" | "edit";
 
@@ -83,6 +86,16 @@ const ANNOTATION_COLORS: Record<LineAnnotationType, string> = {
   pattern: "text-green-600 dark:text-green-400",
   context: "text-slate-500 dark:text-slate-400",
   critique: "text-burgundy",
+};
+
+// Pill background colors for annotation panel (muted/subtle)
+const ANNOTATION_PILL_COLORS: Record<LineAnnotationType, string> = {
+  observation: "bg-blue-400/35 dark:bg-blue-500/30",
+  question: "bg-amber-400/35 dark:bg-amber-500/30",
+  metaphor: "bg-purple-400/35 dark:bg-purple-500/30",
+  pattern: "bg-green-400/35 dark:bg-green-500/30",
+  context: "bg-slate-400/35 dark:bg-slate-500/30",
+  critique: "bg-burgundy/35 dark:bg-burgundy/30",
 };
 
 // File type categories for colour coding
@@ -191,6 +204,7 @@ export function CodeEditorPanel({
   onRenameFile,
   onDuplicateFile,
   onLoadCode,
+  onReorderFiles,
 }: CodeEditorPanelProps) {
   const {
     session,
@@ -202,9 +216,6 @@ export function CodeEditorPanel({
 
   const [selectedFileId, setSelectedFileId] = useState<string | null>(
     codeFiles.length > 0 ? codeFiles[0].id : null
-  );
-  const [expandedFiles, setExpandedFiles] = useState<Set<string>>(
-    new Set(codeFiles.map((f) => f.id))
   );
   const [editorMode, setEditorMode] = useState<EditorMode>("annotate");
   // Store the "clean" code (without embedded annotations) for edit mode
@@ -218,8 +229,6 @@ export function CodeEditorPanel({
       if (!selectedFileId || !selectedExists) {
         setSelectedFileId(codeFiles[0].id);
       }
-      // Expand all files
-      setExpandedFiles(new Set(codeFiles.map((f) => f.id)));
     } else {
       setSelectedFileId(null);
     }
@@ -230,23 +239,51 @@ export function CodeEditorPanel({
   const [annotationContent, setAnnotationContent] = useState("");
   const [editingAnnotationId, setEditingAnnotationId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [editType, setEditType] = useState<LineAnnotationType>("observation");
   const [showAnnotationHelp, setShowAnnotationHelp] = useState(false);
   const [fileMenuOpen, setFileMenuOpen] = useState<string | null>(null);
   const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [showDisplaySettings, setShowDisplaySettings] = useState(false);
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [showAnnotationPanel, setShowAnnotationPanel] = useState(true); // Annotation list in files pane
+  const [showDiscoveryAnimation, setShowDiscoveryAnimation] = useState(false); // Triggered when file loads
+  const [animationTriggerKey, setAnimationTriggerKey] = useState(0); // Increments to force animation restart
+  const [fileSortOrder, setFileSortOrder] = useState<FileSortOrder>("manual");
 
-  // Refs for syncing scroll between line numbers and textarea in edit mode
-  const lineNumbersRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Sort files based on current sort order
+  const sortedFiles = useMemo(() => {
+    if (fileSortOrder === "manual") return codeFiles;
+    const sorted = [...codeFiles].sort((a, b) => {
+      const nameA = a.name.toLowerCase();
+      const nameB = b.name.toLowerCase();
+      if (fileSortOrder === "az") {
+        return nameA.localeCompare(nameB);
+      } else {
+        return nameB.localeCompare(nameA);
+      }
+    });
+    return sorted;
+  }, [codeFiles, fileSortOrder]);
 
-  // Sync line numbers scroll with textarea scroll
-  const handleTextareaScroll = useCallback(() => {
-    if (lineNumbersRef.current && textareaRef.current) {
-      lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop;
-    }
-  }, []);
+  // Move file up/down in the list
+  const handleMoveFile = useCallback((fileId: string, direction: "up" | "down") => {
+    if (!onReorderFiles || fileSortOrder !== "manual") return;
+
+    const currentIndex = codeFiles.findIndex(f => f.id === fileId);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= codeFiles.length) return;
+
+    const newOrder = [...codeFiles];
+    const [removed] = newOrder.splice(currentIndex, 1);
+    newOrder.splice(newIndex, 0, removed);
+
+    onReorderFiles(newOrder.map(f => f.id));
+  }, [codeFiles, onReorderFiles, fileSortOrder]);
 
   // Get current file and its code
   const selectedFile = useMemo(
@@ -270,65 +307,86 @@ export function CodeEditorPanel({
     [session.lineAnnotations, selectedFileId]
   );
 
-  // Group annotations by line
-  const annotationsByLine = useMemo(() => {
-    const map = new Map<number, LineAnnotation[]>();
-    fileAnnotations.forEach((ann) => {
-      const existing = map.get(ann.lineNumber) || [];
-      map.set(ann.lineNumber, [...existing, ann]);
-    });
-    return map;
-  }, [fileAnnotations]);
+  // Inline editing state for annotations - only tracks identity, widget manages content
+  const inlineEditState = useMemo((): InlineEditState | undefined => {
+    if (editingAnnotationId) {
+      // Editing existing annotation
+      const annotation = fileAnnotations.find(a => a.id === editingAnnotationId);
+      return {
+        lineNumber: annotation?.lineNumber || null,
+        annotationId: editingAnnotationId,
+        initialType: annotation?.type || "observation",
+        initialContent: annotation?.content || "",
+      };
+    }
+    if (editingLine) {
+      // Creating new annotation
+      return {
+        lineNumber: editingLine,
+        annotationId: null,
+        initialType: "observation",
+        initialContent: "",
+      };
+    }
+    return undefined;
+  }, [editingAnnotationId, editingLine, fileAnnotations]);
 
-  const toggleFileExpanded = useCallback((fileId: string) => {
-    setExpandedFiles((prev) => {
-      const next = new Set(prev);
-      if (next.has(fileId)) {
-        next.delete(fileId);
-      } else {
-        next.add(fileId);
-      }
-      return next;
-    });
-  }, []);
+  // Callbacks for inline editing - widget passes final values on submit
+  const inlineEditCallbacks = useMemo((): InlineEditCallbacks | undefined => {
+    if (!editingAnnotationId && !editingLine) return undefined;
+
+    return {
+      onSubmit: (type, content) => {
+        if (editingAnnotationId) {
+          // Save edited annotation with type and content from widget
+          if (content.trim()) {
+            updateLineAnnotation(editingAnnotationId, { content: content.trim(), type });
+          }
+          setEditingAnnotationId(null);
+          setEditContent("");
+        } else if (editingLine && selectedFileId && content.trim()) {
+          // Add new annotation with type and content from widget
+          addLineAnnotation({
+            codeFileId: selectedFileId,
+            lineNumber: editingLine,
+            lineContent: lines[editingLine - 1] || "",
+            type: type,
+            content: content.trim(),
+          });
+          setAnnotationContent("");
+          setEditingLine(null);
+        }
+      },
+      onCancel: () => {
+        if (editingAnnotationId) {
+          setEditingAnnotationId(null);
+          setEditContent("");
+        } else {
+          setEditingLine(null);
+          setAnnotationContent("");
+        }
+      },
+    };
+  }, [editingAnnotationId, editingLine, selectedFileId, lines, updateLineAnnotation, addLineAnnotation]);
 
   const handleLineClick = useCallback((lineNumber: number) => {
+    // Stop discovery animation when user interacts
+    setShowDiscoveryAnimation(false);
     setEditingLine(lineNumber);
     setAnnotationContent("");
     setAnnotationType("observation");
   }, []);
 
-  const handleAddAnnotation = useCallback(() => {
-    if (!selectedFileId || !editingLine || !annotationContent.trim()) return;
-
-    addLineAnnotation({
-      codeFileId: selectedFileId,
-      lineNumber: editingLine,
-      lineContent: lines[editingLine - 1] || "",
-      type: annotationType,
-      content: annotationContent.trim(),
-    });
-
-    setAnnotationContent("");
-    setEditingLine(null);
-  }, [selectedFileId, editingLine, annotationContent, annotationType, lines, addLineAnnotation]);
-
-  const handleStartEdit = useCallback((annotation: LineAnnotation) => {
-    setEditingAnnotationId(annotation.id);
-    setEditContent(annotation.content);
-  }, []);
-
-  const handleSaveEdit = useCallback(() => {
-    if (!editingAnnotationId || !editContent.trim()) return;
-    updateLineAnnotation(editingAnnotationId, editContent.trim());
-    setEditingAnnotationId(null);
-    setEditContent("");
-  }, [editingAnnotationId, editContent, updateLineAnnotation]);
-
-  const handleCancelEdit = useCallback(() => {
-    setEditingAnnotationId(null);
-    setEditContent("");
-  }, []);
+  const handleStartEditAnnotation = useCallback((annotationId: string) => {
+    const annotation = fileAnnotations.find(a => a.id === annotationId);
+    if (annotation) {
+      setEditingAnnotationId(annotation.id);
+      setEditContent(annotation.content);
+      setEditType(annotation.type);
+      // Clear new annotation state to avoid conflicts
+      setEditingLine(null);
+    }
+  }, [fileAnnotations]);
 
   // Get file extension from language
   const getExtensionForLanguage = useCallback((language?: string): string => {
@@ -345,141 +403,221 @@ export function CodeEditorPanel({
     return FILE_CATEGORY_COLORS[category];
   }, []);
 
-  // Handle code content edit (in edit mode, we edit the embedded version)
+  // Handle code content edit from CodeMirror
   const handleCodeEdit = useCallback((newContent: string) => {
     setEditModeCode(newContent);
   }, []);
 
-  // Switch to Edit mode: embed annotations into code
+  // Switch to Edit mode: show clean code (annotations preserved in state)
   const handleSwitchToEdit = useCallback(() => {
     if (!selectedFileId) return;
 
-    // Generate code with embedded annotations
-    const annotatedCode = generateAnnotatedCode(currentCode, fileAnnotations);
-    setEditModeCode(annotatedCode);
+    // Just use the clean code - annotations stay in state
+    setEditModeCode(currentCode);
     setEditorMode("edit");
-  }, [selectedFileId, currentCode, fileAnnotations]);
+    setEditingLine(null);
+    setShowAnnotationPanel(false); // Hide annotation panel in edit mode
+  }, [selectedFileId, currentCode]);
 
-  // Switch to Annotate mode: extract annotations from code
+  // Switch to Annotate mode: relocate annotations based on line content
   const handleSwitchToAnnotate = useCallback(() => {
     if (!selectedFileId || !onCodeContentChange) return;
 
-    // Parse the edited code to extract clean code and annotations
-    const lines = editModeCode.split("\n");
-    const cleanLines: string[] = [];
-    const extractedAnnotations: Array<{
-      lineNumber: number;
-      type: LineAnnotationType;
-      content: string;
-      lineContent: string;
-    }> = [];
+    // Update the code content with the edited version
+    onCodeContentChange(selectedFileId, editModeCode);
 
-    let currentCodeLineNumber = 0;
-    let lastCodeLine = "";
+    // Relocate existing annotations based on their lineContent
+    const newLines = editModeCode.split("\n");
 
-    for (const line of lines) {
-      const match = line.match(ANNOTATION_LINE_REGEX);
-      if (match) {
-        // This is an annotation line
-        const [, prefix, content] = match;
-        const type = PREFIX_TO_TYPE[prefix];
-        if (type && currentCodeLineNumber > 0) {
-          extractedAnnotations.push({
-            lineNumber: currentCodeLineNumber,
-            type,
-            content: content.trim(),
-            lineContent: lastCodeLine,
-          });
+    // For each annotation, find where its lineContent now appears
+    fileAnnotations.forEach(ann => {
+      const trimmedTarget = ann.lineContent.trim();
+
+      // Find all lines that match this content
+      const matches: number[] = [];
+      newLines.forEach((line, idx) => {
+        if (line.trim() === trimmedTarget) {
+          matches.push(idx + 1); // 1-indexed line numbers
+        }
+      });
+
+      if (matches.length === 0) {
+        // Line was deleted - mark as orphaned
+        if (!ann.orphaned) {
+          updateLineAnnotation(ann.id, { orphaned: true });
         }
       } else {
-        // This is a code line
-        cleanLines.push(line);
-        currentCodeLineNumber++;
-        lastCodeLine = line;
+        // Find closest match to original position
+        const closest = matches.reduce((prev, curr) =>
+          Math.abs(curr - ann.lineNumber) < Math.abs(prev - ann.lineNumber) ? curr : prev
+        );
+
+        // Update if position changed or was previously orphaned
+        if (ann.lineNumber !== closest || ann.orphaned) {
+          updateLineAnnotation(ann.id, {
+            lineNumber: closest,
+            orphaned: false,
+            lineContent: newLines[closest - 1] // Update to current content
+          });
+        }
       }
-    }
+    });
 
-    const cleanCode = cleanLines.join("\n");
-
-    // Update the actual code content
-    onCodeContentChange(selectedFileId, cleanCode);
-
-    // Clear existing annotations for this file and add extracted ones
-    clearLineAnnotations(selectedFileId);
-
-    // Add the extracted annotations
-    for (const ann of extractedAnnotations) {
-      addLineAnnotation({
-        codeFileId: selectedFileId,
-        lineNumber: ann.lineNumber,
-        lineContent: ann.lineContent,
-        type: ann.type,
-        content: ann.content,
-      });
-    }
-
+    // Trigger discovery animation when entering annotate mode
+    setShowDiscoveryAnimation(true);
+    setAnimationTriggerKey(k => k + 1);
+    setShowAnnotationPanel(true);
     setEditorMode("annotate");
-  }, [selectedFileId, editModeCode, onCodeContentChange, clearLineAnnotations, addLineAnnotation]);
+  }, [selectedFileId, editModeCode, onCodeContentChange, fileAnnotations, updateLineAnnotation]);
 
-  // Download annotated code
+  // Download annotated code as markdown with metadata
   const handleDownloadCode = useCallback(() => {
     if (!selectedFileId || !currentCode) return;
 
-    const annotatedCode = generateAnnotatedCode(currentCode, fileAnnotations);
-    const blob = new Blob([annotatedCode], { type: "text/plain" });
+    const baseName = selectedFile?.name || "code";
+    const language = selectedFile?.language || "";
+
+    // Generate markdown with YAML frontmatter for reimport
+    const annotatedMarkdown = generateAnnotatedMarkdown(
+      currentCode,
+      fileAnnotations,
+      baseName,
+      language
+    );
+
+    const blob = new Blob([annotatedMarkdown], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
 
-    const baseName = selectedFile?.name || "code";
-    // Check if filename already has an extension
-    const hasExtension = /\.[^.]+$/.test(baseName);
-
-    let finalExtension: string;
-    if (hasExtension) {
-      // Use existing extension from filename
-      finalExtension = baseName.match(/\.[^.]+$/)?.[0] || ".txt";
-    } else {
-      // Derive extension from language
-      finalExtension = getExtensionForLanguage(selectedFile?.language);
-    }
-
-    // Remove any existing extension and add -annotated suffix with correct extension
+    // Remove any existing extension and add -annotated.md suffix
     const nameWithoutExt = baseName.replace(/\.[^.]+$/, "");
-    a.download = `${nameWithoutExt}-annotated${finalExtension}`;
+    a.download = `${nameWithoutExt}-annotated.md`;
 
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [selectedFileId, currentCode, fileAnnotations, selectedFile, getExtensionForLanguage]);
+  }, [selectedFileId, currentCode, fileAnnotations, selectedFile]);
+
+  // Handle copy code to clipboard
+  const handleCopyCode = useCallback(() => {
+    if (!currentCode) return;
+    const annotatedCode = generateAnnotatedCode(currentCode, fileAnnotations);
+    navigator.clipboard.writeText(annotatedCode).then(() => {
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    });
+  }, [currentCode, fileAnnotations]);
+
+  // Keyboard shortcut for copy (Cmd/Ctrl+Shift+C)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "c") {
+        e.preventDefault();
+        handleCopyCode();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleCopyCode]);
+
+  // Trigger discovery animation when a file is first loaded in annotate mode
+  const previousFileIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (selectedFileId && selectedFileId !== previousFileIdRef.current && editorMode === "annotate") {
+      setShowDiscoveryAnimation(true);
+      setAnimationTriggerKey(k => k + 1);
+    }
+    previousFileIdRef.current = selectedFileId;
+  }, [selectedFileId, editorMode]);
+
+  // Clear discovery animation flag after animation completes
+  // Only starts timer when selectedFile exists (editor is mounted)
+  useEffect(() => {
+    if (showDiscoveryAnimation && editorMode === "annotate" && selectedFile) {
+      // Allow enough time for the cascade to complete (30ms per line, ~50 lines max = 1.5s + 0.6s animation)
+      const timer = setTimeout(() => {
+        setShowDiscoveryAnimation(false);
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [showDiscoveryAnimation, editorMode, selectedFile]);
+
+  // Handle delete annotation from CodeMirror widget
+  const handleDeleteAnnotation = useCallback((annotationId: string) => {
+    removeLineAnnotation(annotationId);
+  }, [removeLineAnnotation]);
 
   return (
     <div className="flex h-full bg-card border-r border-parchment">
       {/* File tree sidebar */}
-      <div className="w-36 border-r border-parchment bg-cream/30 flex flex-col">
-        <div className="px-3 py-2 border-b border-parchment flex items-center justify-between">
-          <h3 className="font-sans text-[10px] uppercase tracking-widest text-slate-muted">
-            Code Files
-          </h3>
-          {onLoadCode && (
-            <button
-              onClick={onLoadCode}
-              className="p-1 text-slate-muted hover:text-burgundy transition-colors"
-              title="Load code file"
-            >
-              <Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
-            </button>
+      <div className={cn(
+        "border-r border-parchment bg-cream/30 flex flex-col transition-all duration-200",
+        sidebarCollapsed ? "w-8" : "w-36"
+      )}>
+        <div className="px-1 py-1.5 border-b border-parchment flex items-center justify-between">
+          {!sidebarCollapsed && (
+            <>
+              <div className="flex items-center gap-0.5 pl-1">
+                {/* Load code button - leftmost */}
+                {onLoadCode && (
+                  <button
+                    onClick={onLoadCode}
+                    className="p-1 text-slate-muted hover:text-burgundy transition-colors"
+                    title="Load code file"
+                  >
+                    <Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  </button>
+                )}
+                {/* Sort toggle button */}
+                <button
+                  onClick={() => {
+                    // Cycle through: manual -> az -> za -> manual
+                    setFileSortOrder(prev => {
+                      if (prev === "manual") return "az";
+                      if (prev === "az") return "za";
+                      return "manual";
+                    });
+                  }}
+                  className={cn(
+                    "relative p-1 transition-colors",
+                    fileSortOrder !== "manual" ? "text-burgundy" : "text-slate-muted hover:text-burgundy"
+                  )}
+                  title={fileSortOrder === "manual" ? "Sort A→Z" : fileSortOrder === "az" ? "Sort Z→A" : "Manual order"}
+                >
+                  <ArrowUpDown className="h-3 w-3" strokeWidth={1.5} />
+                  {fileSortOrder !== "manual" && (
+                    <span className="absolute -bottom-0.5 -right-0.5 text-[7px] font-bold">
+                      {fileSortOrder === "az" ? "↓" : "↑"}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </>
           )}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="p-1 text-slate-muted hover:text-burgundy transition-colors"
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {sidebarCollapsed ? (
+              <PanelLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+            ) : (
+              <PanelLeftClose className="h-3.5 w-3.5" strokeWidth={1.5} />
+            )}
+          </button>
         </div>
-        <div className="flex-1 overflow-y-auto py-1">
-          {codeFiles.length === 0 ? (
+        {!sidebarCollapsed && (
+          <>
+          <div className="flex-1 min-h-0 overflow-y-auto py-1">
+          {sortedFiles.length === 0 ? (
             <p className="px-3 py-2 font-body text-xs text-slate-muted italic">
               No code uploaded
             </p>
           ) : (
-            <ul className="space-y-0.5">
-              {codeFiles.map((file) => (
+            <ul className="space-y-0">
+              {sortedFiles.map((file, index) => (
                 <li key={file.id} className="group relative">
                   {renamingFileId === file.id ? (
                     <div className="px-2 py-1">
@@ -523,6 +661,36 @@ export function CodeEditorPanel({
                         </button>
                         {fileMenuOpen === file.id && (
                           <div className="absolute left-0 top-full mt-1 w-28 bg-popover rounded-sm shadow-lg border border-parchment py-1 z-50">
+                            {/* Move up/down buttons - only shown in manual sort mode */}
+                            {fileSortOrder === "manual" && onReorderFiles && sortedFiles.length > 1 && (
+                              <>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleMoveFile(file.id, "up");
+                                    setFileMenuOpen(null);
+                                  }}
+                                  disabled={index === 0}
+                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-slate hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
+                                  <ChevronUp className="h-3 w-3" strokeWidth={1.5} />
+                                  Move up
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleMoveFile(file.id, "down");
+                                    setFileMenuOpen(null);
+                                  }}
+                                  disabled={index === sortedFiles.length - 1}
+                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-slate hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
+                                  <ChevronDown className="h-3 w-3" strokeWidth={1.5} />
+                                  Move down
+                                </button>
+                                <div className="my-1 border-t border-parchment" />
+                              </>
+                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -552,7 +720,7 @@ export function CodeEditorPanel({
                                 if (confirm(`Delete "${file.name}"?`)) {
                                   onDeleteFile?.(file.id);
                                   if (selectedFileId === file.id) {
-                                    setSelectedFileId(codeFiles.find(f => f.id !== file.id)?.id || null);
+                                    setSelectedFileId(sortedFiles.find(f => f.id !== file.id)?.id || null);
                                   }
                                 }
                                 setFileMenuOpen(null);
@@ -567,18 +735,10 @@ export function CodeEditorPanel({
                       </div>
                       {/* Filename button */}
                       <button
-                        onClick={() => {
-                          setSelectedFileId(file.id);
-                          toggleFileExpanded(file.id);
-                        }}
-                        className="flex-1 min-w-0 flex items-center gap-1 py-1.5 pr-2 text-left overflow-hidden"
+                        onClick={() => setSelectedFileId(file.id)}
+                        className="flex-1 min-w-0 py-1 pr-2 text-left overflow-hidden"
                         title={file.name}
                       >
-                        {expandedFiles.has(file.id) ? (
-                          <ChevronDown className="h-3 w-3 flex-shrink-0" strokeWidth={1.5} />
-                        ) : (
-                          <ChevronRight className="h-3 w-3 flex-shrink-0" strokeWidth={1.5} />
-                        )}
                         <span className={cn("font-mono text-[10px] truncate", getFileColourClass(file.language))}>
                           {file.name}
                         </span>
@@ -589,7 +749,58 @@ export function CodeEditorPanel({
               ))}
             </ul>
           )}
-        </div>
+          </div>
+
+          {/* Annotation panel - slides up from bottom in Annotate mode */}
+          {editorMode === "annotate" && showAnnotationPanel && (() => {
+            // Group annotations by type
+            const grouped = fileAnnotations.reduce((acc, ann) => {
+              if (!acc[ann.type]) acc[ann.type] = [];
+              acc[ann.type].push(ann);
+              return acc;
+            }, {} as Record<LineAnnotationType, typeof fileAnnotations>);
+
+            // Check for orphaned annotations
+            const orphaned = fileAnnotations.filter(a => a.orphaned);
+
+            return (
+              <div className="mt-auto border-t border-parchment bg-cream/50 px-2 py-1.5 max-h-24 overflow-y-auto">
+                <div className="font-sans text-[9px] uppercase tracking-wider text-slate-muted pb-1 mb-1.5 border-b border-parchment/50">
+                  Annotations ({fileAnnotations.length})
+                </div>
+                <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-[8px]">
+                  {(Object.keys(ANNOTATION_PREFIXES) as LineAnnotationType[]).map(type => {
+                    const anns = grouped[type];
+                    const validAnns = anns ? anns.filter(a => !a.orphaned) : [];
+                    const count = validAnns.length;
+                    return (
+                      <span key={type} className={cn("flex items-center gap-1", count === 0 && "opacity-35")}>
+                        <span className={cn(
+                          "px-1.5 py-0.5 rounded-full text-[7px] font-semibold uppercase text-white min-w-[28px] text-center",
+                          ANNOTATION_PILL_COLORS[type]
+                        )}>
+                          {ANNOTATION_PREFIXES[type]}
+                        </span>
+                        <span className="text-slate-muted font-mono text-[7px]">
+                          {count}
+                        </span>
+                      </span>
+                    );
+                  })}
+                </div>
+                {orphaned.length > 0 && (
+                  <div className="flex items-center gap-1 mt-1 opacity-50">
+                    <span className="px-1.5 py-0.5 rounded-full text-[7px] font-semibold uppercase bg-error/40 text-white">?</span>
+                    <span className="text-slate-muted font-mono text-[7px]">
+                      {orphaned.length} orphaned
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+          </>
+        )}
       </div>
 
       {/* Code editor area */}
@@ -614,69 +825,39 @@ export function CodeEditorPanel({
                   Edit
                 </button>
                 <button
-                  onClick={handleSwitchToAnnotate}
+                  onClick={() => {
+                    if (editorMode === "annotate") {
+                      setShowAnnotationPanel(!showAnnotationPanel);
+                    } else {
+                      handleSwitchToAnnotate();
+                    }
+                  }}
                   className={cn(
                     "px-2 py-0.5 text-[9px] font-sans transition-colors",
                     editorMode === "annotate"
                       ? "bg-burgundy text-ivory"
                       : "bg-card text-slate hover:bg-cream"
                   )}
-                  title="Annotate code (click lines to add annotations)"
+                  title={editorMode === "annotate" ? "Toggle annotation panel" : "Annotate code (click lines to add annotations)"}
                 >
                   Annotate
                 </button>
               </div>
-              <div className="relative">
-                <button
-                  onClick={() => setShowAnnotationHelp(!showAnnotationHelp)}
-                  className="p-1 text-slate-muted hover:text-ink transition-colors"
-                  title="Annotation types"
-                >
-                  <HelpCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
-                </button>
-                {showAnnotationHelp && (
-                  <div className="absolute top-full left-0 mt-1 w-64 bg-popover rounded-sm shadow-lg border border-parchment p-3 z-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-display text-xs text-ink">Annotation Types</h4>
-                      <button
-                        onClick={() => setShowAnnotationHelp(false)}
-                        className="p-0.5 text-slate hover:text-ink"
-                      >
-                        <X className="h-3 w-3" strokeWidth={1.5} />
-                      </button>
-                    </div>
-                    <p className="font-body text-[10px] text-slate mb-2">
-                      Click any line to add an annotation. Types:
-                    </p>
-                    <ul className="space-y-1">
-                      <li className="flex items-start gap-2">
-                        <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.observation)}>Obs</span>
-                        <span className="font-body text-[10px] text-slate">Notable feature or detail</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.question)}>Q</span>
-                        <span className="font-body text-[10px] text-slate">Something to explore further</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.metaphor)}>Met</span>
-                        <span className="font-body text-[10px] text-slate">Figurative interpretation</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.pattern)}>Pat</span>
-                        <span className="font-body text-[10px] text-slate">Recurring structure or idiom</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.context)}>Ctx</span>
-                        <span className="font-body text-[10px] text-slate">Historical or cultural context</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.critique)}>Crit</span>
-                        <span className="font-body text-[10px] text-slate">Critical observation or claim</span>
-                      </li>
-                    </ul>
-                  </div>
+              <button
+                onClick={handleCopyCode}
+                disabled={!currentCode}
+                className={cn(
+                  "p-1 transition-colors disabled:opacity-50",
+                  codeCopied ? "text-green-600" : "text-slate-muted hover:text-ink"
                 )}
-              </div>
+                title="Copy code (⌘⇧C)"
+              >
+                {codeCopied ? (
+                  <span className="text-[9px] font-sans">✓</span>
+                ) : (
+                  <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
+                )}
+              </button>
               <button
                 onClick={handleDownloadCode}
                 disabled={!currentCode}
@@ -754,240 +935,105 @@ export function CodeEditorPanel({
                         <span className="text-[9px] text-slate-muted ml-1">px</span>
                       </div>
                     </div>
-
-                    {/* Bold toggle */}
-                    <div className="flex items-center justify-between">
-                      <label className="font-sans text-[9px] uppercase tracking-wider text-slate-muted">
-                        Bold
-                      </label>
-                      <button
-                        onClick={() => setDisplaySettings(prev => ({ ...prev, bold: !prev.bold }))}
-                        className={cn(
-                          "w-9 h-5 rounded-full transition-colors relative flex-shrink-0",
-                          displaySettings.bold ? "bg-burgundy" : "bg-parchment"
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform",
-                            displaySettings.bold ? "translate-x-4" : "translate-x-0"
-                          )}
-                        />
-                      </button>
-                    </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Right group: annotation count */}
-            <span className="font-sans text-[9px] text-slate-muted">
-              {fileAnnotations.length} annotation{fileAnnotations.length !== 1 ? "s" : ""}
-            </span>
+            {/* Right group: help */}
+            <div className="flex items-center gap-2">
+              {/* Help - annotation types */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowAnnotationHelp(!showAnnotationHelp)}
+                  className={cn(
+                    "p-1 transition-colors",
+                    showAnnotationHelp ? "text-burgundy" : "text-slate-muted hover:text-ink"
+                  )}
+                  title="Annotation types"
+                >
+                  <HelpCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
+                </button>
+                {showAnnotationHelp && (
+                  <div className="absolute top-full right-0 mt-1 w-64 bg-popover rounded-sm shadow-lg border border-parchment p-3 z-50">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-display text-xs text-ink">Annotation Types</h4>
+                      <button
+                        onClick={() => setShowAnnotationHelp(false)}
+                        className="p-0.5 text-slate hover:text-ink"
+                      >
+                        <X className="h-3 w-3" strokeWidth={1.5} />
+                      </button>
+                    </div>
+                    <p className="font-body text-[10px] text-slate mb-2">
+                      Click any line to add an annotation. Types:
+                    </p>
+                    <ul className="space-y-1">
+                      <li className="flex items-start gap-2">
+                        <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.observation)}>Obs</span>
+                        <span className="font-body text-[10px] text-slate">Notable feature or detail</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.question)}>Q</span>
+                        <span className="font-body text-[10px] text-slate">Something to explore further</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.metaphor)}>Met</span>
+                        <span className="font-body text-[10px] text-slate">Figurative interpretation</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.pattern)}>Pat</span>
+                        <span className="font-body text-[10px] text-slate">Recurring structure or idiom</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.context)}>Ctx</span>
+                        <span className="font-body text-[10px] text-slate">Historical or cultural context</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.critique)}>Crit</span>
+                        <span className="font-body text-[10px] text-slate">Critical observation or claim</span>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Code with inline annotations or edit mode */}
-        <div className="flex-1 overflow-auto">
+        {/* Code editor content */}
+        <div className="flex-1 overflow-hidden flex flex-col">
           {!selectedFile ? (
             <div className="flex items-center justify-center h-full text-slate-muted">
               <p className="font-body text-sm">Select or upload a code file to begin analysis</p>
             </div>
           ) : editorMode === "edit" ? (
-            /* Edit mode - editable textarea with embedded annotations */
-            <div className="h-full flex overflow-hidden">
-              {/* Line numbers for edit mode */}
-              <div
-                ref={lineNumbersRef}
-                className="w-12 flex-shrink-0 text-right pr-3 pt-1 text-slate-muted select-none border-r border-parchment/50 bg-cream/30 font-mono overflow-hidden"
-                style={{ fontSize: `${displaySettings.fontSize}px`, lineHeight: "20px" }}
-              >
-                {editModeCode.split("\n").map((_, index) => (
-                  <div key={index + 1}>{index + 1}</div>
-                ))}
-              </div>
-              {/* Editable code area */}
-              <textarea
-                ref={textareaRef}
-                value={editModeCode}
-                onChange={(e) => handleCodeEdit(e.target.value)}
-                onScroll={handleTextareaScroll}
-                className={cn(
-                  "flex-1 px-4 pt-1 font-mono bg-card resize-none focus:outline-none whitespace-pre overflow-auto",
-                  displaySettings.bold && "font-semibold"
-                )}
-                spellCheck={false}
-                wrap="off"
-                style={{ fontSize: `${displaySettings.fontSize}px`, tabSize: 2, lineHeight: "20px" }}
-              />
-            </div>
+            /* Edit mode - CodeMirror with editable content */
+            <CodeMirrorEditor
+              value={editModeCode}
+              onChange={handleCodeEdit}
+              language={selectedFile.language}
+              readOnly={false}
+              fontSize={displaySettings.fontSize}
+              className="flex-1"
+            />
           ) : (
-            /* Annotate mode - line-by-line view with annotations */
-            <div
-              className="leading-relaxed font-mono"
-              style={{ fontSize: `${displaySettings.fontSize}px` }}
-            >
-              {lines.map((line, index) => {
-                const lineNumber = index + 1;
-                const lineAnnotations = annotationsByLine.get(lineNumber) || [];
-                const isEditing = editingLine === lineNumber;
-
-                return (
-                  <div key={lineNumber} className="group">
-                    {/* Code line */}
-                    <div
-                      className={cn(
-                        "flex hover:bg-cream/50 cursor-pointer",
-                        isEditing && "bg-burgundy/5"
-                      )}
-                      onClick={() => handleLineClick(lineNumber)}
-                    >
-                      {/* Line number */}
-                      <div className="w-12 flex-shrink-0 text-right pr-3 py-0.5 text-slate-muted select-none border-r border-parchment/50 bg-cream/30">
-                        {lineNumber}
-                      </div>
-                      {/* Code content */}
-                      <div className={cn(
-                        "flex-1 px-4 py-0.5 whitespace-pre overflow-x-auto",
-                        displaySettings.bold && "font-semibold"
-                      )}>
-                        {line || " "}
-                      </div>
-                      {/* Add annotation button (shown on hover) */}
-                      <div className="w-8 flex-shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MessageSquarePlus
-                          className="h-4 w-4 text-burgundy/70 hover:text-burgundy hover:scale-110 transition-all"
-                          strokeWidth={2}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Inline annotations */}
-                    {lineAnnotations.map((annotation) => (
-                      <div
-                        key={annotation.id}
-                        className="flex border-l-2 border-amber-400 dark:border-amber-500 bg-amber-100/40 dark:bg-amber-900/30"
-                      >
-                        <div className="w-12 flex-shrink-0 border-r border-parchment/50 bg-amber-50/40 dark:bg-amber-900/20" />
-                        <div className="flex-1 px-4 py-1 flex items-start gap-2">
-                          {editingAnnotationId === annotation.id ? (
-                            <div className="flex-1 flex items-center gap-2">
-                              <span className={cn("font-sans text-[10px] font-semibold", ANNOTATION_COLORS[annotation.type])}>
-                                // An:{ANNOTATION_PREFIXES[annotation.type]}:
-                              </span>
-                              <input
-                                type="text"
-                                value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") handleSaveEdit();
-                                  if (e.key === "Escape") handleCancelEdit();
-                                }}
-                                className="flex-1 px-2 py-0.5 text-[11px] border border-parchment rounded bg-card focus:outline-none focus:border-burgundy/50"
-                                autoFocus
-                              />
-                              <button
-                                onClick={handleSaveEdit}
-                                className="px-2 py-0.5 text-[9px] bg-burgundy text-ivory rounded hover:bg-burgundy-dark"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={handleCancelEdit}
-                                className="px-2 py-0.5 text-[9px] text-slate hover:text-ink"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <>
-                              <span className={cn("font-sans text-[10px] font-semibold whitespace-nowrap", ANNOTATION_COLORS[annotation.type])}>
-                                // An:{ANNOTATION_PREFIXES[annotation.type]}:
-                              </span>
-                              <span className="flex-1 text-[11px] text-slate-600 dark:text-slate-300 italic">
-                                {annotation.content}
-                              </span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleStartEdit(annotation);
-                                }}
-                                className="px-1 text-[9px] text-slate-muted hover:text-ink"
-                              >
-                                edit
-                              </button>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  removeLineAnnotation(annotation.id);
-                                }}
-                                className="px-1 text-[9px] text-slate-muted hover:text-error"
-                              >
-                                <X className="h-3 w-3" strokeWidth={1.5} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Add annotation form */}
-                    {isEditing && (
-                      <div className="flex border-l-2 border-burgundy bg-burgundy/5">
-                        <div className="w-12 flex-shrink-0 border-r border-parchment/50 bg-cream/30" />
-                        <div className="flex-1 px-4 py-2 overflow-hidden">
-                          <div className="flex items-center gap-2">
-                            <span className="font-sans text-[10px] text-slate-muted flex-shrink-0">// An:</span>
-                            <select
-                              value={annotationType}
-                              onChange={(e) => setAnnotationType(e.target.value as LineAnnotationType)}
-                              className="px-1 py-0.5 text-[10px] border border-parchment rounded bg-card focus:outline-none focus:border-burgundy/50 flex-shrink-0"
-                            >
-                              {LINE_ANNOTATION_TYPES.map((type) => (
-                                <option key={type} value={type}>
-                                  {ANNOTATION_PREFIXES[type]}
-                                </option>
-                              ))}
-                            </select>
-                            <input
-                              type="text"
-                              value={annotationContent}
-                              onChange={(e) => setAnnotationContent(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && annotationContent.trim()) {
-                                  handleAddAnnotation();
-                                }
-                                if (e.key === "Escape") {
-                                  setEditingLine(null);
-                                }
-                              }}
-                              placeholder="Enter annotation..."
-                              className="flex-1 min-w-0 px-2 py-0.5 text-[11px] border border-parchment rounded bg-card focus:outline-none focus:border-burgundy/50"
-                              autoFocus
-                            />
-                            <div className="flex-shrink-0 flex items-center gap-1">
-                              <button
-                                onClick={handleAddAnnotation}
-                                disabled={!annotationContent.trim()}
-                                className="px-2 py-0.5 text-[9px] bg-burgundy text-ivory rounded hover:bg-burgundy-dark disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                Add
-                              </button>
-                              <button
-                                onClick={() => setEditingLine(null)}
-                                className="px-2 py-0.5 text-[9px] text-slate hover:text-ink border border-parchment rounded"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            /* Annotate mode - CodeMirror with read-only content and annotation widgets */
+            <CodeMirrorEditor
+              value={currentCode}
+              language={selectedFile.language}
+              readOnly={true}
+              fontSize={displaySettings.fontSize}
+              annotations={fileAnnotations}
+              onLineClick={handleLineClick}
+              onEditAnnotation={handleStartEditAnnotation}
+              onDeleteAnnotation={handleDeleteAnnotation}
+              inlineEditState={inlineEditState}
+              inlineEditCallbacks={inlineEditCallbacks}
+              showDiscoveryAnimation={showDiscoveryAnimation}
+              animationTriggerKey={animationTriggerKey}
+              className="flex-1"
+            />
           )}
         </div>
       </div>
@@ -1022,4 +1068,196 @@ export function generateAnnotatedCode(
   });
 
   return result.join("\n");
+}
+
+// Export format types
+export interface AnnotatedMarkdownMetadata {
+  ccsAnnotated: true;
+  version: string;
+  filename: string;
+  language: string;
+  exportedAt: string;
+  annotations: Array<{
+    line: number;
+    type: LineAnnotationType;
+    content: string;
+  }>;
+}
+
+export interface ParsedAnnotatedMarkdown {
+  metadata: AnnotatedMarkdownMetadata;
+  code: string;
+}
+
+/**
+ * Generate a markdown file with YAML frontmatter containing metadata and annotations
+ * This format can be reimported to restore the original file type and annotations
+ */
+export function generateAnnotatedMarkdown(
+  code: string,
+  annotations: LineAnnotation[],
+  filename: string,
+  language: string
+): string {
+  // Build annotation list for YAML
+  const annotationList = annotations.map((ann) => ({
+    line: ann.lineNumber,
+    type: ann.type,
+    content: ann.content,
+  }));
+
+  // Escape special characters in YAML strings
+  const escapeYaml = (str: string) => {
+    if (/[:\n"']/.test(str) || str.includes("#")) {
+      return `"${str.replace(/"/g, '\\"')}"`;
+    }
+    return str;
+  };
+
+  // Build YAML frontmatter
+  const yamlLines = [
+    "---",
+    "ccs-annotated: true",
+    'version: "1.0"',
+    `filename: ${escapeYaml(filename)}`,
+    `language: ${escapeYaml(language || "plain")}`,
+    `exported-at: "${new Date().toISOString()}"`,
+  ];
+
+  if (annotationList.length > 0) {
+    yamlLines.push("annotations:");
+    annotationList.forEach((ann) => {
+      yamlLines.push(`  - line: ${ann.line}`);
+      yamlLines.push(`    type: ${ann.type}`);
+      yamlLines.push(`    content: ${escapeYaml(ann.content)}`);
+    });
+  }
+
+  yamlLines.push("---");
+
+  // Determine the code fence language identifier
+  const fenceLanguage = language?.toLowerCase() || "";
+
+  // Build the complete markdown
+  const parts = [
+    yamlLines.join("\n"),
+    "",
+    "```" + fenceLanguage,
+    code,
+    "```",
+    "",
+  ];
+
+  return parts.join("\n");
+}
+
+/**
+ * Parse an annotated markdown file and extract metadata and code
+ * Returns null if the file is not a valid CCS annotated markdown file
+ */
+export function parseAnnotatedMarkdown(content: string): ParsedAnnotatedMarkdown | null {
+  // Check for YAML frontmatter
+  if (!content.startsWith("---")) {
+    return null;
+  }
+
+  // Find the end of frontmatter
+  const endIndex = content.indexOf("\n---", 3);
+  if (endIndex === -1) {
+    return null;
+  }
+
+  const frontmatter = content.substring(4, endIndex);
+  const body = content.substring(endIndex + 5).trim();
+
+  // Parse YAML manually (simple parser for our specific format)
+  const lines = frontmatter.split("\n");
+  let ccsAnnotated = false;
+  let version = "";
+  let filename = "";
+  let language = "";
+  let exportedAt = "";
+  const annotations: Array<{ line: number; type: LineAnnotationType; content: string }> = [];
+
+  let currentAnnotation: { line?: number; type?: LineAnnotationType; content?: string } | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    // Check for annotation list item
+    if (trimmed.startsWith("- line:")) {
+      // Save previous annotation
+      if (currentAnnotation?.line && currentAnnotation?.type && currentAnnotation?.content !== undefined) {
+        annotations.push({
+          line: currentAnnotation.line,
+          type: currentAnnotation.type,
+          content: currentAnnotation.content,
+        });
+      }
+      currentAnnotation = { line: parseInt(trimmed.replace("- line:", "").trim(), 10) };
+      continue;
+    }
+
+    if (currentAnnotation) {
+      if (trimmed.startsWith("type:")) {
+        const typeValue = trimmed.replace("type:", "").trim() as LineAnnotationType;
+        if (["observation", "question", "metaphor", "pattern", "context", "critique"].includes(typeValue)) {
+          currentAnnotation.type = typeValue;
+        }
+        continue;
+      }
+      if (trimmed.startsWith("content:")) {
+        let contentValue = trimmed.replace("content:", "").trim();
+        // Unescape YAML strings
+        if (contentValue.startsWith('"') && contentValue.endsWith('"')) {
+          contentValue = contentValue.slice(1, -1).replace(/\\"/g, '"');
+        }
+        currentAnnotation.content = contentValue;
+        continue;
+      }
+    }
+
+    // Parse top-level fields
+    if (trimmed === "ccs-annotated: true") {
+      ccsAnnotated = true;
+    } else if (trimmed.startsWith("version:")) {
+      version = trimmed.replace("version:", "").trim().replace(/^"|"$/g, "");
+    } else if (trimmed.startsWith("filename:")) {
+      filename = trimmed.replace("filename:", "").trim().replace(/^"|"$/g, "");
+    } else if (trimmed.startsWith("language:")) {
+      language = trimmed.replace("language:", "").trim().replace(/^"|"$/g, "");
+    } else if (trimmed.startsWith("exported-at:")) {
+      exportedAt = trimmed.replace("exported-at:", "").trim().replace(/^"|"$/g, "");
+    }
+  }
+
+  // Save last annotation
+  if (currentAnnotation?.line && currentAnnotation?.type && currentAnnotation?.content !== undefined) {
+    annotations.push({
+      line: currentAnnotation.line,
+      type: currentAnnotation.type,
+      content: currentAnnotation.content,
+    });
+  }
+
+  if (!ccsAnnotated) {
+    return null;
+  }
+
+  // Extract code from fenced code block
+  const codeBlockMatch = body.match(/```[^\n]*\n([\s\S]*?)```/);
+  const code = codeBlockMatch ? codeBlockMatch[1].replace(/\n$/, "") : body;
+
+  return {
+    metadata: {
+      ccsAnnotated: true,
+      version,
+      filename,
+      language,
+      exportedAt,
+      annotations,
+    },
+    code,
+  };
 }

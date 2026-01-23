@@ -3080,6 +3080,7 @@ export default function ConversationPage() {
 interface MessageBubbleProps {
   message: Message;
   fontSize?: number;
+  userName?: string;
   isCopied?: boolean;
   isFavourite?: boolean;
   onCopy?: (messageId: string, content: string) => void;
@@ -3089,6 +3090,7 @@ interface MessageBubbleProps {
 function MessageBubble({
   message,
   fontSize = 14,
+  userName,
   isCopied = false,
   isFavourite = false,
   onCopy,

@@ -22,6 +22,8 @@ import {
   FolderOpen,
   FileText,
   FileDown,
+  FilePlus2,
+  AlertTriangle,
   Minus,
   Plus,
   Eye,
@@ -34,7 +36,7 @@ import {
   Code,
   ChevronDown,
 } from "lucide-react";
-import { CodeEditorPanel, generateAnnotatedCode } from "@/components/code";
+import { CodeEditorPanel, generateAnnotatedCode, parseAnnotatedMarkdown } from "@/components/code";
 import { ContextPreview } from "@/components/chat";
 import { GuidedPrompts } from "@/components/prompts";
 import { SettingsModal } from "@/components/settings/SettingsModal";
@@ -110,6 +112,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     addCode,
     removeCode,
     updateCode,
+    reorderCodeFiles,
     updateSettings,
     importSession,
     setLanguageOverride,
@@ -119,6 +122,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     hasSavedSession,
     setCodeContent,
     removeCodeContent,
+    addLineAnnotation,
   } = useSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured } = useAISettings();
   const { settings: appSettings, getFontSizes, setModeCodeFontSize, setModeChatFontSize, getDisplayName, profile } = useAppSettings();
@@ -152,6 +156,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [showFontSizePopover, setShowFontSizePopover] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveModalName, setSaveModalName] = useState("");
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
 
   // Message interaction state
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
@@ -432,6 +437,54 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
         const text = await file.text();
         const extension = file.name.split(".").pop()?.toLowerCase() || "";
 
+        // Check if this is a CCS annotated markdown file
+        if (extension === "md" && text.startsWith("---")) {
+          const parsed = parseAnnotatedMarkdown(text);
+          if (parsed) {
+            // This is a CCS annotated file - restore it with original metadata
+            const { metadata, code } = parsed;
+
+            // Use original filename or current filename (minus -annotated.md suffix)
+            const originalName = metadata.filename || file.name.replace(/-annotated\.md$/, "");
+
+            // Add code reference with original language
+            const fileId = addCode({
+              name: originalName,
+              language: metadata.language || undefined,
+              source: "upload",
+              size: code.length,
+            });
+
+            // Store the clean code content
+            setCodeContent(fileId, code);
+
+            // Restore annotations
+            for (const ann of metadata.annotations) {
+              // Get the line content from the code
+              const lines = code.split("\n");
+              const lineContent = lines[ann.line - 1] || "";
+
+              addLineAnnotation({
+                codeFileId: fileId,
+                lineNumber: ann.line,
+                lineContent,
+                type: ann.type,
+                content: ann.content,
+              });
+            }
+
+            // Add message
+            const annotationCount = metadata.annotations.length;
+            addMessage({
+              role: "user",
+              content: `I've restored **${originalName}**${metadata.language ? ` (${metadata.language})` : ""} with ${annotationCount} annotation${annotationCount !== 1 ? "s" : ""}.`,
+            });
+
+            return;
+          }
+        }
+
+        // Regular file upload - not CCS annotated
         const languageMap: Record<string, string> = {
           js: "javascript", ts: "typescript", py: "python", rb: "ruby",
           c: "c", cpp: "cpp", h: "c", java: "java", go: "go", rs: "rust",
@@ -462,7 +515,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
         if (fileInputRef.current) fileInputRef.current.value = "";
       }
     },
-    [addCode, addMessage]
+    [addCode, addMessage, setCodeContent, addLineAnnotation]
   );
 
   // Handle paste code
@@ -542,6 +595,18 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     // Close modal
     setShowSaveModal(false);
   }, [session, saveModalName]);
+
+  // Handle new project - clears current session after confirmation
+  const handleNewProject = useCallback(() => {
+    // Clear the session for the current mode
+    clearModeSession(session.mode);
+    // Reset local state
+    setProjectName("");
+    setFavouriteMessages(new Set());
+    setCodePanelWidth(DEFAULT_CODE_PANEL_WIDTH);
+    // Close modal
+    setShowNewProjectModal(false);
+  }, [clearModeSession, session.mode]);
 
   // Check if there are unsaved changes (more than just the initial assistant message)
   // Note: We use a ref to access latest session data to avoid stale closure issues
@@ -958,6 +1023,13 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             onChange={handleLoadSession}
           />
           <button
+            onClick={() => setShowNewProjectModal(true)}
+            className="p-1.5 text-slate hover:text-ink"
+            title="New project"
+          >
+            <FilePlus2 className="h-4 w-4" strokeWidth={1.5} />
+          </button>
+          <button
             onClick={handleSaveSession}
             className="p-1.5 text-slate hover:text-ink"
             title="Save session"
@@ -1027,6 +1099,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             onRenameFile={handleRenameFile}
             onDuplicateFile={handleDuplicateFile}
             onLoadCode={() => fileInputRef.current?.click()}
+            onReorderFiles={reorderCodeFiles}
           />
         </div>
 
@@ -1494,6 +1567,52 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                 className="btn-editorial-primary text-[11px] px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Project Confirmation Modal */}
+      {showNewProjectModal && (
+        <div
+          className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+          onClick={() => setShowNewProjectModal(false)}
+        >
+          <div
+            className="bg-popover rounded-sm shadow-editorial-lg p-4 w-full max-w-sm mx-4 border border-parchment"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-display text-sm text-foreground flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" strokeWidth={1.5} />
+                New Project
+              </h3>
+              <button
+                onClick={() => setShowNewProjectModal(false)}
+                className="text-slate-muted hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" strokeWidth={1.5} />
+              </button>
+            </div>
+            <p className="font-body text-[11px] text-slate mb-3">
+              This will clear your current session including all code files, annotations, and chat history. This action cannot be undone.
+            </p>
+            <p className="font-body text-[11px] text-amber-700 dark:text-amber-400 mb-4">
+              Make sure to save your session first if you want to keep your work.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowNewProjectModal(false)}
+                className="text-[11px] px-3 py-1.5 rounded-sm font-body border border-parchment-dark text-slate hover:bg-cream hover:text-ink transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleNewProject}
+                className="text-[11px] px-3 py-1.5 rounded-sm font-body bg-red-600 text-white hover:bg-red-700 transition-colors"
+              >
+                Clear and Start New
               </button>
             </div>
           </div>

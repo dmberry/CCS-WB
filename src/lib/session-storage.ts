@@ -5,6 +5,7 @@ import type { Session, EntryMode } from "@/types";
 
 const STORAGE_KEY_PREFIX = "ccs-session-";
 const STORAGE_VERSION = "1";
+const LAST_MODE_KEY = "ccs-last-mode";
 
 interface StoredSession {
   version: string;
@@ -123,5 +124,33 @@ export function getSessionInfo(mode: EntryMode): { exists: boolean; savedAt?: st
     };
   } catch {
     return { exists: false };
+  }
+}
+
+/**
+ * Save the last active mode
+ */
+export function saveLastMode(mode: EntryMode): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(LAST_MODE_KEY, mode);
+  } catch (error) {
+    console.warn("Failed to save last mode:", error);
+  }
+}
+
+/**
+ * Get the last active mode
+ */
+export function getLastMode(): EntryMode | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const mode = localStorage.getItem(LAST_MODE_KEY);
+    if (mode && ["critique", "archaeology", "interpret", "create"].includes(mode)) {
+      return mode as EntryMode;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }

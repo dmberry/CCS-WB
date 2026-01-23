@@ -110,6 +110,7 @@ export interface LineAnnotation {
   type: 'observation' | 'question' | 'metaphor' | 'pattern' | 'context' | 'critique';
   content: string;          // The annotation text
   createdAt: string;
+  orphaned?: boolean;       // True if the annotated line was deleted during editing
 }
 
 export type LineAnnotationType = LineAnnotation['type'];
