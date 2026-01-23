@@ -19,6 +19,7 @@ import {
   keymap,
 } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { search, searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { useAppSettings } from "@/context/AppSettingsContext";
 import { getCCSTheme, getFontSizeTheme } from "./cm-theme";
 import { loadLanguage, normaliseLanguage, getLanguageColor } from "./cm-languages";
@@ -125,7 +126,9 @@ export function CodeMirrorEditor({
       rectangularSelection(),
       crosshairCursor(),
       history(),
-      keymap.of([...defaultKeymap, ...historyKeymap]),
+      search({ top: true }), // Enable search panel (Cmd+F)
+      highlightSelectionMatches(), // Highlight all matches of selection
+      keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
       EditorView.lineWrapping,
     ],
     []

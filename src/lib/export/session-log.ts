@@ -38,6 +38,26 @@ export const LINE_ANNOTATION_TYPES = [
   "critique",
 ] as const;
 
+// Annotation type colors for PDF export (RGB values)
+export const ANNOTATION_COLORS: Record<string, { r: number; g: number; b: number }> = {
+  observation: { r: 59, g: 130, b: 246 },   // Blue
+  question: { r: 245, g: 158, b: 11 },      // Amber
+  metaphor: { r: 168, g: 85, b: 247 },      // Purple
+  pattern: { r: 34, g: 197, b: 94 },        // Green
+  context: { r: 100, g: 116, b: 139 },      // Slate
+  critique: { r: 124, g: 45, b: 54 },       // Burgundy
+};
+
+// Annotation type prefixes (abbreviations)
+export const ANNOTATION_PREFIXES: Record<string, string> = {
+  observation: "Obs",
+  question: "Q",
+  metaphor: "Met",
+  pattern: "Pat",
+  context: "Ctx",
+  critique: "Crit",
+};
+
 export interface SessionLogData {
   metadata: {
     projectName: string;
@@ -459,6 +479,28 @@ export function exportSessionLogPDF(
   const contentWidth = pageWidth - 2 * margin;
   let yPos = margin;
 
+  // Helper to draw a colored pill badge
+  const drawPill = (text: string, x: number, y: number, color: { r: number; g: number; b: number }) => {
+    const pillWidth = doc.getTextWidth(text) + 4;
+    const pillHeight = 4;
+    const radius = 2;
+
+    // Draw rounded rectangle background
+    doc.setFillColor(color.r, color.g, color.b);
+    doc.roundedRect(x, y - 3, pillWidth, pillHeight, radius, radius, "F");
+
+    // Draw white text
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.text(text, x + 2, y - 0.5);
+
+    // Reset text color
+    doc.setTextColor(0, 0, 0);
+
+    return pillWidth;
+  };
+
   // Helper to add wrapped text (sanitises unicode for PDF compatibility)
   const addWrappedText = (text: string, fontSize: number, isBold = false) => {
     const safeText = sanitiseForPDF(text);
@@ -555,9 +597,41 @@ export function exportSessionLogPDF(
     10
   );
   addWrappedText(
-    `Code Files: ${log.statistics.codeFiles} | Annotations: ${log.statistics.totalAnnotations}`,
+    `Code Files: ${log.statistics.codeFiles} | Total Annotations: ${log.statistics.totalAnnotations}`,
     10
   );
+
+  // Annotation breakdown with colored pills
+  if (log.statistics.totalAnnotations > 0) {
+    yPos += 2;
+    let xPos = margin;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("Annotations by type: ", xPos, yPos);
+    xPos += doc.getTextWidth("Annotations by type: ") + 2;
+
+    LINE_ANNOTATION_TYPES.forEach((type) => {
+      const count = log.statistics.annotationsByType[type] || 0;
+      if (count > 0) {
+        const prefix = ANNOTATION_PREFIXES[type] || type;
+        const color = ANNOTATION_COLORS[type] || { r: 128, g: 128, b: 128 };
+        const pillWidth = drawPill(prefix, xPos, yPos, color);
+        xPos += pillWidth + 2;
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text(`${count}`, xPos, yPos);
+        xPos += doc.getTextWidth(`${count}`) + 4;
+
+        // Wrap to next line if needed
+        if (xPos > pageWidth - margin - 20) {
+          xPos = margin + 30;
+          yPos += 5;
+        }
+      }
+    });
+    yPos += 5;
+  }
+
   if (log.statistics.critiqueArtefacts > 0) {
     addWrappedText(
       `Critique Artefacts: ${log.statistics.critiqueArtefacts}`,
@@ -584,7 +658,38 @@ export function exportSessionLogPDF(
         addWrappedText(meta, 9);
       }
 
-      addWrappedText(`Annotations: ${file.annotations?.length || 0}`, 9);
+      // Show annotation count with colored pills per type
+      const annCount = file.annotations?.length || 0;
+      if (annCount > 0 && file.annotations) {
+        let xPos = margin;
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Annotations (${annCount}): `, xPos, yPos);
+        xPos += doc.getTextWidth(`Annotations (${annCount}): `) + 2;
+
+        // Group annotations by type and show pills
+        const byType: Record<string, number> = {};
+        file.annotations.forEach(ann => {
+          byType[ann.type] = (byType[ann.type] || 0) + 1;
+        });
+
+        LINE_ANNOTATION_TYPES.forEach((type) => {
+          const count = byType[type] || 0;
+          if (count > 0) {
+            const prefix = ANNOTATION_PREFIXES[type] || type;
+            const color = ANNOTATION_COLORS[type] || { r: 128, g: 128, b: 128 };
+            const pillWidth = drawPill(prefix, xPos, yPos, color);
+            xPos += pillWidth + 2;
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "normal");
+            doc.text(`${count}`, xPos, yPos);
+            xPos += doc.getTextWidth(`${count}`) + 3;
+          }
+        });
+        yPos += 5;
+      } else {
+        addWrappedText(`Annotations: 0`, 9);
+      }
 
       // Show first 50 lines of annotated code
       if (file.annotatedContent) {

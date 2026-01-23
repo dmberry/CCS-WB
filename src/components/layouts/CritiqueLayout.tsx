@@ -36,6 +36,7 @@ import {
   Code,
   ChevronDown,
   HelpCircle,
+  Search,
 } from "lucide-react";
 import { CodeEditorPanel, generateAnnotatedCode, parseAnnotatedMarkdown } from "@/components/code";
 import { ContextPreview } from "@/components/chat";
@@ -163,6 +164,11 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   // Message interaction state
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [favouriteMessages, setFavouriteMessages] = useState<Set<string>>(new Set());
+
+  // Chat search state
+  const [showChatSearch, setShowChatSearch] = useState(false);
+  const [chatSearchQuery, setChatSearchQuery] = useState("");
+  const chatSearchInputRef = useRef<HTMLInputElement>(null);
 
   // Resizable panel state (percentage width for code panel)
   const DEFAULT_CODE_PANEL_WIDTH = 70;
@@ -703,6 +709,18 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
         return;
       }
 
+      // Cmd/Ctrl + Shift + F - Toggle chat search
+      if (isMod && e.shiftKey && e.key === 'f') {
+        e.preventDefault();
+        setShowChatSearch(prev => !prev);
+        if (!showChatSearch) {
+          setTimeout(() => chatSearchInputRef.current?.focus(), 50);
+        } else {
+          setChatSearchQuery("");
+        }
+        return;
+      }
+
       // Escape - Close popovers/modals
       if (e.key === 'Escape') {
         setShowFontSizePopover(false);
@@ -712,6 +730,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
         setShowCodeInput(false);
         setShowSettingsModal(false);
         setShowExportModal(false);
+        setShowChatSearch(false);
+        setChatSearchQuery("");
         return;
       }
     };
@@ -1127,6 +1147,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                         <span><strong>⌘O</strong> - Open project</span>
                         <span><strong>⌘E</strong> - Export log</span>
                         <span><strong>⌘/</strong> - Focus chat</span>
+                        <span><strong>⌘F</strong> - Search code</span>
+                        <span><strong>⌘⇧F</strong> - Search chat</span>
                       </div>
                     </div>
                   </div>
@@ -1182,9 +1204,51 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
         {/* Right: Chat Panel - only show when AI enabled */}
         {aiEnabled && (
         <div className="flex-1 flex flex-col min-w-0">
+          {/* Chat search bar */}
+          {showChatSearch && (
+            <div className="border-b border-parchment bg-cream/50 px-3 py-2 flex items-center gap-2">
+              <Search className="h-3.5 w-3.5 text-slate-muted flex-shrink-0" strokeWidth={1.5} />
+              <input
+                ref={chatSearchInputRef}
+                type="text"
+                value={chatSearchQuery}
+                onChange={(e) => setChatSearchQuery(e.target.value)}
+                placeholder="Search messages..."
+                className="flex-1 bg-transparent text-sm text-ink placeholder:text-slate-muted focus:outline-none font-body"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setShowChatSearch(false);
+                    setChatSearchQuery("");
+                  }
+                }}
+              />
+              {chatSearchQuery && (
+                <span className="text-[10px] text-slate-muted">
+                  {session.messages.filter(m =>
+                    m.content.toLowerCase().includes(chatSearchQuery.toLowerCase())
+                  ).length} found
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setShowChatSearch(false);
+                  setChatSearchQuery("");
+                }}
+                className="p-0.5 text-slate-muted hover:text-ink"
+              >
+                <X className="h-3.5 w-3.5" strokeWidth={1.5} />
+              </button>
+            </div>
+          )}
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {session.messages.map((message) => (
+            {session.messages
+              .filter(message =>
+                !chatSearchQuery ||
+                message.content.toLowerCase().includes(chatSearchQuery.toLowerCase())
+              )
+              .map((message) => (
               <div
                 key={message.id}
                 className={cn(
@@ -1400,6 +1464,25 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                         <Eye className="h-4 w-4" strokeWidth={1.5} />
                       </button>
                     </>
+                  )}
+                  {session.messages.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setShowChatSearch(!showChatSearch);
+                        if (!showChatSearch) {
+                          setTimeout(() => chatSearchInputRef.current?.focus(), 50);
+                        } else {
+                          setChatSearchQuery("");
+                        }
+                      }}
+                      className={cn(
+                        "p-1.5 rounded-md transition-colors",
+                        showChatSearch ? "text-burgundy" : "text-slate hover:text-ink"
+                      )}
+                      title="Search messages (Cmd+Shift+F)"
+                    >
+                      <Search className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
                   )}
                   {(GUIDED_PROMPTS[session.mode]?.[session.currentPhase]?.length ?? 0) > 0 && (
                     <button

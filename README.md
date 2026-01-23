@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 2.0.0** | CCS Methodology v2.5
+**Version 2.1.0** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -279,6 +279,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 2.1.0 | **Search functionality**: Code search (Cmd+F) in editor, chat search (Cmd+Shift+F) to filter messages; Help popover (?) with interface guide and keyboard shortcuts; PDF export includes coloured annotation type pills |
 | 2.0.0 | **New annotation system**: Type badge pills with colour coding, annotations fade into background and brighten on hover, annotation summary panel in file tree showing counts by type in a grid layout, improved visual hierarchy for distraction-free reading |
 | 1.8.2 | User profile (name/initials, affiliation, bio) displayed in chat and included in session exports, anonymous mode option, unified muted timestamp styling |
 | 1.8.1 | User-editable AI models configuration via `public/models.md` file (add/remove models without code changes) |

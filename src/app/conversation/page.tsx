@@ -36,6 +36,7 @@ import {
   ArrowUp,
   SlidersHorizontal,
   ChevronDown,
+  Search,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { SettingsModal } from "@/components/settings/SettingsModal";
@@ -146,10 +147,14 @@ export default function ConversationPage() {
   const [showContextPreview, setShowContextPreview] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [favouriteMessages, setFavouriteMessages] = useState<Set<string>>(new Set());
+  // Chat search state
+  const [showChatSearch, setShowChatSearch] = useState(false);
+  const [chatSearchQuery, setChatSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sessionLoadInputRef = useRef<HTMLInputElement>(null);
+  const chatSearchInputRef = useRef<HTMLInputElement>(null);
   const hasAddedOpeningMessage = useRef(false);
   const critiqueLayoutRef = useRef<CritiqueLayoutRef>(null);
 
@@ -922,12 +927,26 @@ export default function ConversationPage() {
         return;
       }
 
+      // Cmd/Ctrl + Shift + F - Toggle chat search
+      if (isMod && e.shiftKey && e.key === 'f') {
+        e.preventDefault();
+        setShowChatSearch(prev => !prev);
+        if (!showChatSearch) {
+          setTimeout(() => chatSearchInputRef.current?.focus(), 50);
+        } else {
+          setChatSearchQuery("");
+        }
+        return;
+      }
+
       // Escape - Close popovers/modals
       if (e.key === 'Escape') {
         setShowFontSizePopover(false);
         setShowGuidedPrompts(false);
         setShowContextPreview(false);
         setShowExperienceHelp(false);
+        setShowChatSearch(false);
+        setChatSearchQuery("");
         return;
       }
     };
@@ -2481,9 +2500,51 @@ export default function ConversationPage() {
             !isMobile && isContextPanelOpen ? "md:mr-80" : ""
           )}
         >
+          {/* Chat search bar */}
+          {showChatSearch && (
+            <div className="border-b border-parchment bg-cream/50 px-4 py-2 flex items-center gap-2">
+              <Search className="h-3.5 w-3.5 text-slate-muted flex-shrink-0" strokeWidth={1.5} />
+              <input
+                ref={chatSearchInputRef}
+                type="text"
+                value={chatSearchQuery}
+                onChange={(e) => setChatSearchQuery(e.target.value)}
+                placeholder="Search messages..."
+                className="flex-1 bg-transparent text-sm text-ink placeholder:text-slate-muted focus:outline-none font-body"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") {
+                    setShowChatSearch(false);
+                    setChatSearchQuery("");
+                  }
+                }}
+              />
+              {chatSearchQuery && (
+                <span className="text-[10px] text-slate-muted">
+                  {session.messages.filter(m =>
+                    m.content.toLowerCase().includes(chatSearchQuery.toLowerCase())
+                  ).length} found
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setShowChatSearch(false);
+                  setChatSearchQuery("");
+                }}
+                className="p-0.5 text-slate-muted hover:text-ink"
+              >
+                <X className="h-3.5 w-3.5" strokeWidth={1.5} />
+              </button>
+            </div>
+          )}
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-5">
-            {session.messages.map((message) => (
+            {session.messages
+              .filter(message =>
+                !chatSearchQuery ||
+                message.content.toLowerCase().includes(chatSearchQuery.toLowerCase())
+              )
+              .map((message) => (
               <MessageBubble
                 key={message.id}
                 message={message}
@@ -2662,6 +2723,28 @@ export default function ConversationPage() {
                       title="Guided prompts"
                     >
                       <Lightbulb className="h-4 w-4" strokeWidth={1.5} />
+                    </button>
+                  )}
+                  {/* Chat search button - only show when there are messages */}
+                  {session.messages.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setShowChatSearch(!showChatSearch);
+                        if (!showChatSearch) {
+                          setTimeout(() => chatSearchInputRef.current?.focus(), 50);
+                        } else {
+                          setChatSearchQuery("");
+                        }
+                      }}
+                      className={cn(
+                        "p-1.5 rounded-md transition-colors",
+                        showChatSearch
+                          ? "text-burgundy"
+                          : "text-slate hover:text-ink"
+                      )}
+                      title="Search messages (Cmd+Shift+F)"
+                    >
+                      <Search className="h-4 w-4" strokeWidth={1.5} />
                     </button>
                   )}
                 </div>
