@@ -58,11 +58,12 @@ export interface AIValidationResult {
 }
 
 // Default settings for new users - Ollama is default for local/free usage
+// AI starts disabled so users must configure and verify their connection first
 export const DEFAULT_AI_SETTINGS: AISettings = {
   provider: "ollama",
   model: "llama3.2",
   baseUrl: "http://localhost:11434",
-  aiEnabled: true,
+  aiEnabled: false, // Start disabled - user must enable after configuring
   beDirectMode: false, // Default to graduated Socratic approach
   teachMeMode: false, // Default to dialogue-based learning
 };

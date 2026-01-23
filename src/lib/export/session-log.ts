@@ -752,6 +752,15 @@ export function exportSessionLogPDF(
             const annotationType = prefixToType[prefix] || "observation";
             const color = ANNOTATION_COLORS[annotationType] || { r: 128, g: 128, b: 128 };
 
+            // Draw background highlight for annotation line (same as code lines)
+            const bgColor = ANNOTATION_BG_COLORS[annotationType] || ANNOTATION_BG_COLORS.observation;
+            doc.setFillColor(bgColor.r, bgColor.g, bgColor.b);
+            doc.rect(margin - 1, yPos - 2.5, contentWidth + 2, 3.5, "F");
+
+            // Draw right-side indicator bar
+            doc.setFillColor(color.r, color.g, color.b);
+            doc.rect(margin + contentWidth - 1, yPos - 2.5, 1.5, 3.5, "F");
+
             // Calculate indent width
             const indentWidth = indent ? doc.getTextWidth(indent) : 0;
             let xPos = margin + indentWidth;

@@ -11,6 +11,7 @@ import {
   Trash2,
   Pencil,
   Copy,
+  Check,
   Upload,
   Settings2,
   Minus,
@@ -1760,15 +1761,15 @@ export function CodeEditorPanel({
                     onClick={handleCopyCode}
                     disabled={!currentCode}
                     className={cn(
-                      "p-1 transition-colors disabled:opacity-50",
+                      "p-1 w-6 h-6 flex items-center justify-center transition-colors disabled:opacity-50",
                       codeCopied ? "text-green-600" : "text-slate-muted hover:text-ink"
                     )}
                     title="Copy code (⌘⇧C)"
                   >
                     {codeCopied ? (
-                      <span className="text-[9px] font-sans">✓</span>
+                      <Check className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={1.5} />
                     ) : (
-                      <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      <Copy className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={1.5} />
                     )}
                   </button>
                 </>
