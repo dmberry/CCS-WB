@@ -1,0 +1,252 @@
+/**
+ * Supabase Database Types
+ *
+ * These types match the schema defined in WORKING.md.
+ * When the schema changes, update these types to match.
+ *
+ * For full type safety, generate types from your Supabase project:
+ * npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/lib/supabase/types.ts
+ */
+
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
+// Annotation types matching the app's LineAnnotationType
+export type AnnotationType =
+  | "observation"
+  | "question"
+  | "metaphor"
+  | "pattern"
+  | "context"
+  | "critique";
+
+// Collaborator roles
+export type CollaboratorRole = "viewer" | "editor" | "admin";
+
+export interface Database {
+  public: {
+    Tables: {
+      profiles: {
+        Row: {
+          id: string;
+          display_name: string | null;
+          initials: string | null;
+          affiliation: string | null;
+          avatar_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          display_name?: string | null;
+          initials?: string | null;
+          affiliation?: string | null;
+          avatar_url?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          display_name?: string | null;
+          initials?: string | null;
+          affiliation?: string | null;
+          avatar_url?: string | null;
+          created_at?: string;
+        };
+      };
+      projects: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          owner_id: string;
+          is_public: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          owner_id: string;
+          is_public?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          owner_id?: string;
+          is_public?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      project_collaborators: {
+        Row: {
+          project_id: string;
+          user_id: string;
+          role: CollaboratorRole;
+          joined_at: string;
+        };
+        Insert: {
+          project_id: string;
+          user_id: string;
+          role?: CollaboratorRole;
+          joined_at?: string;
+        };
+        Update: {
+          project_id?: string;
+          user_id?: string;
+          role?: CollaboratorRole;
+          joined_at?: string;
+        };
+      };
+      code_files: {
+        Row: {
+          id: string;
+          project_id: string;
+          filename: string;
+          language: string | null;
+          content: string;
+          original_content: string | null;
+          uploaded_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          filename: string;
+          language?: string | null;
+          content: string;
+          original_content?: string | null;
+          uploaded_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          filename?: string;
+          language?: string | null;
+          content?: string;
+          original_content?: string | null;
+          uploaded_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      annotations: {
+        Row: {
+          id: string;
+          file_id: string;
+          user_id: string | null;
+          line_number: number;
+          end_line_number: number | null;
+          line_content: string | null;
+          type: AnnotationType;
+          content: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          file_id: string;
+          user_id?: string | null;
+          line_number: number;
+          end_line_number?: number | null;
+          line_content?: string | null;
+          type: AnnotationType;
+          content: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          file_id?: string;
+          user_id?: string | null;
+          line_number?: number;
+          end_line_number?: number | null;
+          line_content?: string | null;
+          type?: AnnotationType;
+          content?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      chat_messages: {
+        Row: {
+          id: string;
+          project_id: string;
+          user_id: string | null;
+          content: string;
+          is_ai: boolean;
+          is_marked: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          user_id?: string | null;
+          content: string;
+          is_ai?: boolean;
+          is_marked?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          user_id?: string | null;
+          content?: string;
+          is_ai?: boolean;
+          is_marked?: boolean;
+          created_at?: string;
+        };
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: {
+      annotation_type: AnnotationType;
+      collaborator_role: CollaboratorRole;
+    };
+  };
+}
+
+// Convenience types for row data
+export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+export type Project = Database["public"]["Tables"]["projects"]["Row"];
+export type ProjectCollaborator = Database["public"]["Tables"]["project_collaborators"]["Row"];
+export type CodeFile = Database["public"]["Tables"]["code_files"]["Row"];
+export type Annotation = Database["public"]["Tables"]["annotations"]["Row"];
+export type ChatMessage = Database["public"]["Tables"]["chat_messages"]["Row"];
+
+// Types for inserting data
+export type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
+export type ProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
+export type CodeFileInsert = Database["public"]["Tables"]["code_files"]["Insert"];
+export type AnnotationInsert = Database["public"]["Tables"]["annotations"]["Insert"];
+export type ChatMessageInsert = Database["public"]["Tables"]["chat_messages"]["Insert"];
+
+// Extended types with relations
+export interface ProjectWithOwner extends Project {
+  owner?: Profile;
+}
+
+export interface ProjectWithCollaborators extends Project {
+  owner?: Profile;
+  collaborators?: (ProjectCollaborator & { user?: Profile })[];
+}
+
+export interface AnnotationWithUser extends Annotation {
+  user?: Profile;
+}
+
+export interface CodeFileWithAnnotations extends CodeFile {
+  annotations?: AnnotationWithUser[];
+}

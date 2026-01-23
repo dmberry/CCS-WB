@@ -4,6 +4,8 @@ import "./globals.css";
 import { SessionProvider } from "@/context/SessionContext";
 import { AISettingsProvider } from "@/context/AISettingsContext";
 import { AppSettingsProvider } from "@/context/AppSettingsContext";
+import { AuthProvider } from "@/context/AuthContext";
+import { LoginModal } from "@/components/auth/LoginModal";
 
 const libreBaskerville = Libre_Baskerville({
   subsets: ["latin"],
@@ -29,7 +31,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "CCS-WB",
+  title: "CCS Workbench",
   description:
     "Critical Code Studies Laboratory: Close reading and hermeneutic analysis of software as cultural artefact",
   keywords: [
@@ -55,7 +57,10 @@ export default function RootLayout({
       <body className="font-body antialiased bg-ivory text-ink selection:bg-burgundy/20 selection:text-burgundy-900">
         <AppSettingsProvider>
           <AISettingsProvider>
-            <SessionProvider>{children}</SessionProvider>
+            <AuthProvider>
+              <SessionProvider>{children}</SessionProvider>
+              <LoginModal />
+            </AuthProvider>
           </AISettingsProvider>
         </AppSettingsProvider>
       </body>
