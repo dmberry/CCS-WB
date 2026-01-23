@@ -10,14 +10,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
-import { User, LogOut, Settings, Users, ChevronDown, Loader2 } from "lucide-react";
+import { User, LogOut, Settings, Users, Loader2 } from "lucide-react";
 
 interface UserMenuProps {
-  variant?: "compact" | "full";
   className?: string;
 }
 
-export function UserMenu({ variant = "compact", className }: UserMenuProps) {
+export function UserMenu({ className }: UserMenuProps) {
   const {
     isSupabaseEnabled,
     isAuthenticated,
@@ -53,8 +52,8 @@ export function UserMenu({ variant = "compact", className }: UserMenuProps) {
   // Loading state
   if (isLoading) {
     return (
-      <div className={cn("flex items-center gap-2", className)}>
-        <Loader2 className="h-4 w-4 animate-spin text-slate-muted" />
+      <div className={cn("flex items-center", className)}>
+        <Loader2 className="h-3 w-3 animate-spin text-slate" />
       </div>
     );
   }
@@ -65,14 +64,14 @@ export function UserMenu({ variant = "compact", className }: UserMenuProps) {
       <button
         onClick={() => setShowLoginModal(true)}
         className={cn(
-          "flex items-center gap-1.5 px-2.5 py-1.5",
-          "font-sans text-caption text-slate-muted",
+          "flex items-center gap-1 px-1.5 py-0.5",
+          "font-sans text-[10px] text-slate",
           "hover:text-ink transition-colors",
-          "border border-parchment rounded-md hover:border-parchment-dark",
+          "border border-parchment rounded hover:border-parchment-dark",
           className
         )}
       >
-        <Users className="h-3.5 w-3.5" />
+        <Users className="h-3 w-3" />
         <span>Collaborate</span>
       </button>
     );
@@ -96,18 +95,15 @@ export function UserMenu({ variant = "compact", className }: UserMenuProps) {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "flex items-center gap-2",
-          "rounded-md transition-colors",
-          variant === "compact" ? "p-1" : "px-2 py-1.5",
+          "flex items-center rounded transition-colors p-0.5",
           isOpen ? "bg-cream" : "hover:bg-cream"
         )}
+        title={displayName}
       >
-        {/* Avatar */}
         <div
           className={cn(
             "flex items-center justify-center rounded-full bg-burgundy text-ivory",
-            "font-sans text-[10px] font-medium",
-            variant === "compact" ? "h-6 w-6" : "h-7 w-7"
+            "font-sans text-[8px] font-medium h-5 w-5"
           )}
         >
           {avatarUrl ? (
@@ -120,21 +116,6 @@ export function UserMenu({ variant = "compact", className }: UserMenuProps) {
             initials
           )}
         </div>
-
-        {/* Name (full variant only) */}
-        {variant === "full" && (
-          <>
-            <span className="font-sans text-caption text-ink max-w-[100px] truncate">
-              {displayName}
-            </span>
-            <ChevronDown
-              className={cn(
-                "h-3.5 w-3.5 text-slate-muted transition-transform",
-                isOpen && "rotate-180"
-              )}
-            />
-          </>
-        )}
       </button>
 
       {/* Dropdown menu */}
@@ -142,36 +123,36 @@ export function UserMenu({ variant = "compact", className }: UserMenuProps) {
         <div
           className={cn(
             "absolute right-0 top-full mt-1 z-50",
-            "min-w-[180px] py-1",
-            "bg-popover rounded-md shadow-editorial-lg border border-parchment"
+            "min-w-[140px] py-0.5",
+            "bg-card rounded shadow-lg border border-parchment"
           )}
         >
           {/* User info header */}
-          <div className="px-3 py-2 border-b border-parchment">
-            <p className="font-sans text-caption font-medium text-ink truncate">
+          <div className="px-2 py-1.5 border-b border-parchment">
+            <p className="font-sans text-[11px] font-medium text-ink truncate">
               {displayName}
             </p>
             {profile?.affiliation && (
-              <p className="font-sans text-[10px] text-slate-muted truncate">
+              <p className="font-sans text-[9px] text-slate truncate">
                 {profile.affiliation}
               </p>
             )}
           </div>
 
           {/* Menu items */}
-          <div className="py-1">
+          <div className="py-0.5">
             <button
               onClick={() => {
                 setIsOpen(false);
                 // TODO: Open profile settings
               }}
               className={cn(
-                "w-full flex items-center gap-2 px-3 py-1.5",
-                "font-sans text-caption text-ink",
+                "w-full flex items-center gap-1.5 px-2 py-1",
+                "font-sans text-[10px] text-ink",
                 "hover:bg-cream transition-colors"
               )}
             >
-              <User className="h-3.5 w-3.5 text-slate-muted" />
+              <User className="h-3 w-3 text-slate" />
               Profile
             </button>
 
@@ -181,32 +162,32 @@ export function UserMenu({ variant = "compact", className }: UserMenuProps) {
                 // TODO: Open account settings
               }}
               className={cn(
-                "w-full flex items-center gap-2 px-3 py-1.5",
-                "font-sans text-caption text-ink",
+                "w-full flex items-center gap-1.5 px-2 py-1",
+                "font-sans text-[10px] text-ink",
                 "hover:bg-cream transition-colors"
               )}
             >
-              <Settings className="h-3.5 w-3.5 text-slate-muted" />
+              <Settings className="h-3 w-3 text-slate" />
               Account
             </button>
           </div>
 
           {/* Sign out */}
-          <div className="pt-1 border-t border-parchment">
+          <div className="pt-0.5 border-t border-parchment">
             <button
               onClick={handleSignOut}
               disabled={isSigningOut}
               className={cn(
-                "w-full flex items-center gap-2 px-3 py-1.5",
-                "font-sans text-caption text-slate",
+                "w-full flex items-center gap-1.5 px-2 py-1",
+                "font-sans text-[10px] text-slate",
                 "hover:bg-cream hover:text-ink transition-colors",
                 "disabled:opacity-50 disabled:cursor-not-allowed"
               )}
             >
               {isSigningOut ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-3 w-3 animate-spin" />
               ) : (
-                <LogOut className="h-3.5 w-3.5" />
+                <LogOut className="h-3 w-3" />
               )}
               Sign out
             </button>

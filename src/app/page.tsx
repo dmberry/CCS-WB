@@ -7,6 +7,7 @@ import { useAISettings } from "@/context/AISettingsContext";
 import { CCS_EXPERIENCE_LEVELS, EXPERIENCE_LEVEL_LABELS, EXPERIENCE_LEVEL_DESCRIPTIONS, type EntryMode, type ExperienceLevel } from "@/types";
 import { cn } from "@/lib/utils";
 import { Code, Archive, BookOpen, Sparkles, ChevronDown, FolderOpen, Settings, HelpCircle, X, ExternalLink, Info } from "lucide-react";
+import { UserMenu } from "@/components/auth/UserMenu";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { AISettingsPanel } from "@/components/settings/AISettingsPanel";
 import { PROVIDER_CONFIGS } from "@/lib/ai/config";
@@ -192,6 +193,7 @@ export default function WelcomePage() {
               >
                 <Settings className="h-3.5 w-3.5" strokeWidth={1.5} />
               </button>
+              <UserMenu />
             </div>
           </div>
         </div>
