@@ -39,6 +39,7 @@ export const LINE_ANNOTATION_TYPES = [
 ] as const;
 
 // Annotation type colors for PDF export (RGB values)
+// Full saturation for pills, subtle for line backgrounds
 export const ANNOTATION_COLORS: Record<string, { r: number; g: number; b: number }> = {
   observation: { r: 59, g: 130, b: 246 },   // Blue
   question: { r: 245, g: 158, b: 11 },      // Amber
@@ -46,6 +47,16 @@ export const ANNOTATION_COLORS: Record<string, { r: number; g: number; b: number
   pattern: { r: 34, g: 197, b: 94 },        // Green
   context: { r: 100, g: 116, b: 139 },      // Slate
   critique: { r: 124, g: 45, b: 54 },       // Burgundy
+};
+
+// Lighter versions for line backgrounds (higher values = lighter)
+export const ANNOTATION_BG_COLORS: Record<string, { r: number; g: number; b: number }> = {
+  observation: { r: 239, g: 246, b: 255 },   // Light blue
+  question: { r: 255, g: 251, b: 235 },      // Light amber
+  metaphor: { r: 250, g: 245, b: 255 },      // Light purple
+  pattern: { r: 240, g: 253, b: 244 },       // Light green
+  context: { r: 248, g: 250, b: 252 },       // Light slate
+  critique: { r: 253, g: 242, b: 244 },      // Light burgundy/pink
 };
 
 // Annotation type prefixes (abbreviations)
@@ -710,6 +721,24 @@ export function exportSessionLogPDF(
           "Crit": "critique",
         };
 
+        // Build a map of which original lines should be highlighted
+        const lineAnnotationTypes = new Map<number, string>();
+        if (file.annotations) {
+          file.annotations.forEach(ann => {
+            lineAnnotationTypes.set(ann.lineNumber, ann.type);
+            // For block annotations, highlight all lines in the range
+            const endLine = (ann as { endLine?: number }).endLine;
+            if (endLine && endLine > ann.lineNumber) {
+              for (let i = ann.lineNumber; i <= endLine; i++) {
+                lineAnnotationTypes.set(i, ann.type);
+              }
+            }
+          });
+        }
+
+        // Track original line number (annotation comments don't count)
+        let originalLineNum = 1;
+
         codeLines.forEach((line) => {
           if (yPos > pageHeight - margin) {
             doc.addPage();
@@ -727,8 +756,8 @@ export function exportSessionLogPDF(
             const indentWidth = indent ? doc.getTextWidth(indent) : 0;
             let xPos = margin + indentWidth;
 
-            // Draw the pill
-            doc.setFontSize(7);
+            // Draw the pill (smaller for annotation content)
+            doc.setFontSize(6);
             const pillWidth = drawPill(prefix, xPos, yPos, color);
             xPos += pillWidth + 2;
 
@@ -736,15 +765,30 @@ export function exportSessionLogPDF(
             doc.setFontSize(8);
             doc.setFont("courier", "italic");
             doc.setTextColor(80, 80, 80);
-            const maxContentWidth = pageWidth - margin - xPos - 5;
             const truncatedContent = content.length > 80 ? content.substring(0, 77) + "..." : content;
             doc.text(sanitiseForPDF(truncatedContent), xPos, yPos);
             doc.setTextColor(0, 0, 0);
             doc.setFont("courier", "normal");
+            // Don't increment originalLineNum for annotation comments
           } else {
-            // Regular code line
+            // Regular code line - check if it should be highlighted
+            const annotationType = lineAnnotationTypes.get(originalLineNum);
+            if (annotationType) {
+              const bgColor = ANNOTATION_BG_COLORS[annotationType] || ANNOTATION_BG_COLORS.observation;
+              // Draw subtle background highlight
+              doc.setFillColor(bgColor.r, bgColor.g, bgColor.b);
+              doc.rect(margin - 1, yPos - 2.5, contentWidth + 2, 3.5, "F");
+
+              // Draw a thin colored bar on the right side (like the code editor)
+              const barColor = ANNOTATION_COLORS[annotationType] || ANNOTATION_COLORS.observation;
+              doc.setFillColor(barColor.r, barColor.g, barColor.b);
+              doc.rect(margin + contentWidth - 1, yPos - 2.5, 1.5, 3.5, "F");
+            }
+
             doc.setFont("courier", "normal");
+            doc.setTextColor(0, 0, 0);
             doc.text(sanitiseForPDF(line.substring(0, 100)), margin, yPos);
+            originalLineNum++;
           }
           yPos += 3;
         });
