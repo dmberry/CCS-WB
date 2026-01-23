@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 2.1.0** | CCS Methodology v2.5
+**Version 2.2.0** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -33,6 +33,7 @@ The assistant adapts its engagement style based on your experience:
 The critique mode features a three-panel layout for focused code analysis:
 
 1. **Left panel**: File tree with colour-coded filenames by type
+   - Collapsible and resizable (drag divider)
    - Blue: Code files (Python, JavaScript, etc.)
    - Orange: Web files (HTML, CSS, JSX)
    - Green: Data files (JSON, YAML, XML)
@@ -46,14 +47,15 @@ The critique mode features a three-panel layout for focused code analysis:
    - Six annotation types: Observation, Question, Metaphor, Pattern, Context, Critique
    - Annotations display inline with colour-coded type badges (pills)
    - Annotations fade into background for distraction-free reading, brighten on hover
+   - Full screen mode hides files pane and chat for focused annotation work
    - Download annotated code with annotations preserved
    - Customisable font size and display settings
 
 3. **Right panel**: Chat interface with guided prompts
+   - Collapsible with vertical label; resizable divider
    - Context preview shows what the LLM sees
    - Phase-appropriate questions guide analysis
    - "Help Annotate" asks the LLM to suggest annotations
-   - Resizable panel divider (drag to resize)
    - Customisable chat font size
 
 ### Project Management
@@ -279,6 +281,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 2.2.0 | **Flexible layout**: Collapsible chat panel with vertical label, collapsible and resizable code files pane, full screen mode for annotation pane (hides files and chat for focused work), streamlined chat header showing AI model, updated help with keyboard shortcuts |
 | 2.1.0 | **Search functionality**: Code search (Cmd+F) in editor, chat search (Cmd+Shift+F) to filter messages; Help popover (?) with interface guide and keyboard shortcuts; PDF export includes coloured annotation type pills |
 | 2.0.0 | **New annotation system**: Type badge pills with colour coding, annotations fade into background and brighten on hover, annotation summary panel in file tree showing counts by type in a grid layout, improved visual hierarchy for distraction-free reading |
 | 1.8.2 | User profile (name/initials, affiliation, bio) displayed in chat and included in session exports, anonymous mode option, unified muted timestamp styling |

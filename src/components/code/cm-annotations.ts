@@ -7,6 +7,25 @@ import { Extension } from "@codemirror/state";
 import { EditorView, Decoration, WidgetType, gutter, GutterMarker } from "@codemirror/view";
 import type { LineAnnotation, LineAnnotationType } from "@/types";
 
+// Annotation display settings type (matches CodeEditorPanel)
+type AnnotationBrightness = "low" | "medium" | "high" | "full";
+
+export interface AnnotationDisplaySettings {
+  visible: boolean;
+  brightness: AnnotationBrightness;
+  showPillBackground: boolean;
+  showBadge: boolean;
+  highlightAnnotatedLines: boolean;
+}
+
+// Opacity values for each brightness level
+const BRIGHTNESS_OPACITY: Record<AnnotationBrightness, number> = {
+  low: 0.2,
+  medium: 0.45,
+  high: 0.7,
+  full: 1.0,
+};
+
 // Annotation type prefixes (matching CodeEditorPanel)
 const ANNOTATION_PREFIXES: Record<LineAnnotationType, string> = {
   observation: "Obs",
@@ -230,6 +249,15 @@ class InlineAnnotationEditor extends WidgetType {
   }
 }
 
+// Default display settings when none provided
+const DEFAULT_ANNOTATION_DISPLAY_SETTINGS: AnnotationDisplaySettings = {
+  visible: true,
+  brightness: "medium",
+  showPillBackground: true,
+  showBadge: true,
+  highlightAnnotatedLines: false,
+};
+
 /**
  * Widget that renders a single annotation below a code line
  */
@@ -238,7 +266,9 @@ class AnnotationWidget extends WidgetType {
     readonly annotation: LineAnnotation,
     readonly onEdit: ((id: string) => void) | undefined,
     readonly onDelete: ((id: string) => void) | undefined,
-    readonly isDark: boolean
+    readonly isDark: boolean,
+    readonly isHighlighted: boolean = false,
+    readonly displaySettings: AnnotationDisplaySettings = DEFAULT_ANNOTATION_DISPLAY_SETTINGS
   ) {
     super();
   }
@@ -248,13 +278,21 @@ class AnnotationWidget extends WidgetType {
       this.annotation.id === other.annotation.id &&
       this.annotation.content === other.annotation.content &&
       this.annotation.type === other.annotation.type &&
-      this.isDark === other.isDark
+      this.isDark === other.isDark &&
+      this.isHighlighted === other.isHighlighted &&
+      this.displaySettings.brightness === other.displaySettings.brightness &&
+      this.displaySettings.showBadge === other.displaySettings.showBadge &&
+      this.displaySettings.showPillBackground === other.displaySettings.showPillBackground
     );
   }
 
   toDOM(): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "cm-annotation-widget";
+
+    // Get display settings
+    const { brightness, showBadge, showPillBackground } = this.displaySettings;
+    const baseOpacity = BRIGHTNESS_OPACITY[brightness];
 
     // Get the type-specific colour
     const color = this.isDark
@@ -264,19 +302,61 @@ class AnnotationWidget extends WidgetType {
     // Set right border color inline
     wrapper.style.borderRightColor = color;
 
-    // Type badge (pill style)
-    const badge = document.createElement("span");
-    badge.className = "cm-annotation-type-badge";
-    badge.textContent = ANNOTATION_PREFIXES[this.annotation.type];
-    badge.style.backgroundColor = color;
-    badge.style.color = this.isDark ? "hsl(0 0% 10%)" : "hsl(0 0% 100%)";
-    wrapper.appendChild(badge);
+    // Apply highlight styling if this annotation type is highlighted
+    if (this.isHighlighted) {
+      wrapper.classList.add("cm-annotation-highlighted");
+    }
 
-    // Content (italic, reduced opacity set in CSS)
+    // Annotation bar - contains badge and content, stretches to fill space
+    const bar = document.createElement("div");
+    bar.className = "cm-annotation-bar";
+
+    // Apply background only if showPillBackground is enabled
+    if (showPillBackground) {
+      bar.style.backgroundColor = this.isDark
+        ? `${color}18` // ~10% opacity in dark mode
+        : `${color}12`; // ~7% opacity in light mode
+
+      if (this.isHighlighted) {
+        bar.style.backgroundColor = this.isDark
+          ? `${color}35` // Brighter when highlighted
+          : `${color}25`;
+      }
+    }
+
+    // Set CSS variable for brightness-based opacity (allows hover to override)
+    wrapper.style.setProperty("--annotation-opacity", String(baseOpacity));
+    if (this.isHighlighted) {
+      wrapper.style.setProperty("--annotation-opacity", "1");
+    }
+
+    // Type badge (small pill at start of bar) - conditionally shown
+    // Includes ↑ arrow to indicate annotation applies to line above
+    if (showBadge) {
+      const badge = document.createElement("span");
+      badge.className = "cm-annotation-type-badge";
+      badge.textContent = `↑ ${ANNOTATION_PREFIXES[this.annotation.type]}`;
+      badge.style.backgroundColor = color;
+      badge.style.color = this.isDark ? "hsl(0 0% 10%)" : "hsl(0 0% 100%)";
+      // Make badge fully opaque when highlighted
+      if (this.isHighlighted) {
+        badge.style.opacity = "1";
+        badge.style.transform = "scale(1.05)";
+      }
+      bar.appendChild(badge);
+    }
+
+    // Content (flows after badge within the bar)
     const content = document.createElement("span");
     content.className = "cm-annotation-content";
     content.textContent = this.annotation.content;
-    wrapper.appendChild(content);
+    // If badge is hidden, prefix with type indicator
+    if (!showBadge) {
+      content.textContent = `[${ANNOTATION_PREFIXES[this.annotation.type]}] ${this.annotation.content}`;
+    }
+    bar.appendChild(content);
+
+    wrapper.appendChild(bar);
 
     // Actions container (fades in on hover)
     const actions = document.createElement("div");
@@ -325,8 +405,17 @@ export function createSimpleAnnotationsExtension(
   onDelete: ((id: string) => void) | undefined,
   isDark: boolean,
   editState?: InlineEditState,
-  editCallbacks?: InlineEditCallbacks
+  editCallbacks?: InlineEditCallbacks,
+  highlightedType?: LineAnnotationType | null,
+  displaySettings?: AnnotationDisplaySettings
 ): Extension {
+  // Use defaults if settings not provided
+  const settings = displaySettings || DEFAULT_ANNOTATION_DISPLAY_SETTINGS;
+
+  // If annotations are hidden, return empty extension
+  if (!settings.visible) {
+    return [];
+  }
   return EditorView.decorations.compute(["doc"], (state) => {
     const decorations: { pos: number; widget: Decoration }[] = [];
 
@@ -357,8 +446,9 @@ export function createSimpleAnnotationsExtension(
           decorations.push({ pos: line.to, widget });
         } else {
           // Show normal annotation widget
+          const isHighlighted = highlightedType === ann.type;
           const widget = Decoration.widget({
-            widget: new AnnotationWidget(ann, onEdit, onDelete, isDark),
+            widget: new AnnotationWidget(ann, onEdit, onDelete, isDark, isHighlighted, settings),
             block: true,
             side: 1,
           });
@@ -474,5 +564,40 @@ export function createAnnotateGutter(
         return true;
       },
     },
+  });
+}
+
+/**
+ * Create an extension that dims non-annotated lines to highlight annotations
+ * Lines with annotations remain at full opacity, others are dimmed
+ */
+export function createHighlightAnnotatedLinesExtension(
+  annotations: LineAnnotation[],
+  enabled: boolean
+): Extension {
+  if (!enabled) {
+    return [];
+  }
+
+  // Get set of line numbers that have annotations
+  const annotatedLines = new Set(annotations.map((a) => a.lineNumber));
+
+  return EditorView.decorations.compute(["doc"], (state) => {
+    const decorations: { from: number; to: number }[] = [];
+
+    // Iterate through all lines and mark non-annotated ones for dimming
+    for (let i = 1; i <= state.doc.lines; i++) {
+      if (!annotatedLines.has(i)) {
+        const line = state.doc.line(i);
+        decorations.push({ from: line.from, to: line.from });
+      }
+    }
+
+    // Create line decorations for dimmed lines
+    return Decoration.set(
+      decorations.map((d) =>
+        Decoration.line({ class: "cm-line-dimmed" }).range(d.from)
+      )
+    );
   });
 }

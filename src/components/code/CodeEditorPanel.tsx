@@ -20,6 +20,12 @@ import {
   ArrowUpDown,
   ChevronUp,
   ChevronDown,
+  Eye,
+  EyeOff,
+  Highlighter,
+  Menu,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import type { LineAnnotation, LineAnnotationType, CodeReference } from "@/types";
 import { CodeMirrorEditor } from "./CodeMirrorEditor";
@@ -35,6 +41,8 @@ interface CodeEditorPanelProps {
   onDuplicateFile?: (fileId: string) => void;
   onLoadCode?: () => void; // Trigger file upload from sidebar
   onReorderFiles?: (fileIds: string[]) => void; // Reorder files by new order
+  isFullScreen?: boolean; // Whether annotation pane is in full screen mode
+  onToggleFullScreen?: () => void; // Callback to toggle full screen mode
 }
 
 type FileSortOrder = "manual" | "az" | "za";
@@ -50,6 +58,25 @@ interface DisplaySettings {
 const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   fontSize: 12,
   bold: false,
+};
+
+// Annotation display settings for customizing appearance
+type AnnotationBrightness = "low" | "medium" | "high" | "full";
+
+export interface AnnotationDisplaySettings {
+  visible: boolean; // Show/hide annotations in code
+  brightness: AnnotationBrightness; // Opacity level
+  showPillBackground: boolean; // Show colored bar background
+  showBadge: boolean; // Show type badge pill
+  highlightAnnotatedLines: boolean; // Dim non-annotated lines to focus on annotations
+}
+
+const DEFAULT_ANNOTATION_DISPLAY_SETTINGS: AnnotationDisplaySettings = {
+  visible: true,
+  brightness: "medium",
+  showPillBackground: true,
+  showBadge: true,
+  highlightAnnotatedLines: false,
 };
 
 // Min/max font sizes
@@ -205,6 +232,8 @@ export function CodeEditorPanel({
   onDuplicateFile,
   onLoadCode,
   onReorderFiles,
+  isFullScreen = false,
+  onToggleFullScreen,
 }: CodeEditorPanelProps) {
   const {
     session,
@@ -246,12 +275,21 @@ export function CodeEditorPanel({
   const [renameValue, setRenameValue] = useState("");
   const [showDisplaySettings, setShowDisplaySettings] = useState(false);
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
+  const [annotationDisplaySettings, setAnnotationDisplaySettings] = useState<AnnotationDisplaySettings>(DEFAULT_ANNOTATION_DISPLAY_SETTINGS);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(144); // Default width in pixels (w-36 = 9rem = 144px)
+  const [isDraggingSidebar, setIsDraggingSidebar] = useState(false);
+  const panelContainerRef = useRef<HTMLDivElement>(null);
   const [codeCopied, setCodeCopied] = useState(false);
   const [showAnnotationPanel, setShowAnnotationPanel] = useState(true); // Annotation list in files pane
   const [showDiscoveryAnimation, setShowDiscoveryAnimation] = useState(false); // Triggered when file loads
   const [animationTriggerKey, setAnimationTriggerKey] = useState(0); // Increments to force animation restart
   const [fileSortOrder, setFileSortOrder] = useState<FileSortOrder>("manual");
+  const [highlightedType, setHighlightedType] = useState<LineAnnotationType | null>(null); // Type to highlight in code
+  const [showToolbarMenu, setShowToolbarMenu] = useState(false); // Hamburger menu for narrow toolbar
+  const [toolbarNarrow, setToolbarNarrow] = useState(false); // Track if toolbar is narrow
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const toolbarMenuRef = useRef<HTMLDivElement>(null);
 
   // Sort files based on current sort order
   const sortedFiles = useMemo(() => {
@@ -372,6 +410,9 @@ export function CodeEditorPanel({
   const handleLineClick = useCallback((lineNumber: number) => {
     // Stop discovery animation when user interacts
     setShowDiscoveryAnimation(false);
+    // Ensure annotations are visible when adding a new one
+    // (otherwise the inline editor won't show)
+    setAnnotationDisplaySettings(prev => prev.visible ? prev : { ...prev, visible: true });
     setEditingLine(lineNumber);
     setAnnotationContent("");
     setAnnotationType("observation");
@@ -522,6 +563,27 @@ export function CodeEditorPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleCopyCode]);
 
+  // Click outside to close display settings popover
+  useEffect(() => {
+    if (!showDisplaySettings) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (displaySettingsRef.current && !displaySettingsRef.current.contains(e.target as Node)) {
+        setShowDisplaySettings(false);
+      }
+    };
+
+    // Small delay to avoid immediate trigger from the opening click
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 10);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showDisplaySettings]);
+
   // Trigger discovery animation when a file is first loaded in annotate mode
   const previousFileIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -549,17 +611,110 @@ export function CodeEditorPanel({
     removeLineAnnotation(annotationId);
   }, [removeLineAnnotation]);
 
+  // Handle clicking on an annotation type pill to highlight annotations of that type
+  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const displaySettingsRef = useRef<HTMLDivElement>(null);
+
+  // ResizeObserver to detect narrow toolbar
+  useEffect(() => {
+    const toolbar = toolbarRef.current;
+    if (!toolbar) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        // Collapse tools when toolbar width < 350px
+        setToolbarNarrow(entry.contentRect.width < 350);
+      }
+    });
+
+    observer.observe(toolbar);
+    return () => observer.disconnect();
+  }, []);
+
+  // Close toolbar menu when clicking outside
+  useEffect(() => {
+    if (!showToolbarMenu) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (toolbarMenuRef.current && !toolbarMenuRef.current.contains(e.target as Node)) {
+        setShowToolbarMenu(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 10);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showToolbarMenu]);
+
+  const handleHighlightType = useCallback((type: LineAnnotationType) => {
+    // Clear any existing timeout
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+    // Set the highlighted type
+    setHighlightedType(type);
+    // Auto-clear after 2 seconds
+    highlightTimeoutRef.current = setTimeout(() => {
+      setHighlightedType(null);
+    }, 2000);
+  }, []);
+
+  // Handle sidebar resize dragging
+  const handleSidebarMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDraggingSidebar(true);
+  }, []);
+
+  // Sidebar resize effect
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingSidebar || !panelContainerRef.current) return;
+
+      const containerRect = panelContainerRef.current.getBoundingClientRect();
+      const newWidth = e.clientX - containerRect.left;
+
+      // Clamp between min (80px) and max (300px)
+      const MIN_WIDTH = 80;
+      const MAX_WIDTH = 300;
+      setSidebarWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingSidebar(false);
+    };
+
+    if (isDraggingSidebar) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "none";
+      document.body.style.cursor = "col-resize";
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+  }, [isDraggingSidebar]);
+
   return (
-    <div className="flex h-full bg-card border-r border-parchment">
-      {/* File tree sidebar */}
-      <div className={cn(
-        "border-r border-parchment bg-cream/30 flex flex-col transition-all duration-200",
-        sidebarCollapsed ? "w-8" : "w-36"
-      )}>
-        <div className="px-1 py-1.5 border-b border-parchment flex items-center justify-between">
+    <div ref={panelContainerRef} className="flex h-full bg-card border-r border-parchment">
+      {/* File tree sidebar - hidden in fullscreen mode */}
+      {!isFullScreen && (
+      <div
+        className="border-r border-parchment bg-cream/30 flex flex-col"
+        style={{ width: sidebarCollapsed ? 32 : sidebarWidth }}
+      >
+        <div className="px-1 py-1.5 border-b border-parchment flex items-center justify-between gap-1">
           {!sidebarCollapsed && (
             <>
-              <div className="flex items-center gap-0.5 pl-1">
+              <div className="flex items-center gap-0.5 pl-1 overflow-hidden flex-1 min-w-0">
                 {/* Load code button - leftmost */}
                 {onLoadCode && (
                   <button
@@ -570,6 +725,15 @@ export function CodeEditorPanel({
                     <Upload className="h-3.5 w-3.5" strokeWidth={1.5} />
                   </button>
                 )}
+                {/* Download annotated code button */}
+                <button
+                  onClick={handleDownloadCode}
+                  disabled={!currentCode || !selectedFileId}
+                  className="p-1 text-slate-muted hover:text-burgundy transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  title="Download annotated code"
+                >
+                  <Download className="h-3.5 w-3.5" strokeWidth={1.5} />
+                </button>
                 {/* Sort toggle button */}
                 <button
                   onClick={() => {
@@ -598,7 +762,7 @@ export function CodeEditorPanel({
           )}
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-1 text-slate-muted hover:text-burgundy transition-colors"
+            className="p-1 text-slate-muted hover:text-burgundy transition-colors flex-shrink-0"
             title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {sidebarCollapsed ? (
@@ -608,6 +772,12 @@ export function CodeEditorPanel({
             )}
           </button>
         </div>
+        {/* Collapsed state - show vertical "Files" label */}
+        {sidebarCollapsed && (
+          <div className="flex-1 flex flex-col items-center pt-2">
+            <span className="text-[10px] text-slate-muted" style={{ writingMode: "vertical-rl" }}>Files</span>
+          </div>
+        )}
         {!sidebarCollapsed && (
           <>
           <div className="flex-1 min-h-0 overflow-y-auto py-1">
@@ -774,7 +944,17 @@ export function CodeEditorPanel({
                     const validAnns = anns ? anns.filter(a => !a.orphaned) : [];
                     const count = validAnns.length;
                     return (
-                      <span key={type} className={cn("flex items-center gap-1", count === 0 && "opacity-35")}>
+                      <button
+                        key={type}
+                        onClick={() => count > 0 && handleHighlightType(type)}
+                        disabled={count === 0}
+                        className={cn(
+                          "flex items-center gap-1 text-left transition-all",
+                          count === 0 ? "opacity-35 cursor-default" : "cursor-pointer hover:opacity-80",
+                          highlightedType === type && "ring-1 ring-burgundy rounded-sm"
+                        )}
+                        title={count > 0 ? `Click to highlight ${ANNOTATION_PREFIXES[type]} annotations` : undefined}
+                      >
                         <span className={cn(
                           "px-1.5 py-0.5 rounded-full text-[7px] font-semibold uppercase text-white min-w-[28px] text-center",
                           ANNOTATION_PILL_COLORS[type]
@@ -784,7 +964,7 @@ export function CodeEditorPanel({
                         <span className="text-slate-muted font-mono text-[7px]">
                           {count}
                         </span>
-                      </span>
+                      </button>
                     );
                   })}
                 </div>
@@ -802,15 +982,27 @@ export function CodeEditorPanel({
           </>
         )}
       </div>
+      )}
+
+      {/* Resizable divider - only show when sidebar not collapsed and not fullscreen */}
+      {!isFullScreen && !sidebarCollapsed && (
+        <div
+          onMouseDown={handleSidebarMouseDown}
+          className={cn(
+            "w-1 cursor-col-resize hover:bg-burgundy/30 transition-colors flex-shrink-0",
+            isDraggingSidebar && "bg-burgundy/30"
+          )}
+        />
+      )}
 
       {/* Code editor area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Editor header */}
         {selectedFile && (
-          <div className="px-4 py-2 border-b border-parchment bg-cream/50 flex items-center justify-between">
+          <div ref={toolbarRef} className="px-4 py-2 border-b border-parchment bg-cream/50 flex items-center justify-between">
             {/* Left group: mode toggle and tools */}
             <div className="flex items-center gap-2">
-              {/* Edit/Annotate mode toggle */}
+              {/* Edit/Annotate mode toggle - always visible */}
               <div className="flex items-center border border-parchment rounded-sm overflow-hidden">
                 <button
                   onClick={handleSwitchToEdit}
@@ -843,105 +1035,181 @@ export function CodeEditorPanel({
                   Annotate
                 </button>
               </div>
-              <button
-                onClick={handleCopyCode}
-                disabled={!currentCode}
-                className={cn(
-                  "p-1 transition-colors disabled:opacity-50",
-                  codeCopied ? "text-green-600" : "text-slate-muted hover:text-ink"
-                )}
-                title="Copy code (⌘⇧C)"
-              >
-                {codeCopied ? (
-                  <span className="text-[9px] font-sans">✓</span>
-                ) : (
-                  <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
-                )}
-              </button>
-              <button
-                onClick={handleDownloadCode}
-                disabled={!currentCode}
-                className="p-1 text-slate-muted hover:text-ink transition-colors disabled:opacity-50"
-                title="Download annotated code"
-              >
-                <Download className="h-3.5 w-3.5" strokeWidth={1.5} />
-              </button>
-              {/* Display settings */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowDisplaySettings(!showDisplaySettings)}
-                  className={cn(
-                    "p-1 transition-colors",
-                    showDisplaySettings ? "text-burgundy" : "text-slate-muted hover:text-ink"
-                  )}
-                  title="Display settings"
-                >
-                  <Settings2 className="h-3.5 w-3.5" strokeWidth={1.5} />
-                </button>
-                {showDisplaySettings && (
-                  <div className="absolute top-full right-0 mt-1 w-48 bg-popover rounded-sm shadow-lg border border-parchment p-3 z-50">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-display text-xs text-foreground">Display</h4>
-                      <button
-                        onClick={() => setShowDisplaySettings(false)}
-                        className="p-0.5 text-slate hover:text-foreground"
-                      >
-                        <X className="h-3 w-3" strokeWidth={1.5} />
-                      </button>
-                    </div>
 
-                    {/* Font Size */}
-                    <div className="mb-3">
-                      <label className="font-sans text-[9px] uppercase tracking-wider text-slate-muted mb-1 block">
-                        Size
-                      </label>
-                      <div className="flex items-center gap-1">
+              {/* Tools - hide when narrow, show in hamburger menu instead */}
+              {!toolbarNarrow && (
+                <>
+                  {/* Quick toggles for annotation display - only in annotate mode */}
+                  {editorMode === "annotate" && (
+                    <>
+                      <button
+                        onClick={() => setAnnotationDisplaySettings(prev => ({ ...prev, visible: !prev.visible }))}
+                        className="p-1 text-slate-muted hover:text-ink transition-colors"
+                        title={annotationDisplaySettings.visible ? "Hide annotations" : "Show annotations"}
+                      >
+                        {annotationDisplaySettings.visible ? (
+                          <Eye className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        ) : (
+                          <EyeOff className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setAnnotationDisplaySettings(prev => ({ ...prev, highlightAnnotatedLines: !prev.highlightAnnotatedLines }))}
+                        className={cn(
+                          "p-1 transition-colors",
+                          annotationDisplaySettings.highlightAnnotatedLines
+                            ? "text-burgundy"
+                            : "text-slate-muted hover:text-ink"
+                        )}
+                        title={annotationDisplaySettings.highlightAnnotatedLines ? "Show all code equally" : "Highlight annotated lines (dim others)"}
+                      >
+                        <Highlighter className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      </button>
+                      {/* Fullscreen toggle */}
+                      {onToggleFullScreen && (
                         <button
-                          onClick={() => setDisplaySettings(prev => ({
-                            ...prev,
-                            fontSize: Math.max(MIN_FONT_SIZE, prev.fontSize - 1)
-                          }))}
-                          disabled={displaySettings.fontSize <= MIN_FONT_SIZE}
-                          className="p-1 rounded-sm border border-parchment bg-card hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
+                          onClick={onToggleFullScreen}
+                          className={cn(
+                            "p-1 transition-colors",
+                            isFullScreen
+                              ? "text-burgundy"
+                              : "text-slate-muted hover:text-ink"
+                          )}
+                          title={isFullScreen ? "Exit full screen" : "Full screen mode"}
                         >
-                          <Minus className="h-3 w-3" strokeWidth={1.5} />
+                          {isFullScreen ? (
+                            <Minimize2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                          ) : (
+                            <Maximize2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                          )}
                         </button>
-                        <input
-                          type="number"
-                          min={MIN_FONT_SIZE}
-                          max={MAX_FONT_SIZE}
-                          value={displaySettings.fontSize}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value, 10);
-                            if (!isNaN(val)) {
-                              setDisplaySettings(prev => ({
-                                ...prev,
-                                fontSize: Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, val))
-                              }));
-                            }
-                          }}
-                          className="w-12 px-1 py-0.5 text-center text-[11px] font-mono bg-card text-foreground border border-parchment rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy"
-                        />
-                        <button
-                          onClick={() => setDisplaySettings(prev => ({
-                            ...prev,
-                            fontSize: Math.min(MAX_FONT_SIZE, prev.fontSize + 1)
-                          }))}
-                          disabled={displaySettings.fontSize >= MAX_FONT_SIZE}
-                          className="p-1 rounded-sm border border-parchment bg-card hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                          <Plus className="h-3 w-3" strokeWidth={1.5} />
-                        </button>
-                        <span className="text-[9px] text-slate-muted ml-1">px</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Divider before copy */}
+                  <div className="h-4 w-px bg-parchment mx-1" />
+
+                  <button
+                    onClick={handleCopyCode}
+                    disabled={!currentCode}
+                    className={cn(
+                      "p-1 transition-colors disabled:opacity-50",
+                      codeCopied ? "text-green-600" : "text-slate-muted hover:text-ink"
+                    )}
+                    title="Copy code (⌘⇧C)"
+                  >
+                    {codeCopied ? (
+                      <span className="text-[9px] font-sans">✓</span>
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    )}
+                  </button>
+                </>
+              )}
             </div>
 
-            {/* Right group: help */}
+            {/* Right group: hamburger menu (narrow) or help and settings (wide) */}
             <div className="flex items-center gap-2">
+              {toolbarNarrow ? (
+                /* Hamburger menu for narrow toolbar */
+                <div className="relative" ref={toolbarMenuRef}>
+                  <button
+                    onClick={() => setShowToolbarMenu(!showToolbarMenu)}
+                    className={cn(
+                      "p-1 transition-colors",
+                      showToolbarMenu ? "text-burgundy" : "text-slate-muted hover:text-ink"
+                    )}
+                    title="Tools menu"
+                  >
+                    <Menu className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  </button>
+                  {showToolbarMenu && (
+                    <div className="absolute top-full right-0 mt-1 w-48 bg-popover rounded-sm shadow-lg border border-parchment py-1 z-50">
+                      {/* Annotation tools - only in annotate mode */}
+                      {editorMode === "annotate" && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setAnnotationDisplaySettings(prev => ({ ...prev, visible: !prev.visible }));
+                              setShowToolbarMenu(false);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-slate hover:bg-cream"
+                          >
+                            {annotationDisplaySettings.visible ? (
+                              <Eye className="h-3 w-3" strokeWidth={1.5} />
+                            ) : (
+                              <EyeOff className="h-3 w-3" strokeWidth={1.5} />
+                            )}
+                            {annotationDisplaySettings.visible ? "Hide annotations" : "Show annotations"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setAnnotationDisplaySettings(prev => ({ ...prev, highlightAnnotatedLines: !prev.highlightAnnotatedLines }));
+                              setShowToolbarMenu(false);
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-slate hover:bg-cream"
+                          >
+                            <Highlighter className="h-3 w-3" strokeWidth={1.5} />
+                            {annotationDisplaySettings.highlightAnnotatedLines ? "Show all lines" : "Highlight annotated"}
+                          </button>
+                          {onToggleFullScreen && (
+                            <button
+                              onClick={() => {
+                                onToggleFullScreen();
+                                setShowToolbarMenu(false);
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-slate hover:bg-cream"
+                            >
+                              {isFullScreen ? (
+                                <Minimize2 className="h-3 w-3" strokeWidth={1.5} />
+                              ) : (
+                                <Maximize2 className="h-3 w-3" strokeWidth={1.5} />
+                              )}
+                              {isFullScreen ? "Exit full screen" : "Full screen"}
+                            </button>
+                          )}
+                          <div className="my-1 border-t border-parchment" />
+                        </>
+                      )}
+                      <button
+                        onClick={() => {
+                          handleCopyCode();
+                          setShowToolbarMenu(false);
+                        }}
+                        disabled={!currentCode}
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-slate hover:bg-cream disabled:opacity-50"
+                      >
+                        <Copy className="h-3 w-3" strokeWidth={1.5} />
+                        Copy code
+                      </button>
+                      <div className="my-1 border-t border-parchment" />
+                      <button
+                        onClick={() => {
+                          setShowAnnotationHelp(true);
+                          setShowToolbarMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-slate hover:bg-cream"
+                      >
+                        <HelpCircle className="h-3 w-3" strokeWidth={1.5} />
+                        Annotation help
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowDisplaySettings(true);
+                          setShowToolbarMenu(false);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-slate hover:bg-cream"
+                      >
+                        <Settings2 className="h-3 w-3" strokeWidth={1.5} />
+                        Display settings
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Normal toolbar buttons when wide */
+                <>
               {/* Help - annotation types */}
               <div className="relative">
                 <button
@@ -957,7 +1225,7 @@ export function CodeEditorPanel({
                 {showAnnotationHelp && (
                   <div className="absolute top-full right-0 mt-1 w-64 bg-popover rounded-sm shadow-lg border border-parchment p-3 z-50">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-display text-xs text-ink">Annotation Types</h4>
+                      <h4 className="font-display text-xs text-ink">Annotation Help</h4>
                       <button
                         onClick={() => setShowAnnotationHelp(false)}
                         className="p-0.5 text-slate hover:text-ink"
@@ -966,16 +1234,19 @@ export function CodeEditorPanel({
                       </button>
                     </div>
                     <p className="font-body text-[10px] text-slate mb-2">
-                      Click any line to add an annotation. Types:
+                      Click any line to add an annotation.
                     </p>
-                    <ul className="space-y-1">
+
+                    {/* Annotation types */}
+                    <div className="font-sans text-[8px] uppercase tracking-wider text-slate-muted mb-1">Types</div>
+                    <ul className="space-y-0.5 mb-3">
                       <li className="flex items-start gap-2">
                         <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.observation)}>Obs</span>
                         <span className="font-body text-[10px] text-slate">Notable feature or detail</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.question)}>Q</span>
-                        <span className="font-body text-[10px] text-slate">Something to explore further</span>
+                        <span className="font-body text-[10px] text-slate">Something to explore</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.metaphor)}>Met</span>
@@ -983,20 +1254,128 @@ export function CodeEditorPanel({
                       </li>
                       <li className="flex items-start gap-2">
                         <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.pattern)}>Pat</span>
-                        <span className="font-body text-[10px] text-slate">Recurring structure or idiom</span>
+                        <span className="font-body text-[10px] text-slate">Recurring structure</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.context)}>Ctx</span>
-                        <span className="font-body text-[10px] text-slate">Historical or cultural context</span>
+                        <span className="font-body text-[10px] text-slate">Historical/cultural context</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className={cn("font-mono text-[9px] font-semibold w-8", ANNOTATION_COLORS.critique)}>Crit</span>
-                        <span className="font-body text-[10px] text-slate">Critical observation or claim</span>
+                        <span className="font-body text-[10px] text-slate">Critical claim</span>
                       </li>
+                    </ul>
+
+                    {/* Display controls */}
+                    <div className="font-sans text-[8px] uppercase tracking-wider text-slate-muted mb-1">Display</div>
+                    <ul className="space-y-0.5 text-[10px] text-slate mb-3">
+                      <li><Eye className="h-3 w-3 inline mr-1" strokeWidth={1.5} />Show/hide annotations</li>
+                      <li><Highlighter className="h-3 w-3 inline mr-1" strokeWidth={1.5} />Highlight annotated lines</li>
+                      <li><Maximize2 className="h-3 w-3 inline mr-1" strokeWidth={1.5} />Full screen (hides files and chat)</li>
+                      <li><Settings2 className="h-3 w-3 inline mr-1" strokeWidth={1.5} />Brightness, badge, background</li>
+                    </ul>
+
+                    {/* Keyboard shortcuts */}
+                    <div className="font-sans text-[8px] uppercase tracking-wider text-slate-muted mb-1">Shortcuts</div>
+                    <ul className="space-y-0.5 text-[10px] text-slate font-mono">
+                      <li><span className="text-slate-muted">⌘F</span> Search in code</li>
+                      <li><span className="text-slate-muted">⌘⇧C</span> Copy code</li>
                     </ul>
                   </div>
                 )}
               </div>
+              {/* Display settings */}
+              <div className="relative" ref={displaySettingsRef}>
+                <button
+                  onClick={() => setShowDisplaySettings(!showDisplaySettings)}
+                  className={cn(
+                    "p-1 transition-colors",
+                    showDisplaySettings ? "text-burgundy" : "text-slate-muted hover:text-ink"
+                  )}
+                  title="Display settings"
+                >
+                  <Settings2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                </button>
+                {showDisplaySettings && (
+                  <div className="absolute top-full right-0 mt-2 w-48 bg-popover rounded shadow-xl border border-parchment/50 p-3 z-50 ring-1 ring-black/5 dark:ring-white/10">
+                    {/* Code section */}
+                    <div className="font-sans text-[9px] uppercase tracking-wider text-slate-muted mb-2">Code</div>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="font-sans text-[10px] text-slate">Font size</span>
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          onClick={() => setDisplaySettings(prev => ({
+                            ...prev,
+                            fontSize: Math.max(MIN_FONT_SIZE, prev.fontSize - 1)
+                          }))}
+                          disabled={displaySettings.fontSize <= MIN_FONT_SIZE}
+                          className="p-0.5 rounded-sm border border-parchment bg-card hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <Minus className="h-2.5 w-2.5" strokeWidth={1.5} />
+                        </button>
+                        <span className="w-6 text-center text-[10px] font-mono text-foreground">{displaySettings.fontSize}</span>
+                        <button
+                          onClick={() => setDisplaySettings(prev => ({
+                            ...prev,
+                            fontSize: Math.min(MAX_FONT_SIZE, prev.fontSize + 1)
+                          }))}
+                          disabled={displaySettings.fontSize >= MAX_FONT_SIZE}
+                          className="p-0.5 rounded-sm border border-parchment bg-card hover:bg-cream disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          <Plus className="h-2.5 w-2.5" strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Annotation settings - only in annotate mode */}
+                    {editorMode === "annotate" && (
+                      <>
+                        <div className="my-2.5 border-t border-parchment" />
+                        <div className="font-sans text-[9px] uppercase tracking-wider text-slate-muted mb-2">Annotations</div>
+
+                        {/* Brightness - dropdown */}
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="font-sans text-[10px] text-slate">Brightness</span>
+                          <select
+                            value={annotationDisplaySettings.brightness}
+                            onChange={(e) => setAnnotationDisplaySettings(prev => ({ ...prev, brightness: e.target.value as AnnotationBrightness }))}
+                            className="px-1.5 py-0.5 text-[10px] font-sans bg-card text-foreground border border-parchment rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy cursor-pointer"
+                          >
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="full">Full</option>
+                          </select>
+                        </div>
+
+                        {/* Show badge */}
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="font-sans text-[10px] text-slate">Type badge</span>
+                          <input
+                            type="checkbox"
+                            checked={annotationDisplaySettings.showBadge}
+                            onChange={(e) => setAnnotationDisplaySettings(prev => ({ ...prev, showBadge: e.target.checked }))}
+                            className="rounded border-parchment text-burgundy focus:ring-burgundy h-3.5 w-3.5 cursor-pointer"
+                          />
+                        </div>
+
+                        {/* Show bar background */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-sans text-[10px] text-slate">Bar background</span>
+                          <input
+                            type="checkbox"
+                            checked={annotationDisplaySettings.showPillBackground}
+                            onChange={(e) => setAnnotationDisplaySettings(prev => ({ ...prev, showPillBackground: e.target.checked }))}
+                            className="rounded border-parchment text-burgundy focus:ring-burgundy h-3.5 w-3.5 cursor-pointer"
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+              </>
+              )}
             </div>
           </div>
         )}
@@ -1032,6 +1411,8 @@ export function CodeEditorPanel({
               inlineEditCallbacks={inlineEditCallbacks}
               showDiscoveryAnimation={showDiscoveryAnimation}
               animationTriggerKey={animationTriggerKey}
+              highlightedAnnotationType={highlightedType}
+              annotationDisplaySettings={annotationDisplaySettings}
               className="flex-1"
             />
           )}

@@ -691,18 +691,59 @@ export function exportSessionLogPDF(
         addWrappedText(`Annotations: 0`, 9);
       }
 
-      // Show first 50 lines of annotated code
+      // Show first 50 lines of annotated code with pills for annotations
       if (file.annotatedContent) {
         const codeLines = file.annotatedContent.split("\n").slice(0, 50);
         doc.setFontSize(8);
-        doc.setFont("courier", "normal");
+
+        // Regex to match annotation lines: // An:Type: content
+        const annotationLineRegex = /^(\s*)\/\/\s*An:(\w+):\s*(.*)$/;
+        // Map abbreviations to full type names for color lookup
+        const prefixToType: Record<string, string> = {
+          "Obs": "observation",
+          "Q": "question",
+          "Met": "metaphor",
+          "Pat": "pattern",
+          "Ctx": "context",
+          "Crit": "critique",
+        };
+
         codeLines.forEach((line) => {
           if (yPos > pageHeight - margin) {
             doc.addPage();
             yPos = margin;
           }
-          // Sanitise code line for PDF compatibility
-          doc.text(sanitiseForPDF(line.substring(0, 100)), margin, yPos);
+
+          const match = line.match(annotationLineRegex);
+          if (match) {
+            // This is an annotation line - render with pill
+            const [, indent, prefix, content] = match;
+            const annotationType = prefixToType[prefix] || "observation";
+            const color = ANNOTATION_COLORS[annotationType] || { r: 128, g: 128, b: 128 };
+
+            // Calculate indent width
+            const indentWidth = indent ? doc.getTextWidth(indent) : 0;
+            let xPos = margin + indentWidth;
+
+            // Draw the pill
+            doc.setFontSize(7);
+            const pillWidth = drawPill(prefix, xPos, yPos, color);
+            xPos += pillWidth + 2;
+
+            // Draw the annotation content in italic
+            doc.setFontSize(8);
+            doc.setFont("courier", "italic");
+            doc.setTextColor(80, 80, 80);
+            const maxContentWidth = pageWidth - margin - xPos - 5;
+            const truncatedContent = content.length > 80 ? content.substring(0, 77) + "..." : content;
+            doc.text(sanitiseForPDF(truncatedContent), xPos, yPos);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont("courier", "normal");
+          } else {
+            // Regular code line
+            doc.setFont("courier", "normal");
+            doc.text(sanitiseForPDF(line.substring(0, 100)), margin, yPos);
+          }
           yPos += 3;
         });
         if (file.annotatedContent.split("\n").length > 50) {

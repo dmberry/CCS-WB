@@ -67,6 +67,22 @@ const ccsLightTheme = EditorView.theme(
       alignItems: "center",
       gap: "8px",
       fontSize: "11px",
+      width: "100%", // Ensure full width for uniform bar sizing
+    },
+    // Annotation bar - contains badge and content, colored background
+    ".cm-annotation-bar": {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      flex: "1",
+      minWidth: "0", // Allow shrinking for long content
+      padding: "3px 10px 3px 6px",
+      borderRadius: "4px",
+      transition: "background-color 0.15s, opacity 0.15s",
+      opacity: "var(--annotation-opacity, 0.6)", // Use CSS variable from widget
+    },
+    ".cm-annotation-widget:hover .cm-annotation-bar": {
+      opacity: "1 !important", // Override variable on hover
     },
     ".cm-annotation-type-badge": {
       fontFamily: "system-ui, sans-serif",
@@ -77,11 +93,8 @@ const ccsLightTheme = EditorView.theme(
       whiteSpace: "nowrap",
       textTransform: "uppercase",
       letterSpacing: "0.3px",
-      opacity: "0.4",
-      transition: "opacity 0.15s",
-    },
-    ".cm-annotation-widget:hover .cm-annotation-type-badge": {
-      opacity: "1",
+      flexShrink: "0",
+      transition: "opacity 0.15s, transform 0.15s",
     },
     ".cm-annotation-prefix": {
       fontFamily: "system-ui, sans-serif",
@@ -94,11 +107,7 @@ const ccsLightTheme = EditorView.theme(
       flex: "1",
       fontStyle: "italic",
       color: "hsl(var(--slate))",
-      opacity: "0.5",
       transition: "opacity 0.15s",
-    },
-    ".cm-annotation-widget:hover .cm-annotation-content": {
-      opacity: "0.85",
     },
     ".cm-annotation-actions": {
       display: "flex",
@@ -218,6 +227,14 @@ const ccsLightTheme = EditorView.theme(
     ".cm-annotate-gutter .cm-gutterElement:hover": {
       backgroundColor: "hsl(var(--burgundy) / 0.15)",
     },
+    // Dimmed lines for highlight annotations mode
+    ".cm-line-dimmed": {
+      opacity: "0.35",
+      transition: "opacity 0.15s",
+    },
+    ".cm-line-dimmed:hover": {
+      opacity: "0.7",
+    },
   },
   { dark: false }
 );
@@ -281,6 +298,22 @@ const ccsDarkTheme = EditorView.theme(
       alignItems: "center",
       gap: "8px",
       fontSize: "11px",
+      width: "100%", // Ensure full width for uniform bar sizing
+    },
+    // Annotation bar - contains badge and content, colored background
+    ".cm-annotation-bar": {
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      flex: "1",
+      minWidth: "0", // Allow shrinking for long content
+      padding: "3px 10px 3px 6px",
+      borderRadius: "4px",
+      transition: "background-color 0.15s, opacity 0.15s",
+      opacity: "var(--annotation-opacity, 0.6)", // Use CSS variable from widget
+    },
+    ".cm-annotation-widget:hover .cm-annotation-bar": {
+      opacity: "1 !important", // Override variable on hover
     },
     ".cm-annotation-type-badge": {
       fontFamily: "system-ui, sans-serif",
@@ -291,11 +324,8 @@ const ccsDarkTheme = EditorView.theme(
       whiteSpace: "nowrap",
       textTransform: "uppercase",
       letterSpacing: "0.3px",
-      opacity: "0.4",
-      transition: "opacity 0.15s",
-    },
-    ".cm-annotation-widget:hover .cm-annotation-type-badge": {
-      opacity: "1",
+      flexShrink: "0",
+      transition: "opacity 0.15s, transform 0.15s",
     },
     ".cm-annotation-prefix": {
       fontFamily: "system-ui, sans-serif",
@@ -308,11 +338,7 @@ const ccsDarkTheme = EditorView.theme(
       flex: "1",
       fontStyle: "italic",
       color: "hsl(var(--slate))",
-      opacity: "0.5",
       transition: "opacity 0.15s",
-    },
-    ".cm-annotation-widget:hover .cm-annotation-content": {
-      opacity: "0.9",
     },
     ".cm-annotation-actions": {
       display: "flex",
@@ -431,6 +457,14 @@ const ccsDarkTheme = EditorView.theme(
     },
     ".cm-annotate-gutter .cm-gutterElement:hover": {
       backgroundColor: "hsl(var(--burgundy) / 0.2)",
+    },
+    // Dimmed lines for highlight annotations mode
+    ".cm-line-dimmed": {
+      opacity: "0.3",
+      transition: "opacity 0.15s",
+    },
+    ".cm-line-dimmed:hover": {
+      opacity: "0.65",
     },
   },
   { dark: true }

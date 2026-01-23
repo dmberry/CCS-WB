@@ -23,8 +23,9 @@ import { search, searchKeymap, highlightSelectionMatches } from "@codemirror/sea
 import { useAppSettings } from "@/context/AppSettingsContext";
 import { getCCSTheme, getFontSizeTheme } from "./cm-theme";
 import { loadLanguage, normaliseLanguage, getLanguageColor } from "./cm-languages";
-import { createSimpleAnnotationsExtension, createAnnotateGutter, InlineEditState, InlineEditCallbacks } from "./cm-annotations";
-import type { LineAnnotation } from "@/types";
+import { createSimpleAnnotationsExtension, createAnnotateGutter, createHighlightAnnotatedLinesExtension, InlineEditState, InlineEditCallbacks } from "./cm-annotations";
+import type { LineAnnotation, LineAnnotationType } from "@/types";
+import type { AnnotationDisplaySettings } from "./CodeEditorPanel";
 
 export interface CodeMirrorEditorProps {
   /** The code content to display */
@@ -53,6 +54,10 @@ export interface CodeMirrorEditorProps {
   showDiscoveryAnimation?: boolean;
   /** Key that increments to force animation restart (for same-type file switching) */
   animationTriggerKey?: number;
+  /** Annotation type to highlight (briefly increases brightness of matching annotations) */
+  highlightedAnnotationType?: LineAnnotationType | null;
+  /** Annotation display settings (brightness, badge visibility, etc.) */
+  annotationDisplaySettings?: AnnotationDisplaySettings;
   /** CSS class for the container */
   className?: string;
 }
@@ -71,6 +76,8 @@ export function CodeMirrorEditor({
   inlineEditCallbacks,
   showDiscoveryAnimation = false,
   animationTriggerKey = 0,
+  highlightedAnnotationType,
+  annotationDisplaySettings,
   className,
 }: CodeMirrorEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -84,6 +91,7 @@ export function CodeMirrorEditor({
   const annotationsCompartment = useRef(new Compartment());
   const fontSizeCompartment = useRef(new Compartment());
   const gutterCompartment = useRef(new Compartment());
+  const highlightLinesCompartment = useRef(new Compartment());
 
   // Track if this is the initial mount to prevent double updates
   const isInitialMount = useRef(true);
@@ -161,8 +169,16 @@ export function CodeMirrorEditor({
               stableOnDelete,
               isDark,
               inlineEditState,
-              inlineEditCallbacks
+              inlineEditCallbacks,
+              highlightedAnnotationType,
+              annotationDisplaySettings
             )
+          : []
+      ),
+      // Highlight annotated lines extension (dims non-annotated lines)
+      highlightLinesCompartment.current.of(
+        readOnly && annotationDisplaySettings?.highlightAnnotatedLines
+          ? createHighlightAnnotatedLinesExtension(annotations, true)
           : []
       ),
       // Update listener for content changes
@@ -288,12 +304,26 @@ export function CodeMirrorEditor({
               stableOnDelete,
               isDark,
               inlineEditState,
-              inlineEditCallbacks
+              inlineEditCallbacks,
+              highlightedAnnotationType,
+              annotationDisplaySettings
             )
           : []
       ),
     });
-  }, [annotations, readOnly, stableOnEdit, stableOnDelete, isDark, inlineEditState, inlineEditCallbacks]);
+  }, [annotations, readOnly, stableOnEdit, stableOnDelete, isDark, inlineEditState, inlineEditCallbacks, highlightedAnnotationType, annotationDisplaySettings]);
+
+  // Update highlight annotated lines extension when setting or annotations change
+  useEffect(() => {
+    if (isInitialMount.current) return;
+    viewRef.current?.dispatch({
+      effects: highlightLinesCompartment.current.reconfigure(
+        readOnly && annotationDisplaySettings?.highlightAnnotatedLines
+          ? createHighlightAnnotatedLinesExtension(annotations, true)
+          : []
+      ),
+    });
+  }, [annotations, readOnly, annotationDisplaySettings?.highlightAnnotatedLines]);
 
   return (
     <div

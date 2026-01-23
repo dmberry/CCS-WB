@@ -9,7 +9,6 @@ import type { Message, CodeReference, ExperienceLevel } from "@/types";
 import { EXPERIENCE_LEVEL_LABELS, EXPERIENCE_LEVEL_DESCRIPTIONS, GUIDED_PROMPTS } from "@/types";
 import {
   Send,
-  Upload,
   Loader2,
   X,
   Download,
@@ -37,6 +36,8 @@ import {
   ChevronDown,
   HelpCircle,
   Search,
+  PanelRight,
+  PanelRightClose,
 } from "lucide-react";
 import { CodeEditorPanel, generateAnnotatedCode, parseAnnotatedMarkdown } from "@/components/code";
 import { ContextPreview } from "@/components/chat";
@@ -174,6 +175,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const DEFAULT_CODE_PANEL_WIDTH = 70;
   const [codePanelWidth, setCodePanelWidth] = useState(DEFAULT_CODE_PANEL_WIDTH);
   const [isDragging, setIsDragging] = useState(false);
+  const [chatCollapsed, setChatCollapsed] = useState(false);
+  const [annotationFullScreen, setAnnotationFullScreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Create a Map from session.codeContents for compatibility with existing code
@@ -235,8 +238,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
       const containerRect = containerRef.current.getBoundingClientRect();
       const newWidth = ((e.clientX - containerRect.left) / containerRect.width) * 100;
 
-      // Clamp between 25% and 75%
-      setCodePanelWidth(Math.min(75, Math.max(25, newWidth)));
+      // Clamp between 15% and 85% (allows chat to get very small)
+      setCodePanelWidth(Math.min(85, Math.max(15, newWidth)));
     };
 
     const handleMouseUp = () => {
@@ -1173,8 +1176,11 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
       <div ref={containerRef} className="flex-1 flex overflow-hidden">
         {/* Left + Center: Code Editor Panel */}
         <div
-          className={cn(!aiEnabled && "flex-1", aiEnabled && "border-r border-parchment")}
-          style={aiEnabled ? { width: `${codePanelWidth}%` } : undefined}
+          className={cn(
+            (!aiEnabled || chatCollapsed || annotationFullScreen) && "flex-1",
+            aiEnabled && !chatCollapsed && !annotationFullScreen && "border-r border-parchment"
+          )}
+          style={aiEnabled && !chatCollapsed && !annotationFullScreen ? { width: `${codePanelWidth}%` } : undefined}
         >
           <CodeEditorPanel
             codeFiles={session.codeFiles}
@@ -1187,11 +1193,13 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             onDuplicateFile={handleDuplicateFile}
             onLoadCode={() => fileInputRef.current?.click()}
             onReorderFiles={reorderCodeFiles}
+            isFullScreen={annotationFullScreen}
+            onToggleFullScreen={() => setAnnotationFullScreen(prev => !prev)}
           />
         </div>
 
-        {/* Resizable divider - only show when AI enabled */}
-        {aiEnabled && (
+        {/* Resizable divider - only show when AI enabled, chat not collapsed, and not fullscreen */}
+        {aiEnabled && !chatCollapsed && !annotationFullScreen && (
           <div
             onMouseDown={handleMouseDown}
             className={cn(
@@ -1201,9 +1209,39 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           />
         )}
 
-        {/* Right: Chat Panel - only show when AI enabled */}
-        {aiEnabled && (
-        <div className="flex-1 flex flex-col min-w-0">
+        {/* Right: Chat Panel - only show when AI enabled and not fullscreen */}
+        {aiEnabled && !annotationFullScreen && (
+        <div className={cn(
+          "flex flex-col transition-all duration-200",
+          chatCollapsed ? "w-10 flex-shrink-0" : "flex-1 min-w-0"
+        )}>
+          {/* Collapsed state - just show expand button */}
+          {chatCollapsed ? (
+            <div className="flex-1 flex flex-col items-center pt-2 bg-cream/30 border-l border-parchment">
+              <button
+                onClick={() => setChatCollapsed(false)}
+                className="p-2 text-slate hover:text-ink hover:bg-cream rounded-sm transition-colors"
+                title="Expand chat panel"
+              >
+                <PanelRight className="h-4 w-4" strokeWidth={1.5} />
+              </button>
+              <span className="mt-2 text-[10px] text-slate-muted" style={{ writingMode: "vertical-rl" }}>Chat</span>
+            </div>
+          ) : (
+          <>
+          {/* Chat panel header bar - matches file tree header style */}
+          <div className="flex items-center justify-between px-2 py-1.5 border-b border-parchment bg-cream/30">
+            <button
+              onClick={() => setChatCollapsed(true)}
+              className="p-1 text-slate-muted hover:text-ink hover:bg-cream rounded-sm transition-colors"
+              title="Collapse chat panel"
+            >
+              <PanelRightClose className="h-3.5 w-3.5" strokeWidth={1.5} />
+            </button>
+            <span className="font-sans text-[10px] text-slate-muted">
+              AI: {PROVIDER_CONFIGS[aiSettings.provider]?.name || aiSettings.provider}
+            </span>
+          </div>
           {/* Chat search bar */}
           {showChatSearch && (
             <div className="border-b border-parchment bg-cream/50 px-3 py-2 flex items-center gap-2">
@@ -1358,56 +1396,6 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           {/* Input area - Claude-style */}
           <div className="p-3 flex justify-center">
           <div className="w-full md:w-[80%]">
-            {/* Code paste input */}
-            {showCodeInput && (
-              <div data-code-input className="mb-3 p-3 bg-cream/50 border border-parchment rounded-lg modal-content">
-                <div className="flex gap-2 mb-2">
-                  <input
-                    type="text"
-                    value={codeInputName}
-                    onChange={(e) => setCodeInputName(e.target.value)}
-                    placeholder="File name"
-                    className="flex-1 px-2 py-1 border border-parchment rounded bg-card"
-                    style={{ fontSize: `${chatFontSize}px` }}
-                  />
-                  <select
-                    value={codeInputLanguage}
-                    onChange={(e) => setCodeInputLanguage(e.target.value)}
-                    className="w-28 px-2 py-1 border border-parchment rounded bg-card"
-                    style={{ fontSize: `${chatFontSize}px` }}
-                  >
-                    {CRITIQUE_LANGUAGES.map((lang) => (
-                      <option key={lang} value={lang}>
-                        {lang || "Language"}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <textarea
-                  value={codeInputText}
-                  onChange={(e) => setCodeInputText(e.target.value)}
-                  placeholder="Paste your code here..."
-                  className="w-full h-32 px-2 py-1 font-mono border border-parchment rounded bg-card resize-none"
-                  style={{ fontSize: `${chatFontSize}px` }}
-                />
-                <div className="flex justify-end gap-2 mt-2">
-                  <button
-                    onClick={() => setShowCodeInput(false)}
-                    className="px-3 py-1 text-xs text-slate hover:text-ink"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCodeSubmit}
-                    disabled={!codeInputText.trim()}
-                    className="px-3 py-1 text-xs bg-burgundy text-ivory rounded hover:bg-burgundy-dark disabled:opacity-50"
-                  >
-                    Add Code
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Claude-style input container */}
             <div className="bg-card rounded-2xl border border-parchment shadow-sm">
               {/* Textarea */}
@@ -1426,24 +1414,6 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
               <div className="flex items-center justify-between px-3 pb-2">
                 {/* Left side icons */}
                 <div className="flex items-center gap-0.5">
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-1.5 text-slate hover:text-ink rounded-md transition-colors"
-                    title="Load code from file"
-                  >
-                    <Upload className="h-4 w-4" strokeWidth={1.5} />
-                  </button>
-                  <button
-                    data-code-input
-                    onClick={() => setShowCodeInput(!showCodeInput)}
-                    className={cn(
-                      "p-1.5 rounded-md transition-colors",
-                      showCodeInput ? "text-burgundy" : "text-slate hover:text-ink"
-                    )}
-                    title="Paste code"
-                  >
-                    <FileText className="h-4 w-4" strokeWidth={1.5} />
-                  </button>
                   {session.codeFiles.length > 0 && (
                     <>
                       <button
@@ -1560,6 +1530,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             </div>
           </div>
           </div>
+          </>
+          )}
         </div>
         )}
 
