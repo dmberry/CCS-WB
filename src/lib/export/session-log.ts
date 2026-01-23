@@ -108,6 +108,7 @@ export interface SessionLogData {
     annotations?: Array<{
       id: string;
       lineNumber: number;
+      endLineNumber?: number;
       lineContent: string;
       type: string;
       content: string;
