@@ -1660,11 +1660,13 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                     </label>
                     <button
                       onClick={() => setIsCreatingProject(true)}
+                      disabled={!!currentProjectId}
+                      title={currentProjectId ? "Leave current project first" : undefined}
                       className={cn(
                         "flex items-center justify-center gap-1 px-2 py-1.5 rounded-sm",
                         "text-[11px]",
                         "bg-burgundy/10 text-burgundy hover:bg-burgundy/20",
-                        "transition-colors"
+                        "transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       )}
                     >
                       <Plus className="h-2.5 w-2.5" />
@@ -1769,11 +1771,12 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                             ) : (
                               <button
                                 onClick={() => handleLoadProject(project.id)}
-                                disabled={!!cloudActionLoading}
+                                disabled={!!cloudActionLoading || !!currentProjectId}
+                                title={currentProjectId ? "Leave current project first" : undefined}
                                 className={cn(
                                   "flex items-center justify-center gap-1 px-2 py-1.5 rounded-sm",
                                   "text-[11px] bg-burgundy/10 text-burgundy hover:bg-burgundy/20",
-                                  "transition-colors disabled:opacity-50"
+                                  "transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 )}
                               >
                                 {cloudActionLoading === `load-${project.id}` ? (

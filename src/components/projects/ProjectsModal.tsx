@@ -357,11 +357,14 @@ export function ProjectsModal() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsCreating(true)}
+                  disabled={!!currentProjectId}
+                  title={currentProjectId ? "Leave current project first" : undefined}
                   className={cn(
                     "flex items-center justify-center gap-2 px-4 py-3",
                     "font-sans text-ui-base font-medium text-ivory",
                     "bg-burgundy rounded-xl",
-                    "hover:bg-burgundy-dark transition-all shadow-sm hover:shadow"
+                    "hover:bg-burgundy-dark transition-all shadow-sm hover:shadow",
+                    "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-burgundy"
                   )}
                 >
                   <Plus className="h-4 w-4" />
@@ -491,7 +494,8 @@ export function ProjectsModal() {
                       ) : (
                         <button
                           onClick={() => handleLoad(project)}
-                          disabled={!!actionLoading}
+                          disabled={!!actionLoading || !!currentProjectId}
+                          title={currentProjectId ? "Leave current project first" : undefined}
                           className={cn(
                             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg",
                             "font-sans text-ui-xs font-medium",
