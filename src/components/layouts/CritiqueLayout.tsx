@@ -1996,7 +1996,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             onReorderFiles={reorderCodeFiles}
             onUpdateFileLanguage={(fileId, language) => updateCode(fileId, { language })}
             isFullScreen={annotationFullScreen}
-            onToggleFullScreen={() => setAnnotationFullScreen(prev => !prev)}
+            onToggleFullScreen={() => setAnnotationFullScreen((prev: boolean) => !prev)}
             onRequestMinPanelWidth={(minWidth) => {
               // Auto-extend panel for 80-column punch card files
               // Only extend if user hasn't manually resized (respect user choice)
