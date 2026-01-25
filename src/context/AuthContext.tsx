@@ -31,6 +31,7 @@ interface AuthContextValue {
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isAdmin: boolean;
 
   // Auth methods
   signInWithProvider: (provider: AuthProvider) => Promise<{ error: AuthError | null }>;
@@ -334,6 +335,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         isLoading,
         isAuthenticated: !!user,
+        isAdmin: profile?.is_admin ?? false,
         signInWithProvider,
         signInWithMagicLink,
         signOut,

@@ -64,6 +64,17 @@ interface ProjectsContextValue {
   loadLibraryProject: (projectId: string) => Promise<{ session: Session | null; error: Error | null }>;
   copyLibraryProject: (projectId: string, newName?: string) => Promise<{ project: Project | null; error: Error | null }>;
   submitForReview: (projectId: string) => Promise<{ error: Error | null }>;
+
+  // Admin state
+  pendingSubmissions: LibraryProject[];
+  isLoadingAdmin: boolean;
+  showAdminModal: boolean;
+  setShowAdminModal: (show: boolean) => void;
+
+  // Admin functions
+  fetchPendingSubmissions: () => Promise<void>;
+  approveProject: (projectId: string) => Promise<{ error: Error | null }>;
+  rejectProject: (projectId: string) => Promise<{ error: Error | null }>;
 }
 
 const ProjectsContext = createContext<ProjectsContextValue | null>(null);
@@ -82,6 +93,11 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
   const [showLibraryModal, setShowLibraryModal] = useState(false);
   const [viewingLibraryProjectId, setViewingLibraryProjectId] = useState<string | null>(null);
+
+  // Admin state
+  const [pendingSubmissions, setPendingSubmissions] = useState<LibraryProject[]>([]);
+  const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
 
   const isSupabaseEnabled = isSupabaseConfigured();
   const supabase = isSupabaseEnabled ? getSupabaseClient() : null;
@@ -1072,6 +1088,105 @@ _Add relevant references, documentation links, or related scholarship:_
     }
   }, [supabase, user]);
 
+  // =============================================================================
+  // Admin Functions
+  // =============================================================================
+
+  // Fetch projects pending admin review
+  const fetchPendingSubmissions = useCallback(async () => {
+    if (!supabase) return;
+
+    setIsLoadingAdmin(true);
+
+    try {
+      // Fetch submitted projects with owner info
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from("projects")
+        .select(`
+          *,
+          owner:profiles!owner_id(id, display_name, initials, affiliation)
+        `)
+        .eq("is_public", true)
+        .eq("accession_status", "submitted")
+        .order("submitted_at", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching pending submissions:", error);
+        return;
+      }
+
+      setPendingSubmissions(data || []);
+    } catch (error) {
+      console.error("Error fetching pending submissions:", error);
+    } finally {
+      setIsLoadingAdmin(false);
+    }
+  }, [supabase]);
+
+  // Approve a submitted project (admin only)
+  const approveProject = useCallback(async (projectId: string) => {
+    if (!supabase || !user) {
+      return { error: new Error("Not authenticated") };
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("projects")
+        .update({
+          accession_status: "approved" as AccessionStatus,
+          approved_at: new Date().toISOString(),
+          approved_by: user.id,
+        })
+        .eq("id", projectId)
+        .eq("accession_status", "submitted"); // Only approve submitted projects
+
+      if (error) {
+        return { error: new Error(error.message) };
+      }
+
+      // Remove from pending list
+      setPendingSubmissions(prev => prev.filter(p => p.id !== projectId));
+
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  }, [supabase, user]);
+
+  // Reject a submitted project (admin only)
+  const rejectProject = useCallback(async (projectId: string) => {
+    if (!supabase || !user) {
+      return { error: new Error("Not authenticated") };
+    }
+
+    try {
+      // Reset to draft status
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("projects")
+        .update({
+          is_public: false,
+          accession_status: "draft" as AccessionStatus,
+          submitted_at: null,
+        })
+        .eq("id", projectId)
+        .eq("accession_status", "submitted"); // Only reject submitted projects
+
+      if (error) {
+        return { error: new Error(error.message) };
+      }
+
+      // Remove from pending list
+      setPendingSubmissions(prev => prev.filter(p => p.id !== projectId));
+
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  }, [supabase, user]);
+
   return (
     <ProjectsContext.Provider
       value={{
@@ -1106,6 +1221,14 @@ _Add relevant references, documentation links, or related scholarship:_
         loadLibraryProject,
         copyLibraryProject,
         submitForReview,
+        // Admin
+        pendingSubmissions,
+        isLoadingAdmin,
+        showAdminModal,
+        setShowAdminModal,
+        fetchPendingSubmissions,
+        approveProject,
+        rejectProject,
       }}
     >
       {children}

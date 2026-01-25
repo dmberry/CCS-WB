@@ -11,6 +11,7 @@ import { LoginModal } from "@/components/auth/LoginModal";
 import { ProjectsModal } from "@/components/projects/ProjectsModal";
 import { MembersModal } from "@/components/projects/MembersModal";
 import { LibraryModal } from "@/components/projects/LibraryModal";
+import { AdminModal } from "@/components/projects/AdminModal";
 import { ProjectSyncBanner } from "@/components/projects/ProjectSyncBanner";
 import { Clippy } from "@/components/easter-eggs/Clippy";
 
@@ -76,6 +77,13 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {/* Google Fonts for code font options */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=IBM+Plex+Mono:wght@400;500&family=Inconsolata:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Roboto+Mono:wght@400;500&family=Source+Code+Pro:wght@400;500&display=swap"
+          rel="stylesheet"
+        />
         {/* Inline script to prevent dark mode flash - runs before React hydration */}
         <script
           dangerouslySetInnerHTML={{
@@ -109,6 +117,7 @@ export default function RootLayout({
                     <ProjectsModal />
                     <MembersModal />
                     <LibraryModal />
+                    <AdminModal />
                     <ProjectSyncBanner />
                     <Clippy />
                   </ProjectsProvider>

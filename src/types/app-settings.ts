@@ -77,7 +77,8 @@ export const PROGRAMMING_LANGUAGES = [
   { id: "go", name: "Go", description: "Go" },
   { id: "rust", name: "Rust", description: "Rust" },
   { id: "ruby", name: "Ruby", description: "Ruby" },
-  // Historical languages (punch card era)
+  // Historical languages (punch card era and early microcomputers)
+  { id: "basic", name: "BASIC", description: "Beginner's All-purpose Symbolic Instruction Code (1964+)" },
   { id: "mad", name: "MAD", description: "Michigan Algorithm Decoder (1960s)" },
   { id: "fortran", name: "FORTRAN", description: "Formula Translation (1957+)" },
   { id: "cobol", name: "COBOL", description: "Common Business-Oriented Language (1959+)" },
@@ -85,6 +86,20 @@ export const PROGRAMMING_LANGUAGES = [
 ] as const;
 
 export type ProgrammingLanguageId = typeof PROGRAMMING_LANGUAGES[number]["id"];
+
+// Monospace font options for code display in annotations
+export const CODE_FONT_OPTIONS = [
+  { id: "default", name: "System Default", family: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" },
+  { id: "firacode", name: "Fira Code", family: "'Fira Code', ui-monospace, monospace" },
+  { id: "jetbrains", name: "JetBrains Mono", family: "'JetBrains Mono', ui-monospace, monospace" },
+  { id: "source-code", name: "Source Code Pro", family: "'Source Code Pro', ui-monospace, monospace" },
+  { id: "ibm-plex", name: "IBM Plex Mono", family: "'IBM Plex Mono', ui-monospace, monospace" },
+  { id: "cascadia", name: "Cascadia Code", family: "'Cascadia Code', ui-monospace, monospace" },
+  { id: "roboto", name: "Roboto Mono", family: "'Roboto Mono', ui-monospace, monospace" },
+  { id: "inconsolata", name: "Inconsolata", family: "'Inconsolata', ui-monospace, monospace" },
+] as const;
+
+export type CodeFontId = typeof CODE_FONT_OPTIONS[number]["id"];
 
 export interface FontSizeSettings {
   codeFontSize: number;
@@ -112,6 +127,9 @@ export interface AppSettings {
 
   // Code files pane font size
   filesPaneFontSize: number;  // Font size for files sidebar (8-14px)
+
+  // Code font for annotations and code display
+  codeFont: CodeFontId;
 
   // Default programming language preference
   defaultLanguage: ProgrammingLanguageId;
@@ -157,6 +175,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   annotationFontSize: 9,
   annotationIndent: 56,
   filesPaneFontSize: 10,
+  codeFont: "default",
   defaultLanguage: "",
   theme: "light",
   accentColour: "burgundy",

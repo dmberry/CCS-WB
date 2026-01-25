@@ -16,6 +16,7 @@ import type {
   ThemeMode,
   AccentColourId,
   UserProfile,
+  CodeFontId,
 } from "@/types/app-settings";
 import {
   DEFAULT_APP_SETTINGS,
@@ -31,6 +32,7 @@ import {
   FILES_PANE_FONT_SIZE_MIN,
   FILES_PANE_FONT_SIZE_MAX,
   ACCENT_COLOURS,
+  CODE_FONT_OPTIONS,
 } from "@/types/app-settings";
 
 const STORAGE_KEY = "ccs-wb-app-settings";
@@ -67,6 +69,9 @@ interface AppSettingsContextValue {
 
   // Set files pane font size
   setFilesPaneFontSize: (size: number) => void;
+
+  // Set code font
+  setCodeFont: (font: CodeFontId) => void;
 
   // Set theme
   setTheme: (theme: ThemeMode) => void;
@@ -131,6 +136,7 @@ export function AppSettingsProvider({
             annotationFontSize: parsed.settings.annotationFontSize ?? DEFAULT_APP_SETTINGS.annotationFontSize,
             annotationIndent: parsed.settings.annotationIndent ?? DEFAULT_APP_SETTINGS.annotationIndent,
             filesPaneFontSize: parsed.settings.filesPaneFontSize ?? DEFAULT_APP_SETTINGS.filesPaneFontSize,
+            codeFont: parsed.settings.codeFont ?? DEFAULT_APP_SETTINGS.codeFont,
           };
           setSettings(migratedSettings);
         }
@@ -344,6 +350,14 @@ export function AppSettingsProvider({
     }));
   }, []);
 
+  // Set code font
+  const setCodeFont = useCallback((font: CodeFontId) => {
+    setSettings((prev) => ({
+      ...prev,
+      codeFont: font,
+    }));
+  }, []);
+
   // Set theme
   const setTheme = useCallback((theme: ThemeMode) => {
     setSettings((prev) => ({
@@ -400,6 +414,17 @@ export function AppSettingsProvider({
     const root = document.documentElement;
     root.style.setProperty("--files-pane-font-size", `${settings.filesPaneFontSize}px`);
   }, [settings.filesPaneFontSize]);
+
+  // Apply code font as CSS variable
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const fontOption = CODE_FONT_OPTIONS.find(f => f.id === settings.codeFont);
+    if (!fontOption) return;
+
+    const root = document.documentElement;
+    root.style.setProperty("--code-font-family", fontOption.family);
+  }, [settings.codeFont]);
 
   // Apply accent colour and themed backgrounds as CSS variables
   useEffect(() => {
@@ -468,6 +493,7 @@ export function AppSettingsProvider({
         setAnnotationFontSize,
         setAnnotationIndent,
         setFilesPaneFontSize,
+        setCodeFont,
         setTheme,
         effectiveTheme,
         setAccentColour,

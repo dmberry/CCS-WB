@@ -172,7 +172,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   } = useCollaborativeSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured, connectionStatus, isAiReady } = useAISettings();
   const { settings: appSettings, getFontSizes, setModeCodeFontSize, setModeChatFontSize, getDisplayName, profile } = useAppSettings();
-  const { isAuthenticated, setShowLoginModal, profile: authProfile, user } = useAuth();
+  const { isAuthenticated, setShowLoginModal, profile: authProfile, user, isAdmin } = useAuth();
   const {
     currentProjectId,
     projects,
@@ -188,6 +188,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     viewingLibraryProjectId,
     setViewingLibraryProjectId,
     copyLibraryProject,
+    submitForReview,
+    setShowAdminModal,
   } = useProjects();
   const { markLocalUpdate } = useProjectSync();
   const aiEnabled = aiSettings.aiEnabled;
@@ -1698,6 +1700,67 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                   <Library className="h-3 w-3" />
                   Browse Library
                 </button>
+
+                {/* Submit to Library button - only for project owners with a current project */}
+                {currentProjectId && currentProject && user?.id === currentProject.owner_id && (
+                  <button
+                    onClick={async () => {
+                      if (!currentProjectId) return;
+                      setCloudActionLoading("submit-library");
+                      const { error } = await submitForReview(currentProjectId);
+                      if (error) {
+                        console.error("Error submitting to library:", error);
+                      }
+                      setCloudActionLoading(null);
+                      setShowCloudMenu(false);
+                    }}
+                    disabled={cloudActionLoading === "submit-library" || currentProject.accession_status !== "draft"}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-2 py-1.5 rounded-sm",
+                      "text-[11px] transition-colors",
+                      currentProject.accession_status === "draft"
+                        ? "text-slate hover:text-ink hover:bg-cream"
+                        : "text-slate/50 cursor-not-allowed",
+                      "disabled:opacity-50"
+                    )}
+                    title={
+                      currentProject.accession_status === "submitted"
+                        ? "Already submitted for review"
+                        : currentProject.accession_status === "approved"
+                        ? "Already in library"
+                        : "Submit this project to the public library"
+                    }
+                  >
+                    {cloudActionLoading === "submit-library" ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <UploadCloud className="h-3 w-3" />
+                    )}
+                    {currentProject.accession_status === "submitted"
+                      ? "Pending Review"
+                      : currentProject.accession_status === "approved"
+                      ? "In Library"
+                      : "Submit to Library"}
+                  </button>
+                )}
+
+                {/* Admin button - only for admins */}
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      setShowAdminModal(true);
+                      setShowCloudMenu(false);
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-2 py-1.5 rounded-sm",
+                      "text-[11px] text-amber-600 hover:text-amber-700 hover:bg-amber-50",
+                      "transition-colors"
+                    )}
+                  >
+                    <Shield className="h-3 w-3" />
+                    Admin: Review Submissions
+                  </button>
+                )}
 
                 {/* Divider before projects list */}
                 <div className="border-t border-parchment my-1" />

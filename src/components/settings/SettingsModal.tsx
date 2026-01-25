@@ -21,9 +21,11 @@ import {
   FILES_PANE_FONT_SIZE_MAX,
   PROGRAMMING_LANGUAGES,
   ACCENT_COLOURS,
+  CODE_FONT_OPTIONS,
   type ProgrammingLanguageId,
   type ThemeMode,
   type AccentColourId,
+  type CodeFontId,
 } from "@/types/app-settings";
 
 type SettingsTab = "profile" | "code" | "appearance" | "ai" | "about";
@@ -54,6 +56,7 @@ export function SettingsModal({
     setAnnotationFontSize,
     setAnnotationIndent,
     setFilesPaneFontSize,
+    setCodeFont,
     setDefaultLanguage,
     setTheme,
     setAccentColour,
@@ -621,7 +624,7 @@ export function SettingsModal({
                 </div>
 
                 {/* Annotation Indent */}
-                <div className="flex items-center justify-between py-2">
+                <div className="flex items-center justify-between py-2 border-b border-parchment">
                   <div>
                     <label className="block font-sans text-caption font-medium text-ink">
                       Left Indent
@@ -659,6 +662,30 @@ export function SettingsModal({
                       <Plus className="h-3 w-3" />
                     </button>
                   </div>
+                </div>
+
+                {/* Code Font */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <label className="block font-sans text-caption font-medium text-ink">
+                      Code Font
+                    </label>
+                    <p className="font-sans text-[10px] text-slate-muted">
+                      Monospace font for code display
+                    </p>
+                  </div>
+                  <select
+                    value={settings.codeFont}
+                    onChange={(e) => setCodeFont(e.target.value as CodeFontId)}
+                    className="px-3 py-1.5 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors min-w-[140px]"
+                    style={{ fontFamily: CODE_FONT_OPTIONS.find(f => f.id === settings.codeFont)?.family }}
+                  >
+                    {CODE_FONT_OPTIONS.map((font) => (
+                      <option key={font.id} value={font.id}>
+                        {font.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 

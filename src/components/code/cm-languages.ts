@@ -29,6 +29,7 @@ export const LANGUAGE_COLORS: Record<string, { light: string; dark: string }> = 
   mad: { light: "#6a1b9a", dark: "#9c4dcc" }, // MAD purple (Michigan colors)
   fortran: { light: "#4d148c", dark: "#7b1fa2" }, // FORTRAN deep purple
   cobol: { light: "#0d47a1", dark: "#1976d2" }, // COBOL blue
+  basic: { light: "#0066cc", dark: "#4da6ff" }, // BASIC Dartmouth blue
 };
 
 /**
@@ -98,6 +99,7 @@ const languageLoaders: Record<string, LanguageLoader> = {
 
   // Historical languages (punch card era)
   mad: () => import("./cm-lang-mad").then((m) => m.mad()),
+  basic: () => import("./cm-lang-basic").then((m) => m.basic()),
 };
 
 // File extension to language name mapping
@@ -181,8 +183,8 @@ const extensionToLanguage: Record<string, string> = {
   // COBOL
   cob: "cobol",
   cbl: "cobol",
-  // BASIC
-  bas: "plain",
+  // BASIC - has syntax highlighting
+  bas: "basic",
   // Assembly
   asm: "plain",
   s: "plain",
@@ -242,9 +244,9 @@ const languageAliases: Record<string, string> = {
   // Markdown variants
   md: "markdown",
 
-  // BASIC (historical, no native support)
-  basic: "plain",
-  bas: "plain",
+  // BASIC (historical, has syntax highlighting)
+  basic: "basic",
+  bas: "basic",
 
   // LISP family (no native support)
   lisp: "plain",

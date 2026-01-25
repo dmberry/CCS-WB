@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 2.6.0** | CCS Methodology v2.5
+**Version 2.6.1** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -287,6 +287,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 2.6.1 | **Library & accessioning**: Admin panel for reviewing library submissions (Submit to Library button for owners, Admin: Review Submissions for admins), BASIC syntax highlighting with full keyword support, code font selection (8 monospace fonts including Fira Code, JetBrains Mono, Source Code Pro) in Settings → Appearance |
 | 2.6.0 | **Custom skins**: Retro-themed visual skins system with nostalgic Myspace skin included, skin-aware Clippy with custom messages, shared retro icons, skin credit box support; enable in Settings → Appearance |
 | 2.5.1 | **Easter eggs**: Hidden features for the discerning scholar (try typing "clippy" or "hacker" anywhere outside text fields) |
 | 2.5.0 | **File management & display settings**: New File button creates blank markdown files, Commit Changes saves current content as new base version, Download ZIP exports project with code files and annotations, OAuth redirect preserves current page, display settings (annotation font/indent/brightness, panel layout) persist per-project, files pane font size setting, Safari tab suspension fixes |

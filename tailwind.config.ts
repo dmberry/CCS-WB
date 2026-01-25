@@ -116,7 +116,8 @@ const config: Config = {
         display: ["var(--font-libre-baskerville)", "Georgia", "serif"],
         body: ["var(--font-source-serif)", "Georgia", "serif"],
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "Consolas", "monospace"],
+        // Uses CSS variable for user-selectable code font
+        mono: ["var(--code-font-family, 'JetBrains Mono')", "ui-monospace", "Consolas", "monospace"],
       },
       fontSize: {
         // Editorial type scale based on 1.333 (Perfect Fourth)

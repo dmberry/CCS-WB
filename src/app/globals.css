@@ -7,6 +7,9 @@
     /* UI Font Size - default 11px, can be changed via settings */
     --ui-font-size: 11px;
 
+    /* Code Font Family - user-selectable monospace font */
+    --code-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
     /* Editorial color palette */
     --ink: 0 0% 10%;
     --charcoal: 0 0% 18%;
