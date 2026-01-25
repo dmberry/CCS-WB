@@ -1908,6 +1908,10 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                         <span><strong>⌘⇧F</strong> - Search chat</span>
                       </div>
                     </div>
+                    {/* Easter egg hint */}
+                    <p className="text-[9px] text-slate-muted/50 italic mt-2 pt-2 border-t border-parchment/50">
+                      It looks like you&apos;re reading the help. Would you like help with that?
+                    </p>
                   </div>
                 </div>
               </>
