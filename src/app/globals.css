@@ -245,6 +245,27 @@
   font-size: var(--ui-font-size);
 }
 
+/* Ensure text-ui-* classes work within modal-content */
+.modal-content .text-ui-xs {
+  font-size: calc(var(--ui-font-size) - 2px);
+}
+
+.modal-content .text-ui-sm {
+  font-size: calc(var(--ui-font-size) - 1px);
+}
+
+.modal-content .text-ui-base {
+  font-size: var(--ui-font-size);
+}
+
+.modal-content .text-ui-lg {
+  font-size: calc(var(--ui-font-size) + 2px);
+}
+
+.modal-content .text-ui-title {
+  font-size: calc(var(--ui-font-size) + 4px);
+}
+
 /* Editorial cards */
 .card-editorial {
   @apply bg-card border border-parchment rounded-sm;

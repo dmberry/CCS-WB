@@ -24,6 +24,12 @@ import {
   FONT_SIZE_MAX,
   UI_FONT_SIZE_MIN,
   UI_FONT_SIZE_MAX,
+  ANNOTATION_FONT_SIZE_MIN,
+  ANNOTATION_FONT_SIZE_MAX,
+  ANNOTATION_INDENT_MIN,
+  ANNOTATION_INDENT_MAX,
+  FILES_PANE_FONT_SIZE_MIN,
+  FILES_PANE_FONT_SIZE_MAX,
   ACCENT_COLOURS,
 } from "@/types/app-settings";
 
@@ -54,6 +60,13 @@ interface AppSettingsContextValue {
 
   // Set UI font size for modals and windows
   setUiFontSize: (size: number) => void;
+
+  // Set annotation display settings
+  setAnnotationFontSize: (size: number) => void;
+  setAnnotationIndent: (indent: number) => void;
+
+  // Set files pane font size
+  setFilesPaneFontSize: (size: number) => void;
 
   // Set theme
   setTheme: (theme: ThemeMode) => void;
@@ -108,13 +121,16 @@ export function AppSettingsProvider({
       if (stored) {
         const parsed: AppSettingsStorage = JSON.parse(stored);
         if (parsed.version === STORAGE_VERSION && parsed.settings) {
-          // Migrate old settings that don't have defaultLanguage, uiFontSize, theme, or accentColour
+          // Migrate old settings that don't have newer fields
           const migratedSettings: AppSettings = {
             ...parsed.settings,
             defaultLanguage: parsed.settings.defaultLanguage ?? "",
             uiFontSize: parsed.settings.uiFontSize ?? DEFAULT_APP_SETTINGS.uiFontSize,
             theme: parsed.settings.theme ?? DEFAULT_APP_SETTINGS.theme,
             accentColour: parsed.settings.accentColour ?? DEFAULT_APP_SETTINGS.accentColour,
+            annotationFontSize: parsed.settings.annotationFontSize ?? DEFAULT_APP_SETTINGS.annotationFontSize,
+            annotationIndent: parsed.settings.annotationIndent ?? DEFAULT_APP_SETTINGS.annotationIndent,
+            filesPaneFontSize: parsed.settings.filesPaneFontSize ?? DEFAULT_APP_SETTINGS.filesPaneFontSize,
           };
           setSettings(migratedSettings);
         }
@@ -301,6 +317,33 @@ export function AppSettingsProvider({
     }));
   }, []);
 
+  // Set annotation font size
+  const setAnnotationFontSize = useCallback((size: number) => {
+    const clamped = Math.max(ANNOTATION_FONT_SIZE_MIN, Math.min(ANNOTATION_FONT_SIZE_MAX, size));
+    setSettings((prev) => ({
+      ...prev,
+      annotationFontSize: clamped,
+    }));
+  }, []);
+
+  // Set annotation indent
+  const setAnnotationIndent = useCallback((indent: number) => {
+    const clamped = Math.max(ANNOTATION_INDENT_MIN, Math.min(ANNOTATION_INDENT_MAX, indent));
+    setSettings((prev) => ({
+      ...prev,
+      annotationIndent: clamped,
+    }));
+  }, []);
+
+  // Set files pane font size
+  const setFilesPaneFontSize = useCallback((size: number) => {
+    const clamped = Math.max(FILES_PANE_FONT_SIZE_MIN, Math.min(FILES_PANE_FONT_SIZE_MAX, size));
+    setSettings((prev) => ({
+      ...prev,
+      filesPaneFontSize: clamped,
+    }));
+  }, []);
+
   // Set theme
   const setTheme = useCallback((theme: ThemeMode) => {
     setSettings((prev) => ({
@@ -340,6 +383,23 @@ export function AppSettingsProvider({
     const root = document.documentElement;
     root.style.setProperty("--ui-font-size", `${settings.uiFontSize}px`);
   }, [settings.uiFontSize]);
+
+  // Apply annotation display settings as CSS variables
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const root = document.documentElement;
+    root.style.setProperty("--annotation-font-size", `${settings.annotationFontSize}px`);
+    root.style.setProperty("--annotation-indent", `${settings.annotationIndent}px`);
+  }, [settings.annotationFontSize, settings.annotationIndent]);
+
+  // Apply files pane font size as CSS variable
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const root = document.documentElement;
+    root.style.setProperty("--files-pane-font-size", `${settings.filesPaneFontSize}px`);
+  }, [settings.filesPaneFontSize]);
 
   // Apply accent colour and themed backgrounds as CSS variables
   useEffect(() => {
@@ -405,6 +465,9 @@ export function AppSettingsProvider({
         resetModeToGlobal,
         setDefaultLanguage,
         setUiFontSize,
+        setAnnotationFontSize,
+        setAnnotationIndent,
+        setFilesPaneFontSize,
         setTheme,
         effectiveTheme,
         setAccentColour,

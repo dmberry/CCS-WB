@@ -129,12 +129,26 @@ export function useCodeFilesSync({
   const fetchCodeFiles = useCallback(async (): Promise<CodeFile[]> => {
     if (!supabase || !currentProjectId) return [];
 
+    // Order by display_order to preserve user-defined ordering (falls back to created_at)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
+    let { data, error } = await (supabase as any)
       .from("code_files")
       .select("*")
       .eq("project_id", currentProjectId)
+      .order("display_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true });
+
+    // Fallback: if display_order column doesn't exist yet, query without it
+    if (error) {
+      console.warn("Fetching code files with display_order failed, trying without:", error);
+      const fallback = await (supabase as any)
+        .from("code_files")
+        .select("*")
+        .eq("project_id", currentProjectId)
+        .order("created_at", { ascending: true });
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       console.error("Error fetching code files:", error);
@@ -404,8 +418,8 @@ export function useCodeFilesSync({
       }
     });
 
-    // Poll every 5 seconds for file changes
-    const intervalId = setInterval(async () => {
+    // Poll for file changes
+    const pollForChanges = async () => {
       if (!isMounted) return;
 
       // Skip if we just made an update (to avoid processing our own changes)
@@ -436,20 +450,41 @@ export function useCodeFilesSync({
         }
       }
 
-      // Check for deleted files
-      for (const [fileId] of knownFilesRef.current) {
-        if (!remoteIds.has(fileId)) {
-          console.log("useCodeFilesSync: File deleted by collaborator:", fileId);
-          knownFilesRef.current.delete(fileId);
-          fileTimestampsRef.current.delete(fileId);
-          onFileDeletedRef.current?.(fileId);
+      // Check for deleted files - but only if we got a non-empty result
+      // (empty result when we had files is suspicious and likely indicates an error)
+      const hadFiles = knownFilesRef.current.size > 0;
+      const gotEmptyResult = files.length === 0;
+
+      if (hadFiles && gotEmptyResult) {
+        console.warn("useCodeFilesSync: Got empty result but had files - skipping deletion check (likely error)");
+      } else {
+        for (const [fileId] of knownFilesRef.current) {
+          if (!remoteIds.has(fileId)) {
+            console.log("useCodeFilesSync: File deleted by collaborator:", fileId);
+            knownFilesRef.current.delete(fileId);
+            fileTimestampsRef.current.delete(fileId);
+            onFileDeletedRef.current?.(fileId);
+          }
         }
       }
-    }, 5000);
+    };
+
+    // Poll every 5 seconds for file changes
+    const intervalId = setInterval(pollForChanges, 5000);
+
+    // Resume sync immediately when tab becomes visible (fixes Safari suspension)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        console.log("Tab became visible, triggering code files sync");
+        pollForChanges();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       isMounted = false;
       clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [supabase, isAuthenticated, currentProjectId, enabled, user?.id, fetchCodeFiles, fetchPendingDeletions]);
 

@@ -246,6 +246,7 @@ export function useAnnotationsSync({
   }, [supabase, currentProjectId]);
 
   // Polling interval (5 seconds) - reliable baseline for sync
+  // Also handles visibility change to resume sync when tab becomes active (Safari suspension fix)
   useEffect(() => {
     if (!supabase || !enabled || !currentProjectId) {
       return;
@@ -266,9 +267,22 @@ export function useAnnotationsSync({
       }
     }, 5000);
 
+    // Resume sync immediately when tab becomes visible (fixes Safari suspension)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        console.log("Tab became visible, triggering annotation sync");
+        const currentFileIdMap = fileIdMapRef.current;
+        if (Object.keys(currentFileIdMap).length > 0) {
+          fetchAndUpdate();
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       clearTimeout(initialTimeoutId);
       clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [supabase, enabled, currentProjectId, fetchAndUpdate]);
 

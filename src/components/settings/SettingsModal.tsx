@@ -12,6 +12,12 @@ import {
   FONT_SIZE_MAX,
   UI_FONT_SIZE_MIN,
   UI_FONT_SIZE_MAX,
+  ANNOTATION_FONT_SIZE_MIN,
+  ANNOTATION_FONT_SIZE_MAX,
+  ANNOTATION_INDENT_MIN,
+  ANNOTATION_INDENT_MAX,
+  FILES_PANE_FONT_SIZE_MIN,
+  FILES_PANE_FONT_SIZE_MAX,
   PROGRAMMING_LANGUAGES,
   ACCENT_COLOURS,
   type ProgrammingLanguageId,
@@ -44,6 +50,9 @@ export function SettingsModal({
     setGlobalCodeFontSize,
     setGlobalChatFontSize,
     setUiFontSize,
+    setAnnotationFontSize,
+    setAnnotationIndent,
+    setFilesPaneFontSize,
     setDefaultLanguage,
     setTheme,
     setAccentColour,
@@ -540,6 +549,145 @@ export function SettingsModal({
                       className={cn(
                         "p-1 rounded-sm border border-parchment-dark transition-colors",
                         settings.uiFontSize >= UI_FONT_SIZE_MAX
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:border-burgundy hover:text-burgundy"
+                      )}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Annotation Display */}
+              <div className="pt-3 border-t border-parchment">
+                <h3 className="font-display text-caption text-ink mb-1">Annotation Display</h3>
+                <p className="font-sans text-[10px] text-slate-muted mb-3">
+                  Adjust how annotations appear below code lines.
+                </p>
+
+                {/* Annotation Font Size */}
+                <div className="flex items-center justify-between py-2 border-b border-parchment">
+                  <div>
+                    <label className="block font-sans text-caption font-medium text-ink">
+                      Font Size
+                    </label>
+                    <p className="font-sans text-[10px] text-slate-muted">
+                      Size for annotation text
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setAnnotationFontSize(settings.annotationFontSize - 1)}
+                      disabled={settings.annotationFontSize <= ANNOTATION_FONT_SIZE_MIN}
+                      className={cn(
+                        "p-1 rounded-sm border border-parchment-dark transition-colors",
+                        settings.annotationFontSize <= ANNOTATION_FONT_SIZE_MIN
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:border-burgundy hover:text-burgundy"
+                      )}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <span className="w-7 text-center font-mono text-caption">
+                      {settings.annotationFontSize}
+                    </span>
+                    <button
+                      onClick={() => setAnnotationFontSize(settings.annotationFontSize + 1)}
+                      disabled={settings.annotationFontSize >= ANNOTATION_FONT_SIZE_MAX}
+                      className={cn(
+                        "p-1 rounded-sm border border-parchment-dark transition-colors",
+                        settings.annotationFontSize >= ANNOTATION_FONT_SIZE_MAX
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:border-burgundy hover:text-burgundy"
+                      )}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Annotation Indent */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <label className="block font-sans text-caption font-medium text-ink">
+                      Left Indent
+                    </label>
+                    <p className="font-sans text-[10px] text-slate-muted">
+                      Offset from code for readability
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setAnnotationIndent(settings.annotationIndent - 8)}
+                      disabled={settings.annotationIndent <= ANNOTATION_INDENT_MIN}
+                      className={cn(
+                        "p-1 rounded-sm border border-parchment-dark transition-colors",
+                        settings.annotationIndent <= ANNOTATION_INDENT_MIN
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:border-burgundy hover:text-burgundy"
+                      )}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <span className="w-7 text-center font-mono text-caption">
+                      {settings.annotationIndent}
+                    </span>
+                    <button
+                      onClick={() => setAnnotationIndent(settings.annotationIndent + 8)}
+                      disabled={settings.annotationIndent >= ANNOTATION_INDENT_MAX}
+                      className={cn(
+                        "p-1 rounded-sm border border-parchment-dark transition-colors",
+                        settings.annotationIndent >= ANNOTATION_INDENT_MAX
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:border-burgundy hover:text-burgundy"
+                      )}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Files Pane */}
+              <div className="pt-3 border-t border-parchment">
+                <h3 className="font-display text-caption text-ink mb-1">Files Pane</h3>
+                <p className="font-sans text-[10px] text-slate-muted mb-3">
+                  Adjust how the code files list appears.
+                </p>
+
+                {/* Files Pane Font Size */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <label className="block font-sans text-caption font-medium text-ink">
+                      Font Size
+                    </label>
+                    <p className="font-sans text-[10px] text-slate-muted">
+                      Size for file names in sidebar
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setFilesPaneFontSize(settings.filesPaneFontSize - 1)}
+                      disabled={settings.filesPaneFontSize <= FILES_PANE_FONT_SIZE_MIN}
+                      className={cn(
+                        "p-1 rounded-sm border border-parchment-dark transition-colors",
+                        settings.filesPaneFontSize <= FILES_PANE_FONT_SIZE_MIN
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:border-burgundy hover:text-burgundy"
+                      )}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </button>
+                    <span className="w-7 text-center font-mono text-caption">
+                      {settings.filesPaneFontSize}
+                    </span>
+                    <button
+                      onClick={() => setFilesPaneFontSize(settings.filesPaneFontSize + 1)}
+                      disabled={settings.filesPaneFontSize >= FILES_PANE_FONT_SIZE_MAX}
+                      className={cn(
+                        "p-1 rounded-sm border border-parchment-dark transition-colors",
+                        settings.filesPaneFontSize >= FILES_PANE_FONT_SIZE_MAX
                           ? "opacity-50 cursor-not-allowed"
                           : "hover:border-burgundy hover:text-burgundy"
                       )}

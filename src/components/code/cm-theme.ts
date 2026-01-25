@@ -62,11 +62,11 @@ const ccsLightTheme = EditorView.theme(
     ".cm-annotation-widget": {
       borderRight: "2px solid", // Color set inline by widget (matches line highlight)
       backgroundColor: "transparent",
-      padding: "2px 12px 2px 56px", // Extra left indent (offset from code)
+      padding: "2px 12px 2px var(--annotation-indent, 56px)", // Extra left indent (offset from code)
       display: "flex",
       alignItems: "center",
       gap: "8px",
-      fontSize: "11px",
+      fontSize: "var(--annotation-font-size, 11px)",
       width: "100%", // Ensure full width for uniform bar sizing
     },
     // Annotation bar - contains badge and content, colored background
@@ -332,11 +332,11 @@ const ccsDarkTheme = EditorView.theme(
     ".cm-annotation-widget": {
       borderRight: "2px solid", // Color set inline by widget (matches line highlight)
       backgroundColor: "transparent",
-      padding: "2px 12px 2px 56px", // Extra left indent (offset from code)
+      padding: "2px 12px 2px var(--annotation-indent, 56px)", // Extra left indent (offset from code)
       display: "flex",
       alignItems: "center",
       gap: "8px",
-      fontSize: "11px",
+      fontSize: "var(--annotation-font-size, 11px)",
       width: "100%", // Ensure full width for uniform bar sizing
     },
     // Annotation bar - contains badge and content, colored background

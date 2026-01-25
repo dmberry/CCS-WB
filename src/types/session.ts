@@ -180,6 +180,56 @@ export interface CritiqueArtifact {
   codeReferenceId?: string; // Links to the code being critiqued
 }
 
+// Annotation display settings for customizing appearance (per-project)
+export type AnnotationBrightness = "low" | "medium" | "high" | "full";
+export type LineHighlightIntensity = "off" | "low" | "medium" | "high" | "full";
+
+export interface AnnotationDisplaySettings {
+  visible: boolean;                    // Show/hide annotations in code
+  brightness: AnnotationBrightness;    // Opacity level
+  showPillBackground: boolean;         // Show colored bar background
+  showBadge: boolean;                  // Show type badge pill
+  lineHighlightIntensity: LineHighlightIntensity; // Subtle highlight intensity on annotated lines
+  highlightAnnotatedLines: boolean;    // Dim non-annotated lines (focus mode)
+  fontSize: number;                    // Annotation font size (9-16px)
+  indent: number;                      // Left indent for annotations (0-160px)
+}
+
+export const DEFAULT_ANNOTATION_DISPLAY_SETTINGS: AnnotationDisplaySettings = {
+  visible: true,
+  brightness: "medium",
+  showPillBackground: true,
+  showBadge: true,
+  lineHighlightIntensity: "medium",
+  highlightAnnotatedLines: false,
+  fontSize: 9,
+  indent: 56,
+};
+
+// Panel layout settings (per-project)
+export interface PanelLayoutSettings {
+  codePanelWidth: number;      // Percentage width for code panel (0-100)
+  chatCollapsed: boolean;      // Whether the chat panel is collapsed
+  annotationFullScreen: boolean; // Whether annotation panel is fullscreen
+}
+
+export const DEFAULT_PANEL_LAYOUT_SETTINGS: PanelLayoutSettings = {
+  codePanelWidth: 70,
+  chatCollapsed: false,
+  annotationFullScreen: false,
+};
+
+// Combined display settings for a session/project
+export interface DisplaySettings {
+  annotations: AnnotationDisplaySettings;
+  panelLayout: PanelLayoutSettings;
+}
+
+export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
+  annotations: DEFAULT_ANNOTATION_DISPLAY_SETTINGS,
+  panelLayout: DEFAULT_PANEL_LAYOUT_SETTINGS,
+};
+
 export interface SessionSettings {
   beDirectMode: boolean;
   teachMeMode: boolean;
@@ -198,6 +248,7 @@ export interface Session {
   references: ReferenceResult[]; // Related code, scholarship
   critiqueArtifacts: CritiqueArtifact[];
   settings: SessionSettings;
+  displaySettings: DisplaySettings;  // Per-project display settings (synced to cloud)
   currentPhase: ConversationPhase;
   feedbackEscalation: number;   // 0-3 tracking escalation level
   createdAt: string;

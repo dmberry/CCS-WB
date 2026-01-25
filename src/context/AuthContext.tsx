@@ -233,10 +233,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: new Error("Supabase not configured") as unknown as AuthError };
     }
 
+    // Include current path so user returns to same page after auth
+    const currentPath = window.location.pathname;
+    const redirectUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(currentPath)}`;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: redirectUrl,
       },
     });
 
@@ -249,10 +253,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: new Error("Supabase not configured") as unknown as AuthError };
     }
 
+    // Include current path so user returns to same page after auth
+    const currentPath = window.location.pathname;
+    const redirectUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(currentPath)}`;
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: redirectUrl,
       },
     });
 

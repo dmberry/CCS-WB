@@ -31,10 +31,26 @@ import {
   Undo2,
   Redo2,
   BookOpen,
+  Cloud,
+  FilePlus,
 } from "lucide-react";
 import { SAMPLE_CODE_FILES, fetchSampleCode } from "@/data/sample-code";
-import type { LineAnnotation, LineAnnotationType, CodeReference } from "@/types";
-import { PROGRAMMING_LANGUAGES } from "@/types/app-settings";
+import type {
+  LineAnnotation,
+  LineAnnotationType,
+  CodeReference,
+  AnnotationDisplaySettings as SessionAnnotationDisplaySettings,
+  AnnotationBrightness,
+  LineHighlightIntensity,
+} from "@/types";
+import {
+  PROGRAMMING_LANGUAGES,
+  ANNOTATION_FONT_SIZE_MIN,
+  ANNOTATION_FONT_SIZE_MAX,
+  ANNOTATION_INDENT_MIN,
+  ANNOTATION_INDENT_MAX,
+} from "@/types/app-settings";
+import { DEFAULT_ANNOTATION_DISPLAY_SETTINGS } from "@/types/session";
 import { CodeMirrorEditor } from "./CodeMirrorEditor";
 import type { InlineEditState, InlineEditCallbacks } from "./cm-annotations";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
@@ -49,8 +65,10 @@ interface CodeEditorPanelProps {
   onRenameFile?: (fileId: string, newName: string) => void;
   onDuplicateFile?: (fileId: string) => void;
   onRevertFile?: (fileId: string) => void; // Revert file to original content
+  onCommitFile?: (fileId: string) => void; // Commit current content as new base version
   onLoadCode?: () => void; // Trigger file upload from sidebar
   onLoadSample?: (filename: string, content: string, language: string) => void; // Load a sample code file
+  onAddNewFile?: () => void; // Create a new blank file
   onReorderFiles?: (fileIds: string[]) => void; // Reorder files by new order
   onUpdateFileLanguage?: (fileId: string, language: string | undefined) => void; // Update file's language
   isFullScreen?: boolean; // Whether annotation pane is in full screen mode
@@ -64,6 +82,8 @@ interface CodeEditorPanelProps {
   onClearLineAnnotations?: (codeFileId: string) => void;
   // Remote annotation IDs for animation (yellow flash when collaborator adds annotation)
   newRemoteAnnotationIds?: Set<string>;
+  // Whether we're in a cloud project (for showing cloud icon on files)
+  isInProject?: boolean;
 }
 
 // Historical punch card languages that typically used 80-column format
@@ -180,28 +200,10 @@ const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   bold: false,
 };
 
-// Annotation display settings for customizing appearance
-type AnnotationBrightness = "low" | "medium" | "high" | "full";
-
-export type LineHighlightIntensity = "off" | "low" | "medium" | "high" | "full";
-
-export interface AnnotationDisplaySettings {
-  visible: boolean; // Show/hide annotations in code
-  brightness: AnnotationBrightness; // Opacity level
-  showPillBackground: boolean; // Show colored bar background
-  showBadge: boolean; // Show type badge pill
-  lineHighlightIntensity: LineHighlightIntensity; // Subtle highlight intensity on annotated lines
-  highlightAnnotatedLines: boolean; // Dim non-annotated lines to focus on annotations (focus mode)
-}
-
-const DEFAULT_ANNOTATION_DISPLAY_SETTINGS: AnnotationDisplaySettings = {
-  visible: true,
-  brightness: "medium",
-  showPillBackground: true,
-  showBadge: true,
-  lineHighlightIntensity: "medium",
-  highlightAnnotatedLines: false,
-};
+// Use AnnotationDisplaySettings from session types (includes fontSize and indent)
+// Re-export for backwards compatibility with other code that imports from here
+export type { LineHighlightIntensity } from "@/types";
+type AnnotationDisplaySettings = SessionAnnotationDisplaySettings;
 
 // Min/max font sizes
 const MIN_FONT_SIZE = 8;
@@ -356,8 +358,10 @@ export function CodeEditorPanel({
   onRenameFile,
   onDuplicateFile,
   onRevertFile,
+  onCommitFile,
   onLoadCode,
   onLoadSample,
+  onAddNewFile,
   onReorderFiles,
   onUpdateFileLanguage,
   isFullScreen = false,
@@ -369,6 +373,7 @@ export function CodeEditorPanel({
   onRemoveLineAnnotation,
   onClearLineAnnotations,
   newRemoteAnnotationIds,
+  isInProject = false,
 }: CodeEditorPanelProps) {
   const {
     session,
@@ -376,7 +381,21 @@ export function CodeEditorPanel({
     updateLineAnnotation: sessionUpdateLineAnnotation,
     removeLineAnnotation: sessionRemoveLineAnnotation,
     clearLineAnnotations: sessionClearLineAnnotations,
+    updateAnnotationDisplaySettings,
   } = useSession();
+
+  // Get annotation display settings from session (per-project)
+  // Use defaults as fallback for old sessions that don't have displaySettings
+  const annotationDisplaySettings = session.displaySettings?.annotations ?? DEFAULT_ANNOTATION_DISPLAY_SETTINGS;
+  // Wrapper to update annotation display settings
+  const setAnnotationDisplaySettings = (updater: Partial<AnnotationDisplaySettings> | ((prev: AnnotationDisplaySettings) => Partial<AnnotationDisplaySettings>)) => {
+    if (typeof updater === "function") {
+      const updates = updater(annotationDisplaySettings);
+      updateAnnotationDisplaySettings(updates);
+    } else {
+      updateAnnotationDisplaySettings(updater);
+    }
+  };
 
   // Use prop methods if provided, otherwise fall back to session methods
   const addLineAnnotation = onAddLineAnnotation ?? sessionAddLineAnnotation;
@@ -442,7 +461,7 @@ export function CodeEditorPanel({
   const [renameValue, setRenameValue] = useState("");
   const [showDisplaySettings, setShowDisplaySettings] = useState(false);
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY_SETTINGS);
-  const [annotationDisplaySettings, setAnnotationDisplaySettings] = useState<AnnotationDisplaySettings>(DEFAULT_ANNOTATION_DISPLAY_SETTINGS);
+  // annotationDisplaySettings is now from session.displaySettings.annotations (defined above)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(144); // Default width in pixels (w-36 = 9rem = 144px)
   const [isDraggingSidebar, setIsDraggingSidebar] = useState(false);
@@ -492,6 +511,14 @@ export function CodeEditorPanel({
   useEffect(() => {
     setCursorPosition(null);
   }, [selectedFileId]);
+
+  // Apply annotation display settings as CSS variables (per-project settings)
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    root.style.setProperty("--annotation-font-size", `${annotationDisplaySettings.fontSize}px`);
+    root.style.setProperty("--annotation-indent", `${annotationDisplaySettings.indent}px`);
+  }, [annotationDisplaySettings.fontSize, annotationDisplaySettings.indent]);
 
   const toolbarRef = useRef<HTMLDivElement>(null);
   const toolbarMenuRef = useRef<HTMLDivElement>(null);
@@ -1186,7 +1213,17 @@ export function CodeEditorPanel({
           {!sidebarCollapsed && (
             <>
               <div className="flex items-center gap-0.5 pl-1 overflow-hidden flex-1 min-w-0">
-                {/* Load code button - leftmost */}
+                {/* New file button - leftmost */}
+                {onAddNewFile && (
+                  <button
+                    onClick={onAddNewFile}
+                    className="p-1 text-slate-muted hover:text-burgundy transition-colors"
+                    title="Create new file"
+                  >
+                    <FilePlus className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  </button>
+                )}
+                {/* Load code button */}
                 {onLoadCode && (
                   <button
                     onClick={onLoadCode}
@@ -1369,6 +1406,20 @@ export function CodeEditorPanel({
                               <Copy className="h-3 w-3" strokeWidth={1.5} />
                               Duplicate
                             </button>
+                            {/* Commit option - only show if file is modified */}
+                            {isFileModified(file.id) && onCommitFile && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onCommitFile(file.id);
+                                  setFileMenuOpen(null);
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-emerald-600 hover:bg-emerald-50"
+                              >
+                                <Check className="h-3 w-3" strokeWidth={1.5} />
+                                Commit changes
+                              </button>
+                            )}
                             {/* Revert option - only show if file is modified */}
                             {isFileModified(file.id) && onRevertFile && (
                               <button
@@ -1400,10 +1451,17 @@ export function CodeEditorPanel({
                       {/* Filename button */}
                       <button
                         onClick={() => setSelectedFileId(file.id)}
-                        className="flex-1 min-w-0 py-1 pr-2 text-left overflow-hidden flex items-center gap-1"
+                        className="flex-1 min-w-0 py-1 pr-2 text-left overflow-hidden flex items-center gap-0.5"
                         title={file.name}
                       >
-                        <span className={cn("font-mono text-[10px] truncate flex-1", getFileColourClass(file.language))}>
+                        {/* Cloud icon when file is in a cloud project */}
+                        {isInProject && (
+                          <Cloud className="h-2.5 w-2.5 text-slate-muted flex-shrink-0" strokeWidth={1.5} />
+                        )}
+                        <span
+                          className={cn("font-mono truncate flex-1", getFileColourClass(file.language))}
+                          style={{ fontSize: "var(--files-pane-font-size, 10px)" }}
+                        >
                           {file.name}
                         </span>
                         {/* File status indicators */}
@@ -2116,7 +2174,7 @@ export function CodeEditorPanel({
                         </div>
 
                         {/* Line highlight intensity */}
-                        <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center justify-between gap-3 mb-1.5">
                           <span className="font-sans text-[10px] text-slate">Line highlight</span>
                           <select
                             value={annotationDisplaySettings.lineHighlightIntensity}
@@ -2129,6 +2187,74 @@ export function CodeEditorPanel({
                             <option value="high">High</option>
                             <option value="full">Full</option>
                           </select>
+                        </div>
+
+                        {/* Annotation font size */}
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="font-sans text-[10px] text-slate">Font size</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setAnnotationDisplaySettings({ fontSize: annotationDisplaySettings.fontSize - 1 })}
+                              disabled={annotationDisplaySettings.fontSize <= ANNOTATION_FONT_SIZE_MIN}
+                              className={cn(
+                                "p-0.5 rounded-sm border border-parchment transition-colors",
+                                annotationDisplaySettings.fontSize <= ANNOTATION_FONT_SIZE_MIN
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : "hover:border-burgundy hover:text-burgundy"
+                              )}
+                            >
+                              <Minus className="h-2.5 w-2.5" />
+                            </button>
+                            <span className="w-5 text-center font-mono text-[10px]">
+                              {annotationDisplaySettings.fontSize}
+                            </span>
+                            <button
+                              onClick={() => setAnnotationDisplaySettings({ fontSize: annotationDisplaySettings.fontSize + 1 })}
+                              disabled={annotationDisplaySettings.fontSize >= ANNOTATION_FONT_SIZE_MAX}
+                              className={cn(
+                                "p-0.5 rounded-sm border border-parchment transition-colors",
+                                annotationDisplaySettings.fontSize >= ANNOTATION_FONT_SIZE_MAX
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : "hover:border-burgundy hover:text-burgundy"
+                              )}
+                            >
+                              <Plus className="h-2.5 w-2.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Annotation left indent */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-sans text-[10px] text-slate">Left indent</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setAnnotationDisplaySettings({ indent: annotationDisplaySettings.indent - 8 })}
+                              disabled={annotationDisplaySettings.indent <= ANNOTATION_INDENT_MIN}
+                              className={cn(
+                                "p-0.5 rounded-sm border border-parchment transition-colors",
+                                annotationDisplaySettings.indent <= ANNOTATION_INDENT_MIN
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : "hover:border-burgundy hover:text-burgundy"
+                              )}
+                            >
+                              <Minus className="h-2.5 w-2.5" />
+                            </button>
+                            <span className="w-5 text-center font-mono text-[10px]">
+                              {annotationDisplaySettings.indent}
+                            </span>
+                            <button
+                              onClick={() => setAnnotationDisplaySettings({ indent: annotationDisplaySettings.indent + 8 })}
+                              disabled={annotationDisplaySettings.indent >= ANNOTATION_INDENT_MAX}
+                              className={cn(
+                                "p-0.5 rounded-sm border border-parchment transition-colors",
+                                annotationDisplaySettings.indent >= ANNOTATION_INDENT_MAX
+                                  ? "opacity-50 cursor-not-allowed"
+                                  : "hover:border-burgundy hover:text-burgundy"
+                              )}
+                            >
+                              <Plus className="h-2.5 w-2.5" />
+                            </button>
+                          </div>
                         </div>
                       </>
                     )}

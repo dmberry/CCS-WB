@@ -106,6 +106,13 @@ export interface AppSettings {
   // UI font size for modals, settings panels, etc.
   uiFontSize: number;
 
+  // Annotation display settings
+  annotationFontSize: number; // Font size for annotation content (9-16px)
+  annotationIndent: number;   // Left indent for annotations (0-160px)
+
+  // Code files pane font size
+  filesPaneFontSize: number;  // Font size for files sidebar (8-14px)
+
   // Default programming language preference
   defaultLanguage: ProgrammingLanguageId;
 
@@ -147,6 +154,9 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   codeFontSize: 13,
   chatFontSize: 14,
   uiFontSize: 11,
+  annotationFontSize: 9,
+  annotationIndent: 56,
+  filesPaneFontSize: 10,
   defaultLanguage: "",
   theme: "light",
   accentColour: "burgundy",
@@ -160,3 +170,13 @@ export const FONT_SIZE_MAX = 24;
 // UI font size constraints (smaller range for UI elements)
 export const UI_FONT_SIZE_MIN = 9;
 export const UI_FONT_SIZE_MAX = 16;
+
+// Annotation display constraints
+export const ANNOTATION_FONT_SIZE_MIN = 9;
+export const ANNOTATION_FONT_SIZE_MAX = 16;
+export const ANNOTATION_INDENT_MIN = 0;
+export const ANNOTATION_INDENT_MAX = 160;
+
+// Files pane font size constraints
+export const FILES_PANE_FONT_SIZE_MIN = 8;
+export const FILES_PANE_FONT_SIZE_MAX = 14;

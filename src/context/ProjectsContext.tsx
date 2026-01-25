@@ -69,10 +69,18 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   const fetchProjects = useCallback(async () => {
     if (!supabase || !user) {
       setProjects([]);
+      setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
+
+    // Timeout to prevent infinite loading (Safari suspension issue)
+    const loadingTimeout = setTimeout(() => {
+      console.warn("fetchProjects: Loading timeout reached, forcing isLoading=false");
+      setIsLoading(false);
+    }, 10000);
+
     try {
       // Get projects the user owns (simple query without joins)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -129,6 +137,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Error fetching projects:", error);
     } finally {
+      clearTimeout(loadingTimeout);
       setIsLoading(false);
     }
   }, [supabase, user]);
@@ -279,12 +288,26 @@ _Add relevant references, documentation links, or related scholarship:_
       }
 
       // Fetch code files from code_files table (source of truth for files)
+      // Order by display_order to preserve user-defined ordering (falls back to created_at)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: codeFilesData, error: filesError } = await (supabase as any)
+      let { data: codeFilesData, error: filesError } = await (supabase as any)
         .from("code_files")
         .select("*")
         .eq("project_id", projectId)
+        .order("display_order", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true });
+
+      // Fallback: if display_order column doesn't exist yet, query without it
+      if (filesError) {
+        console.warn("Fetching code files with display_order failed, trying without:", filesError);
+        const fallback = await (supabase as any)
+          .from("code_files")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: true });
+        codeFilesData = fallback.data;
+        filesError = fallback.error;
+      }
 
       if (filesError) {
         console.error("Error fetching code files:", filesError);
@@ -424,9 +447,10 @@ _Add relevant references, documentation links, or related scholarship:_
         }
       }
 
-      // 1. Save code files to code_files table
+      // 1. Save code files to code_files table (with display_order to preserve user ordering)
       console.log(`saveProject: Saving ${session.codeFiles.length} files to code_files table`);
-      for (const file of session.codeFiles) {
+      for (let i = 0; i < session.codeFiles.length; i++) {
+        const file = session.codeFiles[i];
         const content = session.codeContents[file.id];
         if (content === undefined) continue;
 
@@ -441,6 +465,7 @@ _Add relevant references, documentation links, or related scholarship:_
             content: content,
             original_content: content,
             uploaded_by: user.id,
+            display_order: i, // Preserve user-defined file order
             updated_at: new Date().toISOString(),
           }, { onConflict: "id" });
 

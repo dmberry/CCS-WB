@@ -16,7 +16,11 @@ import type {
   ExperienceLevel,
   LineAnnotation,
   LineAnnotationType,
+  DisplaySettings,
+  AnnotationDisplaySettings,
+  PanelLayoutSettings,
 } from "@/types";
+import { DEFAULT_DISPLAY_SETTINGS } from "@/types/session";
 import { generateId, getCurrentTimestamp } from "@/lib/utils";
 import {
   saveSessionForMode,
@@ -63,7 +67,11 @@ type SessionAction =
   | { type: "CLEAR_LINE_ANNOTATIONS"; payload?: string } // optional codeFileId to clear only that file's annotations
   // Code contents actions
   | { type: "SET_CODE_CONTENT"; payload: { fileId: string; content: string } }
-  | { type: "REMOVE_CODE_CONTENT"; payload: string };
+  | { type: "REMOVE_CODE_CONTENT"; payload: string }
+  // Display settings actions
+  | { type: "UPDATE_DISPLAY_SETTINGS"; payload: Partial<DisplaySettings> }
+  | { type: "UPDATE_ANNOTATION_DISPLAY_SETTINGS"; payload: Partial<AnnotationDisplaySettings> }
+  | { type: "UPDATE_PANEL_LAYOUT_SETTINGS"; payload: Partial<PanelLayoutSettings> };
 
 // Initial state
 const createInitialSession = (): Session => ({
@@ -80,6 +88,7 @@ const createInitialSession = (): Session => ({
     beDirectMode: false,
     teachMeMode: false,
   },
+  displaySettings: DEFAULT_DISPLAY_SETTINGS,
   currentPhase: "opening",
   feedbackEscalation: 0,
   createdAt: getCurrentTimestamp(),
@@ -241,6 +250,17 @@ function sessionReducer(state: Session, action: SessionAction): Session {
           ...defaultSession.settings,
           ...(action.payload.settings || {}),
         },
+        // Ensure displaySettings object exists with defaults (for old session files)
+        displaySettings: {
+          annotations: {
+            ...defaultSession.displaySettings.annotations,
+            ...(action.payload.displaySettings?.annotations || {}),
+          },
+          panelLayout: {
+            ...defaultSession.displaySettings.panelLayout,
+            ...(action.payload.displaySettings?.panelLayout || {}),
+          },
+        },
         // Ensure other required fields have defaults
         currentPhase: action.payload.currentPhase || "opening",
         feedbackEscalation: typeof action.payload.feedbackEscalation === "number" ? action.payload.feedbackEscalation : 0,
@@ -334,8 +354,22 @@ function sessionReducer(state: Session, action: SessionAction): Session {
       };
 
     case "LOAD_SAVED_SESSION":
+      // Ensure displaySettings exists with defaults (for old saved sessions)
+      // eslint-disable-next-line no-case-declarations
+      const loadedDefaults = createInitialSession();
       return {
         ...action.payload,
+        // Merge displaySettings with defaults to handle old sessions
+        displaySettings: {
+          annotations: {
+            ...loadedDefaults.displaySettings.annotations,
+            ...(action.payload.displaySettings?.annotations || {}),
+          },
+          panelLayout: {
+            ...loadedDefaults.displaySettings.panelLayout,
+            ...(action.payload.displaySettings?.panelLayout || {}),
+          },
+        },
         lastModified: now,
       };
 
@@ -438,6 +472,43 @@ function sessionReducer(state: Session, action: SessionAction): Session {
       };
     }
 
+    // Display settings actions
+    case "UPDATE_DISPLAY_SETTINGS":
+      return {
+        ...state,
+        displaySettings: {
+          ...state.displaySettings,
+          ...action.payload,
+        },
+        lastModified: now,
+      };
+
+    case "UPDATE_ANNOTATION_DISPLAY_SETTINGS":
+      return {
+        ...state,
+        displaySettings: {
+          ...state.displaySettings,
+          annotations: {
+            ...state.displaySettings.annotations,
+            ...action.payload,
+          },
+        },
+        lastModified: now,
+      };
+
+    case "UPDATE_PANEL_LAYOUT_SETTINGS":
+      return {
+        ...state,
+        displaySettings: {
+          ...state.displaySettings,
+          panelLayout: {
+            ...state.displaySettings.panelLayout,
+            ...action.payload,
+          },
+        },
+        lastModified: now,
+      };
+
     default:
       return state;
   }
@@ -485,6 +556,10 @@ interface SessionContextType {
   // Code contents functions
   setCodeContent: (fileId: string, content: string) => void;
   removeCodeContent: (fileId: string) => void;
+  // Display settings functions
+  updateDisplaySettings: (settings: Partial<DisplaySettings>) => void;
+  updateAnnotationDisplaySettings: (settings: Partial<AnnotationDisplaySettings>) => void;
+  updatePanelLayoutSettings: (settings: Partial<PanelLayoutSettings>) => void;
 }
 
 const SessionContext = createContext<SessionContextType | null>(null);
@@ -742,6 +817,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "REMOVE_CODE_CONTENT", payload: fileId });
   }, []);
 
+  // Display settings functions
+  const updateDisplaySettings = useCallback((settings: Partial<DisplaySettings>) => {
+    dispatch({ type: "UPDATE_DISPLAY_SETTINGS", payload: settings });
+  }, []);
+
+  const updateAnnotationDisplaySettings = useCallback((settings: Partial<AnnotationDisplaySettings>) => {
+    dispatch({ type: "UPDATE_ANNOTATION_DISPLAY_SETTINGS", payload: settings });
+  }, []);
+
+  const updatePanelLayoutSettings = useCallback((settings: Partial<PanelLayoutSettings>) => {
+    dispatch({ type: "UPDATE_PANEL_LAYOUT_SETTINGS", payload: settings });
+  }, []);
+
   const value: SessionContextType = {
     session,
     initSession,
@@ -783,6 +871,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     // Code contents
     setCodeContent,
     removeCodeContent,
+    // Display settings
+    updateDisplaySettings,
+    updateAnnotationDisplaySettings,
+    updatePanelLayoutSettings,
   };
 
   return (

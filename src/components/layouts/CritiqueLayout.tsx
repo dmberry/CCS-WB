@@ -77,6 +77,7 @@ import {
   MODE_LABELS,
 } from "@/lib/export";
 import ReactMarkdown from "react-markdown";
+import JSZip from "jszip";
 
 interface CritiqueLayoutProps {
   onNavigateHome: () => void;
@@ -158,6 +159,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     updateLineAnnotation,
     removeLineAnnotation,
     clearLineAnnotations,
+    // Display settings
+    updatePanelLayoutSettings,
     // Collaborative features
     isInProject,
     isCollaborationConnected,
@@ -179,6 +182,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     setCurrentProjectId,
     setShowMembersModal,
     setMembersModalProjectId,
+    refreshProjects,
   } = useProjects();
   const { markLocalUpdate } = useProjectSync();
   const aiEnabled = aiSettings.aiEnabled;
@@ -236,12 +240,24 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [showProjectInfo, setShowProjectInfo] = useState(false);
   const projectInfoRef = useRef<HTMLDivElement>(null);
 
-  // Resizable panel state (percentage width for code panel)
+  // Panel layout settings from session (per-project)
+  // Use defaults as fallback for old sessions that don't have displaySettings
   const DEFAULT_CODE_PANEL_WIDTH = 70;
-  const [codePanelWidth, setCodePanelWidth] = useState(DEFAULT_CODE_PANEL_WIDTH);
+  const panelLayout = session.displaySettings?.panelLayout ?? {
+    codePanelWidth: DEFAULT_CODE_PANEL_WIDTH,
+    chatCollapsed: false,
+    annotationFullScreen: false,
+  };
+  const codePanelWidth = panelLayout.codePanelWidth;
+  const chatCollapsed = panelLayout.chatCollapsed;
+  const annotationFullScreen = panelLayout.annotationFullScreen;
+
+  // Wrapper functions to update panel layout through session
+  const setCodePanelWidth = (width: number) => updatePanelLayoutSettings({ codePanelWidth: width });
+  const setChatCollapsed = (collapsed: boolean) => updatePanelLayoutSettings({ chatCollapsed: collapsed });
+  const setAnnotationFullScreen = (fullScreen: boolean) => updatePanelLayoutSettings({ annotationFullScreen: fullScreen });
+
   const [isDragging, setIsDragging] = useState(false);
-  const [chatCollapsed, setChatCollapsed] = useState(false);
-  const [annotationFullScreen, setAnnotationFullScreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   // Track if user has manually resized the panel (disables auto-extend for 80-column files)
   const userHasManuallyResized = useRef(false);
@@ -264,6 +280,15 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     });
   }, []);
 
+  // Commit current content as the new original (overwrites existing)
+  const commitOriginalContent = useCallback((fileId: string, content: string) => {
+    setOriginalContents(prev => {
+      const next = new Map(prev);
+      next.set(fileId, content);
+      return next;
+    });
+  }, []);
+
   // Revert a file to its original content and clear annotations
   const handleRevertFile = useCallback((fileId: string) => {
     const original = originalContents.get(fileId);
@@ -273,6 +298,14 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
       clearLineAnnotations(fileId);
     }
   }, [originalContents, setCodeContent, clearLineAnnotations]);
+
+  // Commit current changes as the new base version
+  const handleCommitFile = useCallback((fileId: string) => {
+    const current = codeContents.get(fileId);
+    if (current !== undefined) {
+      commitOriginalContent(fileId, current);
+    }
+  }, [codeContents, commitOriginalContent]);
 
   // Reset layout to defaults when session changes (clear or load new session)
   const prevSessionIdRef = useRef(session.id);
@@ -324,6 +357,13 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
       });
     }
   }, [session.messages.length, addMessage]);
+
+  // Refresh projects when cloud menu opens (handles stale state from Safari suspension)
+  useEffect(() => {
+    if (showCloudMenu && isAuthenticated) {
+      refreshProjects();
+    }
+  }, [showCloudMenu, isAuthenticated, refreshProjects]);
 
   // Handle panel resize dragging
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -695,15 +735,18 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     if (!currentProjectId) return;
 
     setIsSavingToCloud(true);
-    console.log("handleSaveToCloud: Saving to Supabase", currentProjectId);
-    markLocalUpdate();
-    const { error } = await saveProject(currentProjectId, session);
-    if (error) {
-      console.error("Failed to save to cloud:", error);
-    } else {
-      console.log("handleSaveToCloud: Saved successfully");
+    try {
+      console.log("handleSaveToCloud: Saving to Supabase", currentProjectId);
+      markLocalUpdate();
+      const { error } = await saveProject(currentProjectId, session);
+      if (error) {
+        console.error("Failed to save to cloud:", error);
+      } else {
+        console.log("handleSaveToCloud: Saved successfully");
+      }
+    } finally {
+      setIsSavingToCloud(false);
     }
-    setIsSavingToCloud(false);
   }, [currentProjectId, session, saveProject, markLocalUpdate]);
 
   // NOTE: Auto-save to session_data removed - annotations and files sync via their own tables.
@@ -716,27 +759,109 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     if (!currentProjectId) return;
 
     setIsRefreshingFromCloud(true);
-    console.log("handleRefreshFromCloud: Refreshing from Supabase", currentProjectId);
-    const { success, error } = await refreshFromCloud();
-    if (error) {
-      console.error("Failed to refresh from cloud:", error);
-    } else if (success) {
-      console.log("handleRefreshFromCloud: Refreshed successfully");
+    try {
+      console.log("handleRefreshFromCloud: Refreshing from Supabase", currentProjectId);
+      const { success, error } = await refreshFromCloud();
+      if (error) {
+        console.error("Failed to refresh from cloud:", error);
+      } else if (success) {
+        console.log("handleRefreshFromCloud: Refreshed successfully");
+      }
+    } finally {
+      setIsRefreshingFromCloud(false);
     }
-    setIsRefreshingFromCloud(false);
   }, [currentProjectId, refreshFromCloud]);
+
+  // Download project as ZIP
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+  const handleDownloadZip = useCallback(async () => {
+    if (!currentProject) return;
+
+    setIsDownloadingZip(true);
+    try {
+      const zip = new JSZip();
+
+      // Add code files to ZIP
+      for (const file of session.codeFiles) {
+        const content = codeContents.get(file.id) || "";
+        zip.file(file.name, content);
+      }
+
+      // Create annotations summary as markdown
+      if (session.lineAnnotations && session.lineAnnotations.length > 0) {
+        const annotationsByFile = new Map<string, typeof session.lineAnnotations>();
+
+        for (const annotation of session.lineAnnotations) {
+          const existing = annotationsByFile.get(annotation.codeFileId) || [];
+          existing.push(annotation);
+          annotationsByFile.set(annotation.codeFileId, existing);
+        }
+
+        let annotationsContent = `# Annotations for ${currentProject.name}\n\n`;
+        annotationsContent += `Generated: ${new Date().toISOString()}\n\n`;
+
+        for (const file of session.codeFiles) {
+          const fileAnnotations = annotationsByFile.get(file.id);
+          if (fileAnnotations && fileAnnotations.length > 0) {
+            annotationsContent += `## ${file.name}\n\n`;
+            // Sort by line number
+            const sorted = [...fileAnnotations].sort((a, b) => a.lineNumber - b.lineNumber);
+            for (const ann of sorted) {
+              annotationsContent += `**Line ${ann.lineNumber}** [${ann.type}]${ann.addedBy ? ` (${ann.addedBy})` : ""}\n`;
+              annotationsContent += `> ${ann.content}\n\n`;
+            }
+          }
+        }
+
+        zip.file("annotations.md", annotationsContent);
+      }
+
+      // Add project metadata
+      const metadata = {
+        name: currentProject.name,
+        description: currentProject.description || "",
+        mode: currentProject.mode,
+        created_at: currentProject.created_at,
+        updated_at: currentProject.updated_at,
+        exported_at: new Date().toISOString(),
+        files: session.codeFiles.length,
+        annotations: session.lineAnnotations?.length || 0,
+      };
+      zip.file("project.json", JSON.stringify(metadata, null, 2));
+
+      // Generate and download
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${currentProject.name.replace(/[^a-z0-9]/gi, "_")}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setShowProjectInfo(false);
+    } catch (error) {
+      console.error("Failed to create ZIP:", error);
+    } finally {
+      setIsDownloadingZip(false);
+    }
+  }, [currentProject, session.codeFiles, session.lineAnnotations, codeContents]);
 
   // Load a project from the cloud menu
   const handleLoadProject = useCallback(async (projectId: string) => {
     setCloudActionLoading(`load-${projectId}`);
-    const { session: loadedSession, error } = await loadProject(projectId);
-    if (error) {
-      console.error("Failed to load project:", error);
-    } else if (loadedSession) {
-      importSession(loadedSession);
+    try {
+      const { session: loadedSession, error } = await loadProject(projectId);
+      if (error) {
+        console.error("Failed to load project:", error);
+      } else if (loadedSession) {
+        importSession(loadedSession);
+      }
+      setShowCloudMenu(false);
+    } finally {
+      setCloudActionLoading(null);
     }
-    setCloudActionLoading(null);
-    setShowCloudMenu(false);
   }, [loadProject, importSession]);
 
   // Create a new project from the cloud menu
@@ -744,28 +869,31 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     if (!newProjectName.trim()) return;
 
     setCloudActionLoading("create");
-    const { project, error } = await createProject(
-      newProjectName.trim(),
-      undefined,
-      session.mode
-    );
+    try {
+      const { project, error } = await createProject(
+        newProjectName.trim(),
+        undefined,
+        session.mode
+      );
 
-    if (error) {
-      console.error("Failed to create project:", error);
-    } else if (project) {
-      // Optionally save current session to the new project
-      if (populateWithSession) {
-        await saveProject(project.id, session);
+      if (error) {
+        console.error("Failed to create project:", error);
+      } else if (project) {
+        // Optionally save current session to the new project
+        if (populateWithSession) {
+          await saveProject(project.id, session);
+        }
+        setCurrentProjectId(project.id);
+        markLocalUpdate();
       }
-      setCurrentProjectId(project.id);
-      markLocalUpdate();
-    }
 
-    setNewProjectName("");
-    setIsCreatingProject(false);
-    setPopulateWithSession(false);
-    setCloudActionLoading(null);
-    setShowCloudMenu(false);
+      setNewProjectName("");
+      setIsCreatingProject(false);
+      setPopulateWithSession(false);
+      setShowCloudMenu(false);
+    } finally {
+      setCloudActionLoading(null);
+    }
   }, [newProjectName, session, createProject, saveProject, setCurrentProjectId, markLocalUpdate, populateWithSession]);
 
   // Confirm save from modal
@@ -1208,7 +1336,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
               )}
               title="Click for project info"
             >
-              <span className="font-mono text-xs text-ink font-medium truncate">
+              <Cloud className="h-2.5 w-2.5 text-slate-muted flex-shrink-0" strokeWidth={1.5} />
+              <span className="font-mono text-[10px] text-ink font-medium truncate">
                 {currentProject?.name || "Cloud Project"}
               </span>
               <ChevronDown className={cn("h-2.5 w-2.5 text-slate transition-transform flex-shrink-0", showProjectInfo && "rotate-180")} strokeWidth={1.5} />
@@ -1221,11 +1350,6 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                 "w-[280px] py-2 px-3",
                 "bg-card rounded-lg shadow-lg border border-parchment"
               )}>
-                {/* Project Name */}
-                <h3 className="font-serif text-sm font-medium text-ink mb-2 truncate">
-                  {currentProject.name}
-                </h3>
-
                 {/* Owner */}
                 <div className="flex items-center gap-2 mb-2 text-[11px]">
                   {user?.id === currentProject.owner_id ? (
@@ -1284,23 +1408,45 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                 </div>
 
                 {/* Actions */}
-                {user?.id === currentProject.owner_id && (
+                <div className="flex flex-col gap-2">
+                  {/* Download ZIP - available to all users */}
                   <button
-                    onClick={() => {
-                      setShowProjectInfo(false);
-                      setMembersModalProjectId(currentProject.id);
-                      setShowMembersModal(true);
-                    }}
+                    onClick={handleDownloadZip}
+                    disabled={isDownloadingZip}
                     className={cn(
                       "w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded",
-                      "text-[11px] font-medium text-burgundy",
-                      "bg-burgundy/10 hover:bg-burgundy/20 transition-colors"
+                      "text-[11px] font-medium text-slate",
+                      "bg-slate/10 hover:bg-slate/20 transition-colors",
+                      "disabled:opacity-50 disabled:cursor-not-allowed"
                     )}
                   >
-                    <UserPlus className="h-3 w-3" />
-                    Manage Members
+                    {isDownloadingZip ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Download className="h-3 w-3" />
+                    )}
+                    Download ZIP
                   </button>
-                )}
+
+                  {/* Manage Members - owners only */}
+                  {user?.id === currentProject.owner_id && (
+                    <button
+                      onClick={() => {
+                        setShowProjectInfo(false);
+                        setMembersModalProjectId(currentProject.id);
+                        setShowMembersModal(true);
+                      }}
+                      className={cn(
+                        "w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded",
+                        "text-[11px] font-medium text-burgundy",
+                        "bg-burgundy/10 hover:bg-burgundy/20 transition-colors"
+                      )}
+                    >
+                      <UserPlus className="h-3 w-3" />
+                      Manage Members
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -1555,9 +1701,6 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                           )}
                         >
                           <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                            {isCurrentProject && (
-                              <Check className="h-3 w-3 text-burgundy flex-shrink-0" strokeWidth={2} />
-                            )}
                             {/* Owner/member indicator */}
                             {isOwner ? (
                               <Shield className="h-2.5 w-2.5 text-slate/40 flex-shrink-0" />
@@ -1809,6 +1952,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             onRenameFile={handleRenameFile}
             onDuplicateFile={handleDuplicateFile}
             onRevertFile={handleRevertFile}
+            onCommitFile={handleCommitFile}
             onLoadCode={() => fileInputRef.current?.click()}
             onLoadSample={(filename, content, language) => {
               // Add the sample code as a new file (same pattern as regular file upload)
@@ -1829,6 +1973,26 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                 content: `I've loaded the sample **${filename}**${language ? ` (${language})` : ""} for analysis.`,
               });
             }}
+            onAddNewFile={() => {
+              // Generate unique filename (untitled.md, untitled-2.md, etc.)
+              const existingNames = new Set(session.codeFiles.map(f => f.name.toLowerCase()));
+              let filename = "untitled.md";
+              let counter = 2;
+              while (existingNames.has(filename.toLowerCase())) {
+                filename = `untitled-${counter}.md`;
+                counter++;
+              }
+              // Create new blank markdown file
+              const fileId = addCode({
+                name: filename,
+                language: "markdown",
+                source: "created",
+                size: 0,
+              });
+              // Set empty content
+              setCodeContent(fileId, "");
+              storeOriginalContent(fileId, "");
+            }}
             onReorderFiles={reorderCodeFiles}
             onUpdateFileLanguage={(fileId, language) => updateCode(fileId, { language })}
             isFullScreen={annotationFullScreen}
@@ -1846,6 +2010,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             onRemoveLineAnnotation={removeLineAnnotation}
             onClearLineAnnotations={clearLineAnnotations}
             newRemoteAnnotationIds={newRemoteAnnotationIds}
+            isInProject={isInProject}
           />
         </div>
 

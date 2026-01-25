@@ -174,7 +174,7 @@ export function MembersModal() {
         />
 
         {/* Modal */}
-        <div className="relative bg-ivory rounded-xl shadow-2xl border border-parchment max-w-md w-full max-h-[80vh] flex flex-col modal-content">
+        <div className="relative bg-popover rounded-sm shadow-lg border border-parchment max-w-md w-full max-h-[80vh] flex flex-col modal-content">
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-parchment">
             <div className="flex items-center gap-2">
@@ -368,22 +368,25 @@ export function MembersModal() {
                         {/* Role selector (owner only, not for self) */}
                         {isOwner && user?.id !== member.user_id ? (
                           <>
-                            <select
-                              value={member.role}
-                              onChange={(e) =>
-                                handleRoleChange(member, e.target.value as MemberRole)
-                              }
-                              disabled={actionLoading === `role-${member.id}`}
-                              className={cn(
-                                "appearance-none px-2 py-1 font-sans text-ui-xs",
-                                "bg-cream border border-parchment rounded",
-                                "focus:outline-none focus:ring-1 focus:ring-burgundy",
-                                "disabled:opacity-50"
-                              )}
-                            >
-                              <option value="viewer">Viewer</option>
-                              <option value="editor">Editor</option>
-                            </select>
+                            <div className="relative">
+                              <select
+                                value={member.role}
+                                onChange={(e) =>
+                                  handleRoleChange(member, e.target.value as MemberRole)
+                                }
+                                disabled={actionLoading === `role-${member.id}`}
+                                className={cn(
+                                  "appearance-none pl-2 pr-6 py-1 font-sans text-ui-xs",
+                                  "bg-cream border border-parchment rounded cursor-pointer",
+                                  "focus:outline-none focus:ring-1 focus:ring-burgundy",
+                                  "disabled:opacity-50 disabled:cursor-not-allowed"
+                                )}
+                              >
+                                <option value="viewer">Viewer</option>
+                                <option value="editor">Editor</option>
+                              </select>
+                              <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate pointer-events-none" />
+                            </div>
 
                             <button
                               onClick={() => handleRemoveClick(member)}
