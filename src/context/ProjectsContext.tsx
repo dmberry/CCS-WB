@@ -66,7 +66,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   const isSupabaseEnabled = isSupabaseConfigured();
   const supabase = isSupabaseEnabled ? getSupabaseClient() : null;
 
-  // Fetch user's projects (owned + shared)
+  // Fetch user's projects (owned + shared) - OPTIMIZED: parallel queries
   const fetchProjects = useCallback(async () => {
     if (!supabase || !user) {
       setProjects([]);
@@ -83,35 +83,42 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     }, 10000);
 
     try {
-      // Get projects the user owns (simple query without joins)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: ownedProjects, error: ownedError } = await (supabase as any)
-        .from("projects")
-        .select("*")
-        .eq("owner_id", user.id)
-        .order("updated_at", { ascending: false });
+      // Run owned and shared queries in parallel
+      const [ownedResult, sharedResult] = await Promise.all([
+        // Get projects the user owns
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("projects")
+          .select("*")
+          .eq("owner_id", user.id)
+          .order("updated_at", { ascending: false }),
+        // Get project IDs shared with the user
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("project_members")
+          .select("project_id")
+          .eq("user_id", user.id),
+      ]);
 
-      console.log("Owned projects result:", { data: ownedProjects, error: ownedError, errorKeys: ownedError ? Object.keys(ownedError) : null });
+      const { data: ownedProjects, error: ownedError } = ownedResult;
+      const { data: sharedProjects, error: sharedError } = sharedResult;
+
       if (ownedError && Object.keys(ownedError).length > 0) {
-        console.error("Error fetching owned projects:", JSON.stringify(ownedError, null, 2), ownedError.message, ownedError.code);
+        console.error("Error fetching owned projects:", ownedError.message);
       }
-
-      // Get projects shared with the user
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: sharedProjects, error: sharedError } = await (supabase as any)
-        .from("project_members")
-        .select("project_id")
-        .eq("user_id", user.id);
-
-      console.log("Shared projects result:", { data: sharedProjects, error: sharedError, errorKeys: sharedError ? Object.keys(sharedError) : null });
       if (sharedError && Object.keys(sharedError).length > 0) {
-        console.error("Error fetching shared projects:", JSON.stringify(sharedError, null, 2), sharedError.message, sharedError.code);
+        console.error("Error fetching shared projects:", sharedError.message);
       }
 
-      // Fetch shared project details if any
+      // Fetch shared project details if any (only IDs not already owned)
+      const owned = ownedProjects || [];
+      const ownedIds = new Set(owned.map((p: Project) => p.id));
+      const sharedIds = (sharedProjects || [])
+        .map((p: { project_id: string }) => p.project_id)
+        .filter((id: string) => !ownedIds.has(id));
+
       let sharedProjectDetails: Project[] = [];
-      if (sharedProjects && sharedProjects.length > 0) {
-        const sharedIds = sharedProjects.map((p: { project_id: string }) => p.project_id);
+      if (sharedIds.length > 0) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: sharedData } = await (supabase as any)
           .from("projects")
@@ -120,14 +127,8 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
         sharedProjectDetails = sharedData || [];
       }
 
-      // Combine and deduplicate
-      const owned = ownedProjects || [];
-      const allProjects = [...owned];
-      for (const project of sharedProjectDetails) {
-        if (!allProjects.find((p: Project) => p.id === project.id)) {
-          allProjects.push(project);
-        }
-      }
+      // Combine (already deduplicated by filtering sharedIds)
+      const allProjects = [...owned, ...sharedProjectDetails];
 
       // Sort by updated_at
       allProjects.sort((a: Project, b: Project) =>
@@ -241,8 +242,8 @@ _Add relevant references, documentation links, or related scholarship:_
         console.log("createProject: README.md created successfully with id:", readmeId);
       }
 
-      // Refresh project list
-      await fetchProjects();
+      // Add to local state instead of full refresh
+      setProjects(prev => [project as ProjectWithOwner, ...prev]);
 
       // Build initial session with the README we just created
       // This avoids a race condition where loadProject might run before the DB commits
@@ -267,7 +268,7 @@ _Add relevant references, documentation links, or related scholarship:_
     }
   }, [supabase, user, fetchProjects]);
 
-  // Load a project's session data
+  // Load a project's session data - OPTIMIZED: parallel queries
   // Files and annotations are loaded from their respective tables (code_files, annotations)
   // NOT from session_data, which only stores other session state (messages, mode, etc.)
   const loadProject = useCallback(async (projectId: string) => {
@@ -276,31 +277,44 @@ _Add relevant references, documentation links, or related scholarship:_
     }
 
     try {
-      // Fetch project metadata and session_data
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: projectData, error: projectError } = await (supabase as any)
-        .from("projects")
-        .select("*")
-        .eq("id", projectId)
-        .single();
+      // Fetch project, files, and annotations in parallel
+      const [projectResult, filesResult, annotationsResult] = await Promise.all([
+        // Project metadata
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("projects")
+          .select("*")
+          .eq("id", projectId)
+          .single(),
+        // Code files (with display_order)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("code_files")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("display_order", { ascending: true, nullsFirst: false })
+          .order("created_at", { ascending: true }),
+        // Annotations
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("annotations")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: true }),
+      ]);
+
+      const { data: projectData, error: projectError } = projectResult;
+      let { data: codeFilesData, error: filesError } = filesResult;
+      const { data: annotationsData, error: annotationsError } = annotationsResult;
 
       if (projectError) {
         return { session: null, error: new Error(projectError.message) };
       }
 
-      // Fetch code files from code_files table (source of truth for files)
-      // Order by display_order to preserve user-defined ordering (falls back to created_at)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let { data: codeFilesData, error: filesError } = await (supabase as any)
-        .from("code_files")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("display_order", { ascending: true, nullsFirst: false })
-        .order("created_at", { ascending: true });
-
       // Fallback: if display_order column doesn't exist yet, query without it
       if (filesError) {
         console.warn("Fetching code files with display_order failed, trying without:", filesError);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const fallback = await (supabase as any)
           .from("code_files")
           .select("*")
@@ -312,20 +326,7 @@ _Add relevant references, documentation links, or related scholarship:_
 
       if (filesError) {
         console.error("Error fetching code files:", filesError);
-      } else {
-        console.log("loadProject: Fetched code_files from database:", {
-          count: codeFilesData?.length,
-          files: codeFilesData?.map((f: { filename: string; id: string }) => ({ name: f.filename, id: f.id })),
-        });
       }
-
-      // Fetch annotations from annotations table (source of truth for annotations)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: annotationsData, error: annotationsError } = await (supabase as any)
-        .from("annotations")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: true });
 
       if (annotationsError) {
         console.error("Error fetching annotations:", annotationsError);
@@ -407,7 +408,7 @@ _Add relevant references, documentation links, or related scholarship:_
     }
   }, [supabase]);
 
-  // Save session to a project
+  // Save session to a project - OPTIMIZED: bulk upserts + parallel queries
   // Files and annotations are saved to their respective tables (code_files, annotations)
   // session_data only stores other session state (messages, mode, settings, etc.)
   const saveProject = useCallback(async (projectId: string, session: Session) => {
@@ -418,48 +419,14 @@ _Add relevant references, documentation links, or related scholarship:_
     }
 
     try {
-      // 0. Update README.md with current file list (if README exists)
-      const readmeFile = session.codeFiles.find(f => f.name.toLowerCase() === "readme.md");
-      if (readmeFile) {
-        const readmeContent = session.codeContents[readmeFile.id] || "";
+      const now = new Date().toISOString();
 
-        // Build file list (excluding README itself)
-        const otherFiles = session.codeFiles.filter(f => f.name.toLowerCase() !== "readme.md");
-        const fileListLines = otherFiles.map(f => {
-          const content = session.codeContents[f.id] || "";
-          const lineCount = content.split("\n").length;
-          return `- \`${f.name}\` (${f.language}, ${lineCount} lines)`;
-        });
-
-        const fileListSection = fileListLines.length > 0
-          ? fileListLines.join("\n")
-          : "_No code files added yet._";
-
-        // Replace the Code Files section content
-        // Match from "## Code Files" to the next "##" heading or end of file
-        const codeFilesRegex = /(## Code Files\s*\n)[\s\S]*?(?=\n## |\n---|$)/;
-
-        if (codeFilesRegex.test(readmeContent)) {
-          const updatedReadme = readmeContent.replace(
-            codeFilesRegex,
-            `$1\n${fileListSection}\n`
-          );
-          session.codeContents[readmeFile.id] = updatedReadme;
-          console.log("saveProject: Updated README.md with file list");
-        }
-      }
-
-      // 1. Save code files to code_files table (with display_order to preserve user ordering)
-      console.log(`saveProject: Saving ${session.codeFiles.length} files to code_files table`);
-      for (let i = 0; i < session.codeFiles.length; i++) {
-        const file = session.codeFiles[i];
-        const content = session.codeContents[file.id];
-        if (content === undefined) continue;
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error: fileError } = await (supabase as any)
-          .from("code_files")
-          .upsert({
+      // Build bulk data for files (skip README update - too expensive for every save)
+      const filesData = session.codeFiles
+        .map((file, i) => {
+          const content = session.codeContents[file.id];
+          if (content === undefined) return null;
+          return {
             id: file.id,
             project_id: projectId,
             filename: file.name,
@@ -467,122 +434,115 @@ _Add relevant references, documentation links, or related scholarship:_
             content: content,
             original_content: content,
             uploaded_by: user.id,
-            display_order: i, // Preserve user-defined file order
-            updated_at: new Date().toISOString(),
-          }, { onConflict: "id" });
+            display_order: i,
+            updated_at: now,
+          };
+        })
+        .filter(Boolean);
 
-        if (fileError) {
-          console.error("saveProject: Error saving file", file.name, fileError);
-        }
+      // Build bulk data for annotations
+      const annotationsData = session.lineAnnotations.map(annotation => ({
+        id: annotation.id,
+        file_id: annotation.codeFileId,
+        project_id: projectId,
+        user_id: user.id,
+        line_number: annotation.lineNumber,
+        end_line_number: annotation.endLineNumber || null,
+        line_content: annotation.lineContent || null,
+        type: annotation.type,
+        content: annotation.content,
+        updated_at: now,
+      }));
+
+      // Session data without files/annotations (stored separately)
+      const sessionDataWithoutFiles = {
+        ...session,
+        codeFiles: [],
+        codeContents: {},
+        lineAnnotations: [],
+      };
+
+      const projectUpdateData = {
+        session_data: sessionDataWithoutFiles,
+        mode: session.mode,
+        updated_at: now,
+      };
+
+      // Run all upserts and fetches in parallel
+      console.log(`saveProject: Bulk saving ${filesData.length} files, ${annotationsData.length} annotations`);
+
+      const [filesUpsertResult, annotationsUpsertResult, projectUpdateResult, existingFilesResult, existingAnnotationsResult] = await Promise.all([
+        // Bulk upsert files
+        filesData.length > 0
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ? (supabase as any).from("code_files").upsert(filesData, { onConflict: "id" })
+          : Promise.resolve({ error: null }),
+        // Bulk upsert annotations
+        annotationsData.length > 0
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ? (supabase as any).from("annotations").upsert(annotationsData, { onConflict: "id" })
+          : Promise.resolve({ error: null }),
+        // Update project metadata
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any).from("projects").update(projectUpdateData).eq("id", projectId).select(),
+        // Get existing file IDs for deletion check
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any).from("code_files").select("id").eq("project_id", projectId),
+        // Get existing annotation IDs for deletion check
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any).from("annotations").select("id").eq("project_id", projectId),
+      ]);
+
+      if (filesUpsertResult.error) {
+        console.error("saveProject: Error bulk saving files", filesUpsertResult.error);
+      }
+      if (annotationsUpsertResult.error) {
+        console.error("saveProject: Error bulk saving annotations", annotationsUpsertResult.error);
+      }
+      if (projectUpdateResult.error) {
+        console.error("saveProject: Error updating project", projectUpdateResult.error);
+        return { error: new Error(projectUpdateResult.error.message) };
       }
 
-      // 2. Delete files from code_files that are no longer in session
-      // Get current files in database
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: existingFiles } = await (supabase as any)
-        .from("code_files")
-        .select("id")
-        .eq("project_id", projectId);
-
+      // Calculate orphans to delete
       const sessionFileIds = new Set(session.codeFiles.map(f => f.id));
-      const filesToDelete = (existingFiles || [])
+      const filesToDelete = (existingFilesResult.data || [])
         .filter((f: { id: string }) => !sessionFileIds.has(f.id))
         .map((f: { id: string }) => f.id);
 
-      if (filesToDelete.length > 0) {
-        console.log(`saveProject: Deleting ${filesToDelete.length} orphan files`);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any)
-          .from("code_files")
-          .delete()
-          .in("id", filesToDelete);
-      }
-
-      // 3. Save annotations to annotations table
-      console.log(`saveProject: Saving ${session.lineAnnotations.length} annotations to annotations table`);
-      for (const annotation of session.lineAnnotations) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error: annotationError } = await (supabase as any)
-          .from("annotations")
-          .upsert({
-            id: annotation.id,
-            file_id: annotation.codeFileId,
-            project_id: projectId,
-            user_id: user.id,
-            line_number: annotation.lineNumber,
-            end_line_number: annotation.endLineNumber || null,
-            line_content: annotation.lineContent || null,
-            type: annotation.type,
-            content: annotation.content,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: "id" });
-
-        if (annotationError) {
-          console.error("saveProject: Error saving annotation", annotation.id, annotationError);
-        }
-      }
-
-      // 4. Delete annotations that are no longer in session
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: existingAnnotations } = await (supabase as any)
-        .from("annotations")
-        .select("id")
-        .eq("project_id", projectId);
-
       const sessionAnnotationIds = new Set(session.lineAnnotations.map(a => a.id));
-      const annotationsToDelete = (existingAnnotations || [])
+      const annotationsToDelete = (existingAnnotationsResult.data || [])
         .filter((a: { id: string }) => !sessionAnnotationIds.has(a.id))
         .map((a: { id: string }) => a.id);
 
-      if (annotationsToDelete.length > 0) {
-        console.log(`saveProject: Deleting ${annotationsToDelete.length} orphan annotations`);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any)
-          .from("annotations")
-          .delete()
-          .in("id", annotationsToDelete);
+      // Delete orphans in parallel (if any)
+      if (filesToDelete.length > 0 || annotationsToDelete.length > 0) {
+        console.log(`saveProject: Deleting ${filesToDelete.length} orphan files, ${annotationsToDelete.length} orphan annotations`);
+        await Promise.all([
+          filesToDelete.length > 0
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ? (supabase as any).from("code_files").delete().in("id", filesToDelete)
+            : Promise.resolve(),
+          annotationsToDelete.length > 0
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ? (supabase as any).from("annotations").delete().in("id", annotationsToDelete)
+            : Promise.resolve(),
+        ]);
       }
 
-      // 5. Save session_data WITHOUT codeFiles, codeContents, lineAnnotations
-      // These are now in their own tables
-      const sessionDataWithoutFiles = {
-        ...session,
-        codeFiles: [],  // Empty - data is in code_files table
-        codeContents: {},  // Empty - data is in code_files table
-        lineAnnotations: [],  // Empty - data is in annotations table
-      };
+      console.log("saveProject: Success");
 
-      const updateData = {
-        session_data: sessionDataWithoutFiles,
-        mode: session.mode,
-        updated_at: new Date().toISOString(),
-      };
-      console.log("saveProject: Updating project metadata");
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error, data } = await (supabase as any)
-        .from("projects")
-        .update(updateData)
-        .eq("id", projectId)
-        .select();
-
-      console.log("saveProject: Result", { error, data });
-
-      if (error) {
-        console.error("saveProject: Error", error);
-        return { error: new Error(error.message) };
-      }
-
-      console.log("saveProject: Success, refreshing projects");
-      // Refresh project list to update timestamps
-      await fetchProjects();
+      // Update local state instead of full refresh (just update timestamp)
+      setProjects(prev => prev.map(p =>
+        p.id === projectId ? { ...p, updated_at: now } : p
+      ));
 
       return { error: null };
     } catch (error) {
       console.error("saveProject: Exception", error);
       return { error: error as Error };
     }
-  }, [supabase, user, fetchProjects]);
+  }, [supabase, user]);
 
   // Delete a project
   const deleteProject = useCallback(async (projectId: string) => {
@@ -606,14 +566,14 @@ _Add relevant references, documentation links, or related scholarship:_
         setCurrentProjectId(null);
       }
 
-      // Refresh project list
-      await fetchProjects();
+      // Remove from local state instead of full refresh
+      setProjects(prev => prev.filter(p => p.id !== projectId));
 
       return { error: null };
     } catch (error) {
       return { error: error as Error };
     }
-  }, [supabase, currentProjectId, fetchProjects]);
+  }, [supabase, currentProjectId]);
 
   // Get project members with profile info
   const getProjectMembers = useCallback(async (projectId: string) => {
@@ -815,14 +775,18 @@ _Add relevant references, documentation links, or related scholarship:_
         return { project: null, error: new Error("Project not found") };
       }
 
-      // Refresh projects list
-      await fetchProjects();
+      // Add to local state instead of full refresh
+      setProjects(prev => {
+        // Don't add if already exists
+        if (prev.some(p => p.id === project.id)) return prev;
+        return [project as ProjectWithOwner, ...prev];
+      });
 
       return { project: project as Project, error: null };
     } catch (error) {
       return { project: null, error: error as Error };
     }
-  }, [supabase, user, fetchProjects]);
+  }, [supabase, user]);
 
   return (
     <ProjectsContext.Provider
