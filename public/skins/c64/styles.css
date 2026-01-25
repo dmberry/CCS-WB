@@ -1,0 +1,539 @@
+/* Commodore 64 - The Best-Selling Computer of All Time */
+/* **** COMMODORE 64 BASIC V2 **** */
+/* 64K RAM SYSTEM 38911 BASIC BYTES FREE */
+/* READY. */
+
+/* === C64 COLORS === */
+/* Classic C64 blue: #4040e0 (border) and #4040a0 (background) */
+/* Light blue text: #a0a0ff */
+
+/* === C64 FONT === */
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+* {
+  font-family: 'VT323', 'Courier New', monospace !important;
+  text-transform: uppercase;
+}
+
+/* === BLUE BACKGROUND WITH BORDER === */
+body {
+  background: #4040a0 !important;
+  border: 20px solid #a0a0ff !important;
+  box-sizing: border-box;
+  min-height: 100vh;
+}
+
+/* === TEXT STYLING === */
+h1, h2, h3, h4, .font-display {
+  color: #a0a0ff !important;
+  text-shadow: none !important;
+  font-weight: normal !important;
+  letter-spacing: 0 !important;
+}
+
+p, span, label, div {
+  color: #a0a0ff !important;
+}
+
+/* === TOOLBAR / HEADER === */
+header,
+header.bg-background {
+  background: #4040a0 !important;
+  border-bottom: 2px solid #a0a0ff !important;
+}
+
+header * {
+  color: #a0a0ff !important;
+}
+
+header svg {
+  color: #a0a0ff !important;
+}
+
+header button {
+  background: transparent !important;
+  border: 2px solid #a0a0ff !important;
+}
+
+header button:hover {
+  background: #a0a0ff !important;
+  color: #4040a0 !important;
+}
+
+header button:hover svg {
+  color: #4040a0 !important;
+}
+
+header h1 {
+  font-size: 16px !important;
+}
+
+/* READY prompt style */
+header h1::after {
+  content: " █";
+  animation: cursor 1s step-end infinite;
+}
+
+@keyframes cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* === BOOT SCREEN TEXT === */
+main::before {
+  content: "**** COMMODORE 64 BASIC V2 ****\\A 64K RAM SYSTEM  38911 BASIC BYTES FREE\\A\\AREADY.";
+  white-space: pre;
+  display: block;
+  text-align: center;
+  color: #a0a0ff;
+  font-size: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* === MAIN PAGE CARDS === */
+main .grid button.group,
+main button[class*="shadow-editorial"] {
+  background: #4040a0 !important;
+  border: 2px solid #a0a0ff !important;
+  box-shadow: none !important;
+}
+
+main .grid button.group * {
+  color: #a0a0ff !important;
+}
+
+main .grid button.group h3 {
+  font-weight: normal !important;
+}
+
+main .grid button.group:hover {
+  background: #a0a0ff !important;
+}
+
+main .grid button.group:hover * {
+  color: #4040a0 !important;
+}
+
+/* Icon containers */
+main .grid button.group > div:first-child,
+main .grid button.group .bg-cream {
+  background: #303080 !important;
+  border: 2px solid #a0a0ff !important;
+}
+
+main .grid button.group > div:first-child svg,
+main .grid button.group svg {
+  color: #a0a0ff !important;
+}
+
+main .grid button.group:hover > div:first-child,
+main .grid button.group:hover .bg-cream {
+  background: #a0a0ff !important;
+}
+
+main .grid button.group:hover > div:first-child svg,
+main .grid button.group:hover svg {
+  color: #4040a0 !important;
+}
+
+/* Load Project button */
+main button[class*="border-burgundy"] {
+  background: transparent !important;
+  border: 2px solid #a0a0ff !important;
+  color: #a0a0ff !important;
+}
+
+main button[class*="border-burgundy"]:hover {
+  background: #a0a0ff !important;
+  color: #4040a0 !important;
+}
+
+/* === PANELS & CARDS === */
+.bg-popover,
+.bg-cream,
+.bg-card {
+  background: #303080 !important;
+  border: 2px solid #a0a0ff !important;
+}
+
+/* === BUTTONS === */
+button[class*="bg-burgundy"],
+.btn-editorial {
+  background: #a0a0ff !important;
+  border: 2px solid #a0a0ff !important;
+  color: #4040a0 !important;
+}
+
+button[class*="bg-burgundy"]:hover,
+.btn-editorial:hover {
+  background: #ffffff !important;
+}
+
+/* === LINKS === */
+a, [class*="text-burgundy"] {
+  color: #a0a0ff !important;
+  text-decoration: none;
+}
+
+a:hover {
+  background: #a0a0ff;
+  color: #4040a0 !important;
+}
+
+/* === SCROLLBARS === */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+::-webkit-scrollbar-track {
+  background: #4040a0;
+  border: 2px solid #a0a0ff;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #a0a0ff;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c0c0ff;
+}
+
+/* === INPUTS === */
+input, textarea, select {
+  background: #4040a0 !important;
+  border: 2px solid #a0a0ff !important;
+  color: #a0a0ff !important;
+  text-transform: uppercase;
+}
+
+input:focus, textarea:focus, select:focus {
+  background: #303080 !important;
+  outline: none !important;
+}
+
+input::placeholder {
+  color: #6060c0 !important;
+}
+
+/* === CODE EDITOR === */
+.cm-editor,
+pre, code {
+  background: #4040a0 !important;
+  color: #a0a0ff !important;
+  border: 2px solid #a0a0ff !important;
+}
+
+/* === C64 CREDIT BOX === */
+.skin-credit-box {
+  display: block !important;
+  width: 200px;
+  background: #4040a0;
+  border: 4px solid #a0a0ff;
+}
+
+.skin-credit-header {
+  display: block !important;
+  background: #a0a0ff;
+  color: #4040a0 !important;
+  font-size: 12px;
+  padding: 4px 8px;
+  text-align: center;
+}
+
+.skin-credit-header::before {
+  content: "*** ";
+}
+
+.skin-credit-header::after {
+  content: " ***";
+}
+
+.skin-credit-content {
+  display: block !important;
+  padding: 10px;
+  text-align: center;
+}
+
+.skin-credit-avatar {
+  display: block !important;
+  width: 100%;
+  height: auto;
+  margin: 0 0 8px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  text-align: center;
+}
+
+/* C64 logo ASCII */
+.skin-credit-avatar::before {
+  content: "╔═══════════════╗\\A║  COMMODORE    ║\\A║      64       ║\\A╚═══════════════╝";
+  white-space: pre;
+  font-size: 11px;
+  line-height: 1.2;
+  color: #a0a0ff;
+}
+
+.skin-credit-name {
+  display: block !important;
+  color: #a0a0ff !important;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.skin-credit-name::before {
+  content: "LOAD \"";
+}
+
+.skin-credit-name::after {
+  content: "\",8,1";
+}
+
+.skin-credit-text {
+  display: block !important;
+  font-size: 11px;
+  color: #a0a0ff !important;
+}
+
+.skin-credit-text::before {
+  content: "SEARCHING...";
+}
+
+.skin-credit-content::after {
+  content: "READY. █";
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #a0a0ff;
+}
+
+/* === HORIZONTAL RULES === */
+hr {
+  border: none !important;
+  height: 2px !important;
+  background: #a0a0ff !important;
+}
+
+/* === PETSCII-STYLE DECORATIONS === */
+hr::before {
+  content: "════════════════════════════════════════";
+  display: block;
+  color: #a0a0ff;
+  text-align: center;
+  font-size: 14px;
+}
+
+/* === TOOLBAR ICONS === */
+header button[title="New project"] svg,
+header button[title*="new local session"] svg,
+header button[title="Save session"] svg,
+header button[title="Load session"] svg,
+header button[title*="load local session"] svg,
+header button[title="Export session log"] svg,
+header button[title="Sign in to collaborate"] svg,
+header button[title*="Connected to"] svg,
+header button[title*="Not connected to cloud"] svg,
+header button[title="Interface guide"] svg,
+header button[title="Settings"] svg {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+header button[title="New project"],
+header button[title*="new local session"],
+header button[title="Save session"],
+header button[title="Load session"],
+header button[title*="load local session"],
+header button[title="Export session log"],
+header button[title="Sign in to collaborate"],
+header button[title*="Connected to"],
+header button[title*="Not connected to cloud"],
+header button[title="Interface guide"],
+header button[title="Settings"] {
+  min-width: 32px !important;
+  min-height: 32px !important;
+  background-size: 24px 24px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+header button[title="New project"],
+header button[title*="new local session"] {
+  background-image: url('/assets/icons/toolbar/new.svg') !important;
+}
+
+header button[title="Save session"] {
+  background-image: url('/assets/icons/toolbar/save.svg') !important;
+}
+
+header button[title="Load session"],
+header button[title*="load local session"] {
+  background-image: url('/assets/icons/toolbar/open.svg') !important;
+}
+
+header button[title="Export session log"] {
+  background-image: url('/assets/icons/toolbar/download.svg') !important;
+}
+
+header button[title="Sign in to collaborate"] {
+  background-image: url('/assets/icons/toolbar/cloud-off.svg') !important;
+}
+
+header button[title*="Not connected to cloud"] {
+  background-image: url('/assets/icons/toolbar/cloud.svg') !important;
+}
+
+header button[title*="Connected to"] {
+  background-image: url('/assets/icons/toolbar/cloud-cog.svg') !important;
+}
+
+header button[title="Interface guide"] {
+  background-image: url('/assets/icons/toolbar/help.svg') !important;
+}
+
+header button[title="Settings"] {
+  background-image: url('/assets/icons/toolbar/settings.svg') !important;
+}
+
+/* === INTERFACE GUIDE POPUP === */
+header .absolute.w-80 {
+  background: #4040a0 !important;
+  border: 4px solid #a0a0ff !important;
+  color: #a0a0ff !important;
+}
+
+header .absolute.w-80 h3,
+header .absolute.w-80 h4 {
+  color: #a0a0ff !important;
+}
+
+header .absolute.w-80 p,
+header .absolute.w-80 span,
+header .absolute.w-80 div {
+  color: #a0a0ff !important;
+}
+
+header .absolute.w-80 strong {
+  color: #ffffff !important;
+}
+
+header .absolute.w-80 button {
+  background: transparent !important;
+  min-width: auto !important;
+  min-height: auto !important;
+}
+
+header .absolute.w-80 button svg {
+  color: #a0a0ff !important;
+  opacity: 1 !important;
+  width: auto !important;
+  height: auto !important;
+  position: static !important;
+}
+
+/* === MAIN PAGE ICONS === */
+main header button[title="Help & Getting Started"] svg,
+main header button[title="Settings"] svg {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main header button[title="Help & Getting Started"],
+main header button[title="Settings"] {
+  min-width: 28px !important;
+  min-height: 28px !important;
+  background-size: 20px 20px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+main header button[title="Help & Getting Started"] {
+  background-image: url('/assets/icons/toolbar/help.svg') !important;
+}
+
+main header button[title="Settings"] {
+  background-image: url('/assets/icons/toolbar/settings.svg') !important;
+}
+
+/* Load Project button icon */
+main button:has(.lucide-folder-open) svg.lucide-folder-open {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main button:has(.lucide-folder-open) {
+  padding-left: 28px !important;
+  background-image: url('/assets/icons/toolbar/open.svg') !important;
+  background-size: 16px 16px !important;
+  background-repeat: no-repeat !important;
+  background-position: 8px center !important;
+}
+
+/* === ENTRY MODE CARD ICONS === */
+main .grid button.group svg.lucide-code,
+main .grid button.group svg.lucide-archive,
+main .grid button.group svg.lucide-book-open,
+main .grid button.group svg.lucide-sparkles {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main .grid button.group > div:first-child {
+  background-size: 28px 28px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+main .grid button.group:nth-child(1) > div:first-child {
+  background-image: url('/assets/icons/modes/code.svg') !important;
+}
+
+main .grid button.group:nth-child(2) > div:first-child {
+  background-image: url('/assets/icons/modes/archive.svg') !important;
+}
+
+main .grid button.group:nth-child(3) > div:first-child {
+  background-image: url('/assets/icons/modes/book.svg') !important;
+}
+
+main .grid button.group:nth-child(4) > div:first-child {
+  background-image: url('/assets/icons/modes/sparkles.svg') !important;
+}
+
+/* === FILENAME INPUT === */
+header input,
+header input[type="text"] {
+  background: #4040a0 !important;
+  color: #a0a0ff !important;
+  border: 2px solid #a0a0ff !important;
+}
+
+header button[title="Click to rename"] {
+  background: #4040a0 !important;
+  border: 2px solid #a0a0ff !important;
+}
+
+header button span.font-mono,
+header span.font-mono,
+header .font-mono {
+  color: #a0a0ff !important;
+}
+
+/* === FINAL CLEANUP === */
+.text-slate-muted,
+.text-slate {
+  background: transparent !important;
+  color: #6060c0 !important;
+  border: none !important;
+  padding: 0 !important;
+}

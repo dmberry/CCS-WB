@@ -1,0 +1,70 @@
+{
+  "name": "Atari 2600",
+  "author": "Atari, Inc.",
+  "version": "1977",
+  "description": "GAME PROGRAM™ — Insert cartridge and press GAME RESET. Wood grain luxury meets 128 bytes of RAM.",
+  "mode": "dark-only",
+  "fonts": {
+    "display": "'Press Start 2P', 'Courier New', monospace",
+    "body": "'VT323', 'Courier New', monospace",
+    "mono": "'Press Start 2P', 'Courier New', monospace"
+  },
+  "colors": {
+    "dark": {
+      "--ink": "33 70% 55%",
+      "--charcoal": "25 60% 35%",
+      "--slate": "30 40% 45%",
+      "--ivory": "0 0% 8%",
+      "--cream": "25 30% 12%",
+      "--parchment": "30 50% 25%",
+      "--burgundy": "15 80% 50%",
+      "--gold": "45 90% 50%",
+      "--background": "0 0% 8%",
+      "--foreground": "33 70% 55%",
+      "--popover": "25 30% 10%",
+      "--popover-foreground": "33 70% 55%",
+      "--muted": "25 30% 15%",
+      "--muted-foreground": "30 40% 40%",
+      "--border": "30 50% 30%",
+      "--input": "25 30% 12%",
+      "--primary": "15 80% 50%",
+      "--primary-foreground": "0 0% 100%",
+      "--ring": "45 90% 50%",
+      "--card": "25 30% 10%",
+      "--card-foreground": "33 70% 55%",
+      "--secondary": "45 90% 50%",
+      "--secondary-foreground": "0 0% 8%",
+      "--accent": "0 70% 50%",
+      "--accent-foreground": "0 0% 100%"
+    }
+  },
+  "clippy": {
+    "avoidCreditBox": true,
+    "messages": [
+      "INSERT CARTRIDGE",
+      "PRESS GAME RESET",
+      "GAME SELECT",
+      "DIFFICULTY: A",
+      "PLAYER 1 READY",
+      "128 BYTES SHOULD BE ENOUGH FOR ANYONE",
+      "Your code has that wood grain aesthetic.",
+      "Have you tried blowing on the cartridge?",
+      "This function is Combat-compatible.",
+      "Adventure says: You have found the code.",
+      "Pitfall Harry approves of this loop.",
+      "E.T. could not find this variable.",
+      "Your code is more colourful than actual Atari graphics.",
+      "GAME OVER - INSERT QUARTER",
+      "Press RESET to debug.",
+      "This code runs at a smooth 60 fields per second.",
+      "Warning: May cause TV scan line nostalgia.",
+      "Stella emulator verified.",
+      "Your sprite is flickering. That's a feature.",
+      "River Raid high score: 999999",
+      "Remember when games fit in 4K?",
+      "This code has Activision quality.",
+      "Pac-Man at home vibes.",
+      "Joystick recommended for this code."
+    ]
+  }
+}

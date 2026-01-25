@@ -1,0 +1,574 @@
+/* Atari 2600 - Video Computer System */
+/* GAME PROGRAM™ - Atari, Inc. 1977 */
+/* 128 bytes of RAM. That's all you get. */
+
+/* === IMPORT PIXEL FONT === */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+* {
+  font-family: 'VT323', 'Courier New', monospace !important;
+}
+
+h1, h2, h3, .font-display {
+  font-family: 'Press Start 2P', 'VT323', monospace !important;
+}
+
+/* === WOOD GRAIN + BLACK BACKGROUND === */
+body {
+  background: #0a0a0a !important;
+  position: relative;
+}
+
+/* Wood grain stripe at top (like the console) */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(180deg,
+    #8b6914 0%,
+    #a67c00 10%,
+    #6b4f0a 20%,
+    #8b6914 30%,
+    #a67c00 50%,
+    #6b4f0a 60%,
+    #8b6914 70%,
+    #a67c00 90%,
+    #6b4f0a 100%
+  );
+  background-size: 100% 10px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Scan line effect */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.1),
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  z-index: 9998;
+}
+
+/* === ATARI COLOR PALETTE === */
+/* Using classic Atari 2600 colors */
+
+h1, h2, h3, h4, .font-display {
+  color: #d4a017 !important;
+  text-shadow: 2px 2px 0 #000000 !important;
+  letter-spacing: 2px;
+}
+
+p, span, label, div {
+  color: #c8a060 !important;
+}
+
+/* === TOOLBAR / HEADER === */
+header,
+header.bg-background {
+  background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%) !important;
+  border-bottom: 4px solid #d4a017 !important;
+  margin-top: 60px !important; /* Space for wood grain */
+}
+
+header * {
+  color: #d4a017 !important;
+}
+
+header svg {
+  color: #ff6600 !important;
+}
+
+header button {
+  background: #1a1a1a !important;
+  border: 2px solid #d4a017 !important;
+}
+
+header button:hover {
+  background: #d4a017 !important;
+  color: #000000 !important;
+}
+
+header button:hover svg {
+  color: #000000 !important;
+}
+
+header h1 {
+  font-size: 12px !important;
+  letter-spacing: 3px;
+}
+
+/* === MAIN PAGE CARDS === */
+main {
+  padding-top: 20px;
+}
+
+main .grid button.group,
+main button[class*="shadow-editorial"] {
+  background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%) !important;
+  border: 3px solid #d4a017 !important;
+  box-shadow: 4px 4px 0 #6b4f0a !important;
+}
+
+main .grid button.group * {
+  color: #c8a060 !important;
+}
+
+main .grid button.group h3 {
+  color: #ff6600 !important;
+  font-size: 10px !important;
+  letter-spacing: 1px;
+}
+
+main .grid button.group:hover {
+  border-color: #ff6600 !important;
+  box-shadow: 4px 4px 0 #ff6600 !important;
+}
+
+/* Icon containers - like game cartridge labels */
+main .grid button.group > div:first-child,
+main .grid button.group .bg-cream {
+  background: linear-gradient(180deg, #cc0000 0%, #990000 100%) !important;
+  border: 2px solid #ffcc00 !important;
+}
+
+main .grid button.group > div:first-child svg,
+main .grid button.group svg {
+  color: #ffcc00 !important;
+}
+
+/* Load Project button - orange Atari style */
+main button[class*="border-burgundy"] {
+  background: linear-gradient(180deg, #ff6600 0%, #cc5200 100%) !important;
+  border: 2px solid #ffcc00 !important;
+  color: #000000 !important;
+}
+
+main button[class*="border-burgundy"]:hover {
+  background: linear-gradient(180deg, #ff9933 0%, #ff6600 100%) !important;
+}
+
+/* === PANELS & CARDS === */
+.bg-popover,
+.bg-cream,
+.bg-card {
+  background: #1a1a1a !important;
+  border: 2px solid #d4a017 !important;
+}
+
+/* === BUTTONS - Atari orange/red === */
+button[class*="bg-burgundy"],
+.btn-editorial {
+  background: linear-gradient(180deg, #ff6600 0%, #cc3300 100%) !important;
+  border: 2px solid #ffcc00 !important;
+  color: #ffffff !important;
+  font-family: 'Press Start 2P', monospace !important;
+  font-size: 10px !important;
+  text-shadow: 1px 1px 0 #000000;
+}
+
+button[class*="bg-burgundy"]:hover,
+.btn-editorial:hover {
+  background: linear-gradient(180deg, #ff9933 0%, #ff6600 100%) !important;
+}
+
+/* === LINKS === */
+a, [class*="text-burgundy"] {
+  color: #ff6600 !important;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #ffcc00 !important;
+  text-shadow: 0 0 5px #ffcc00;
+}
+
+/* === SCROLLBARS === */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+  border: 1px solid #6b4f0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #d4a017 0%, #8b6914 100%);
+  border: 1px solid #ffcc00;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ffcc00 0%, #d4a017 100%);
+}
+
+/* === INPUTS === */
+input, textarea, select {
+  background: #0a0a0a !important;
+  border: 2px solid #d4a017 !important;
+  color: #c8a060 !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: #ff6600 !important;
+  box-shadow: 0 0 10px rgba(255,102,0,0.3) !important;
+  outline: none !important;
+}
+
+input::placeholder {
+  color: #6b4f0a !important;
+}
+
+/* === CODE EDITOR === */
+.cm-editor,
+pre, code {
+  background: #0a0a0a !important;
+  color: #00ff00 !important;
+  border: 2px solid #d4a017 !important;
+}
+
+/* === ATARI CREDIT BOX - Cartridge style === */
+.skin-credit-box {
+  display: block !important;
+  width: 180px;
+  background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+  border: 3px solid #d4a017;
+  box-shadow: 4px 4px 0 #6b4f0a;
+  overflow: hidden;
+}
+
+/* Wood grain header */
+.skin-credit-header {
+  display: block !important;
+  background: linear-gradient(180deg,
+    #8b6914 0%,
+    #a67c00 30%,
+    #6b4f0a 60%,
+    #8b6914 100%
+  );
+  color: #000000 !important;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 8px;
+  text-align: center;
+  text-shadow: 1px 1px 0 #d4a017;
+}
+
+.skin-credit-header::before {
+  content: "ATARI";
+}
+
+.skin-credit-content {
+  display: block !important;
+  padding: 12px;
+  text-align: center;
+  background: #1a1a1a;
+}
+
+/* Cartridge label style */
+.skin-credit-avatar {
+  display: block !important;
+  width: 120px;
+  height: 60px;
+  margin: 0 auto 10px;
+  background: linear-gradient(180deg, #cc0000 0%, #990000 100%);
+  border: 2px solid #ffcc00;
+  position: relative;
+}
+
+.skin-credit-avatar::before {
+  content: "GAME\\APROGRAM™";
+  white-space: pre;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #ffcc00;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.skin-credit-name {
+  display: block !important;
+  color: #ff6600 !important;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  margin-bottom: 6px;
+}
+
+.skin-credit-name::before {
+  content: "CODE COMBAT";
+}
+
+/* Hide default text */
+.skin-credit-name {
+  font-size: 0;
+}
+.skin-credit-name::before {
+  font-size: 8px;
+}
+
+.skin-credit-text {
+  display: block !important;
+  font-size: 10px;
+  color: #c8a060 !important;
+}
+
+.skin-credit-text::before {
+  content: "1 PLAYER";
+}
+
+.skin-credit-content::after {
+  content: "GAME SELECT";
+  display: block;
+  margin-top: 10px;
+  padding: 4px 8px;
+  background: #ff6600;
+  color: #000000;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+}
+
+/* === HORIZONTAL RULES === */
+hr {
+  border: none !important;
+  height: 4px !important;
+  background: linear-gradient(90deg,
+    transparent,
+    #d4a017,
+    #ff6600,
+    #d4a017,
+    transparent
+  ) !important;
+}
+
+/* === TOOLBAR ICONS === */
+header button[title="New project"] svg,
+header button[title*="new local session"] svg,
+header button[title="Save session"] svg,
+header button[title="Load session"] svg,
+header button[title*="load local session"] svg,
+header button[title="Export session log"] svg,
+header button[title="Sign in to collaborate"] svg,
+header button[title*="Connected to"] svg,
+header button[title*="Not connected to cloud"] svg,
+header button[title="Interface guide"] svg,
+header button[title="Settings"] svg {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+header button[title="New project"],
+header button[title*="new local session"],
+header button[title="Save session"],
+header button[title="Load session"],
+header button[title*="load local session"],
+header button[title="Export session log"],
+header button[title="Sign in to collaborate"],
+header button[title*="Connected to"],
+header button[title*="Not connected to cloud"],
+header button[title="Interface guide"],
+header button[title="Settings"] {
+  min-width: 32px !important;
+  min-height: 32px !important;
+  background-size: 24px 24px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+header button[title="New project"],
+header button[title*="new local session"] {
+  background-image: url('/assets/icons/toolbar/new.svg') !important;
+}
+
+header button[title="Save session"] {
+  background-image: url('/assets/icons/toolbar/save.svg') !important;
+}
+
+header button[title="Load session"],
+header button[title*="load local session"] {
+  background-image: url('/assets/icons/toolbar/open.svg') !important;
+}
+
+header button[title="Export session log"] {
+  background-image: url('/assets/icons/toolbar/download.svg') !important;
+}
+
+header button[title="Sign in to collaborate"] {
+  background-image: url('/assets/icons/toolbar/cloud-off.svg') !important;
+}
+
+header button[title*="Not connected to cloud"] {
+  background-image: url('/assets/icons/toolbar/cloud.svg') !important;
+}
+
+header button[title*="Connected to"] {
+  background-image: url('/assets/icons/toolbar/cloud-cog.svg') !important;
+}
+
+header button[title="Interface guide"] {
+  background-image: url('/assets/icons/toolbar/help.svg') !important;
+}
+
+header button[title="Settings"] {
+  background-image: url('/assets/icons/toolbar/settings.svg') !important;
+}
+
+/* === INTERFACE GUIDE POPUP === */
+header .absolute.w-80 {
+  background: #1a1a1a !important;
+  border: 3px solid #d4a017 !important;
+  box-shadow: 4px 4px 0 #6b4f0a !important;
+  color: #c8a060 !important;
+}
+
+header .absolute.w-80 h3,
+header .absolute.w-80 h4 {
+  color: #ff6600 !important;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px !important;
+}
+
+header .absolute.w-80 p,
+header .absolute.w-80 span,
+header .absolute.w-80 div {
+  color: #c8a060 !important;
+}
+
+header .absolute.w-80 strong {
+  color: #ffcc00 !important;
+}
+
+header .absolute.w-80 button {
+  background: transparent !important;
+  min-width: auto !important;
+  min-height: auto !important;
+}
+
+header .absolute.w-80 button svg {
+  color: #ff6600 !important;
+  opacity: 1 !important;
+  width: auto !important;
+  height: auto !important;
+  position: static !important;
+}
+
+/* === MAIN PAGE ICONS === */
+main header button[title="Help & Getting Started"] svg,
+main header button[title="Settings"] svg {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main header button[title="Help & Getting Started"],
+main header button[title="Settings"] {
+  min-width: 28px !important;
+  min-height: 28px !important;
+  background-size: 20px 20px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+main header button[title="Help & Getting Started"] {
+  background-image: url('/assets/icons/toolbar/help.svg') !important;
+}
+
+main header button[title="Settings"] {
+  background-image: url('/assets/icons/toolbar/settings.svg') !important;
+}
+
+/* Load Project button icon */
+main button:has(.lucide-folder-open) svg.lucide-folder-open {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main button:has(.lucide-folder-open) {
+  padding-left: 28px !important;
+  background-image: url('/assets/icons/toolbar/open.svg') !important;
+  background-size: 16px 16px !important;
+  background-repeat: no-repeat !important;
+  background-position: 8px center !important;
+}
+
+/* === ENTRY MODE CARD ICONS === */
+main .grid button.group svg.lucide-code,
+main .grid button.group svg.lucide-archive,
+main .grid button.group svg.lucide-book-open,
+main .grid button.group svg.lucide-sparkles {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main .grid button.group > div:first-child {
+  background-size: 28px 28px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+main .grid button.group:nth-child(1) > div:first-child {
+  background-image: url('/assets/icons/modes/code.svg') !important;
+}
+
+main .grid button.group:nth-child(2) > div:first-child {
+  background-image: url('/assets/icons/modes/archive.svg') !important;
+}
+
+main .grid button.group:nth-child(3) > div:first-child {
+  background-image: url('/assets/icons/modes/book.svg') !important;
+}
+
+main .grid button.group:nth-child(4) > div:first-child {
+  background-image: url('/assets/icons/modes/sparkles.svg') !important;
+}
+
+/* === FILENAME INPUT === */
+header input,
+header input[type="text"] {
+  background: #0a0a0a !important;
+  color: #d4a017 !important;
+  border: 2px solid #d4a017 !important;
+}
+
+header button[title="Click to rename"] {
+  background: #0a0a0a !important;
+  border: 2px solid #d4a017 !important;
+}
+
+header button span.font-mono,
+header span.font-mono,
+header .font-mono {
+  color: #d4a017 !important;
+}
+
+/* === FINAL CLEANUP === */
+.text-slate-muted,
+.text-slate {
+  background: transparent !important;
+  color: #8b6914 !important;
+  border: none !important;
+  padding: 0 !important;
+}

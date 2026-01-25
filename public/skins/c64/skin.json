@@ -1,0 +1,71 @@
+{
+  "name": "Commodore 64",
+  "author": "Commodore Business Machines",
+  "version": "1.0",
+  "description": "**** COMMODORE 64 BASIC V2 **** 64K RAM SYSTEM 38911 BASIC BYTES FREE. READY.",
+  "mode": "dark-only",
+  "fonts": {
+    "display": "'C64 Pro', 'Pet Me 64', 'Courier New', monospace",
+    "body": "'C64 Pro', 'Pet Me 64', 'Courier New', monospace",
+    "mono": "'C64 Pro', 'Pet Me 64', 'Courier New', monospace"
+  },
+  "colors": {
+    "dark": {
+      "--ink": "228 100% 76%",
+      "--charcoal": "228 80% 60%",
+      "--slate": "228 50% 50%",
+      "--ivory": "228 100% 27%",
+      "--cream": "228 90% 30%",
+      "--parchment": "228 70% 40%",
+      "--burgundy": "228 100% 76%",
+      "--gold": "228 100% 76%",
+      "--background": "228 100% 27%",
+      "--foreground": "228 100% 76%",
+      "--popover": "228 90% 25%",
+      "--popover-foreground": "228 100% 76%",
+      "--muted": "228 70% 35%",
+      "--muted-foreground": "228 60% 55%",
+      "--border": "228 100% 76%",
+      "--input": "228 90% 30%",
+      "--primary": "228 100% 76%",
+      "--primary-foreground": "228 100% 27%",
+      "--ring": "228 100% 76%",
+      "--card": "228 90% 28%",
+      "--card-foreground": "228 100% 76%",
+      "--secondary": "228 80% 60%",
+      "--secondary-foreground": "228 100% 27%",
+      "--accent": "228 100% 70%",
+      "--accent-foreground": "228 100% 27%"
+    }
+  },
+  "clippy": {
+    "avoidCreditBox": true,
+    "messages": [
+      "READY.",
+      "?SYNTAX ERROR",
+      "?ILLEGAL QUANTITY ERROR",
+      "?OUT OF MEMORY ERROR",
+      "PRESS PLAY ON TAPE",
+      "LOAD \"*\",8,1",
+      "10 PRINT \"HELLO WORLD\"",
+      "20 GOTO 10",
+      "RUN",
+      "LIST",
+      "POKE 53280,0",
+      "POKE 53281,0",
+      "SYS 64738",
+      "64K RAM SYSTEM 38911 BASIC BYTES FREE",
+      "SEARCHING FOR CODE",
+      "LOADING",
+      "FOUND CODE",
+      "?FILE NOT FOUND ERROR",
+      "?DEVICE NOT PRESENT ERROR",
+      "BREAK IN LINE 42",
+      "This code needs more PEEK and POKE.",
+      "Have you tried turning it off and on again?",
+      "Remember when 64K was a lot of memory?",
+      "Your code is giving me datasette vibes.",
+      "SID chip approves of this function."
+    ]
+  }
+}
