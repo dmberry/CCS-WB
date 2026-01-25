@@ -10,6 +10,7 @@ import { ProjectsProvider } from "@/context/ProjectsContext";
 import { LoginModal } from "@/components/auth/LoginModal";
 import { ProjectsModal } from "@/components/projects/ProjectsModal";
 import { MembersModal } from "@/components/projects/MembersModal";
+import { LibraryModal } from "@/components/projects/LibraryModal";
 import { ProjectSyncBanner } from "@/components/projects/ProjectSyncBanner";
 import { Clippy } from "@/components/easter-eggs/Clippy";
 
@@ -107,6 +108,7 @@ export default function RootLayout({
                     {children}
                     <ProjectsModal />
                     <MembersModal />
+                    <LibraryModal />
                     <ProjectSyncBanner />
                     <Clippy />
                   </ProjectsProvider>

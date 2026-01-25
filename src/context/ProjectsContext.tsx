@@ -16,7 +16,7 @@ import React, {
 } from "react";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { useAuth } from "./AuthContext";
-import type { Project, ProjectWithOwner, Profile, MemberWithProfile, MemberRole } from "@/lib/supabase/types";
+import type { Project, ProjectWithOwner, Profile, MemberWithProfile, MemberRole, LibraryProject, AccessionStatus } from "@/lib/supabase/types";
 import type { Session, EntryMode } from "@/types/session";
 import { DEFAULT_DISPLAY_SETTINGS } from "@/types/session";
 
@@ -50,6 +50,20 @@ interface ProjectsContextValue {
   setShowMembersModal: (show: boolean) => void;
   membersModalProjectId: string | null;
   setMembersModalProjectId: (id: string | null) => void;
+
+  // Library state
+  libraryProjects: LibraryProject[];
+  isLoadingLibrary: boolean;
+  showLibraryModal: boolean;
+  setShowLibraryModal: (show: boolean) => void;
+  viewingLibraryProjectId: string | null;
+  setViewingLibraryProjectId: (id: string | null) => void;
+
+  // Library functions
+  fetchLibraryProjects: () => Promise<void>;
+  loadLibraryProject: (projectId: string) => Promise<{ session: Session | null; error: Error | null }>;
+  copyLibraryProject: (projectId: string, newName?: string) => Promise<{ project: Project | null; error: Error | null }>;
+  submitForReview: (projectId: string) => Promise<{ error: Error | null }>;
 }
 
 const ProjectsContext = createContext<ProjectsContextValue | null>(null);
@@ -62,6 +76,12 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   const [showProjectsModal, setShowProjectsModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [membersModalProjectId, setMembersModalProjectId] = useState<string | null>(null);
+
+  // Library state
+  const [libraryProjects, setLibraryProjects] = useState<LibraryProject[]>([]);
+  const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
+  const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [viewingLibraryProjectId, setViewingLibraryProjectId] = useState<string | null>(null);
 
   const isSupabaseEnabled = isSupabaseConfigured();
   const supabase = isSupabaseEnabled ? getSupabaseClient() : null;
@@ -788,6 +808,270 @@ _Add relevant references, documentation links, or related scholarship:_
     }
   }, [supabase, user]);
 
+  // =============================================================================
+  // Library Functions
+  // =============================================================================
+
+  // Fetch approved public projects for the library
+  const fetchLibraryProjects = useCallback(async () => {
+    if (!supabase) return;
+
+    setIsLoadingLibrary(true);
+
+    try {
+      // Fetch approved public projects with owner info
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from("projects")
+        .select(`
+          *,
+          owner:profiles!owner_id(id, display_name, initials, affiliation)
+        `)
+        .eq("is_public", true)
+        .eq("accession_status", "approved")
+        .order("approved_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching library projects:", error);
+        return;
+      }
+
+      setLibraryProjects(data || []);
+    } catch (error) {
+      console.error("Error fetching library projects:", error);
+    } finally {
+      setIsLoadingLibrary(false);
+    }
+  }, [supabase]);
+
+  // Load a library project in read-only mode
+  const loadLibraryProject = useCallback(async (projectId: string) => {
+    if (!supabase) {
+      return { session: null, error: new Error("Supabase not configured") };
+    }
+
+    try {
+      // Verify the project is actually in the library (approved public)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: projectCheck } = await (supabase as any)
+        .from("projects")
+        .select("id, is_public, accession_status")
+        .eq("id", projectId)
+        .eq("is_public", true)
+        .eq("accession_status", "approved")
+        .single();
+
+      if (!projectCheck) {
+        return { session: null, error: new Error("Project not found in library") };
+      }
+
+      // Use the existing loadProject logic to fetch session data
+      const result = await loadProject(projectId);
+
+      if (result.error) {
+        return result;
+      }
+
+      // Mark as viewing library project (read-only)
+      setViewingLibraryProjectId(projectId);
+
+      // Don't set currentProjectId - we're just viewing, not joining
+      setCurrentProjectId(null);
+
+      return result;
+    } catch (error) {
+      return { session: null, error: error as Error };
+    }
+  }, [supabase, loadProject]);
+
+  // Copy a library project to user's own projects
+  const copyLibraryProject = useCallback(async (projectId: string, newName?: string) => {
+    if (!supabase || !user) {
+      return { project: null, error: new Error("Not authenticated") };
+    }
+
+    try {
+      // 1. Fetch source project, files, and annotations in parallel
+      const [projectResult, filesResult, annotationsResult] = await Promise.all([
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("projects")
+          .select("*")
+          .eq("id", projectId)
+          .eq("is_public", true)
+          .eq("accession_status", "approved")
+          .single(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("code_files")
+          .select("*")
+          .eq("project_id", projectId),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from("annotations")
+          .select("*")
+          .eq("project_id", projectId),
+      ]);
+
+      if (projectResult.error || !projectResult.data) {
+        return { project: null, error: new Error("Project not found in library") };
+      }
+
+      const sourceProject = projectResult.data;
+      const sourceFiles = filesResult.data || [];
+      const sourceAnnotations = annotationsResult.data || [];
+
+      // 2. Create new project with new owner
+      const newProjectId = crypto.randomUUID();
+      const now = new Date().toISOString();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: newProject, error: createError } = await (supabase as any)
+        .from("projects")
+        .insert({
+          id: newProjectId,
+          name: newName || `${sourceProject.name} (Copy)`,
+          description: sourceProject.description,
+          owner_id: user.id,
+          mode: sourceProject.mode,
+          session_data: sourceProject.session_data,
+          // Reset library fields for the copy
+          is_public: false,
+          accession_status: "draft",
+          submitted_at: null,
+          reviewed_at: null,
+          approved_at: null,
+          approved_by: null,
+          created_at: now,
+          updated_at: now,
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        return { project: null, error: new Error(createError.message) };
+      }
+
+      // 3. Copy all code_files with new IDs, building oldId -> newId map
+      const fileIdMap = new Map<string, string>();
+      const newFiles = sourceFiles.map((file: {
+        id: string;
+        filename: string;
+        language: string | null;
+        content: string;
+        original_content: string | null;
+        display_order: number | null;
+      }) => {
+        const newFileId = crypto.randomUUID();
+        fileIdMap.set(file.id, newFileId);
+        return {
+          id: newFileId,
+          project_id: newProjectId,
+          filename: file.filename,
+          language: file.language,
+          content: file.content,
+          original_content: file.original_content,
+          uploaded_by: user.id,
+          display_order: file.display_order,
+          created_at: now,
+          updated_at: now,
+        };
+      });
+
+      if (newFiles.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: filesError } = await (supabase as any)
+          .from("code_files")
+          .insert(newFiles);
+
+        if (filesError) {
+          console.error("Error copying files:", filesError);
+        }
+      }
+
+      // 4. Copy all annotations with remapped file_ids
+      const newAnnotations = sourceAnnotations.map((annotation: {
+        id: string;
+        file_id: string;
+        line_number: number;
+        end_line_number: number | null;
+        line_content: string | null;
+        type: string;
+        content: string;
+      }) => ({
+        id: crypto.randomUUID(),
+        file_id: fileIdMap.get(annotation.file_id) || annotation.file_id,
+        project_id: newProjectId,
+        user_id: user.id,
+        line_number: annotation.line_number,
+        end_line_number: annotation.end_line_number,
+        line_content: annotation.line_content,
+        type: annotation.type,
+        content: annotation.content,
+        created_at: now,
+        updated_at: now,
+      }));
+
+      if (newAnnotations.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: annotationsError } = await (supabase as any)
+          .from("annotations")
+          .insert(newAnnotations);
+
+        if (annotationsError) {
+          console.error("Error copying annotations:", annotationsError);
+        }
+      }
+
+      console.log(`copyLibraryProject: Copied project with ${newFiles.length} files, ${newAnnotations.length} annotations`);
+
+      // 5. Add to local projects list
+      setProjects(prev => [newProject as ProjectWithOwner, ...prev]);
+
+      // Clear read-only viewing state
+      setViewingLibraryProjectId(null);
+
+      return { project: newProject as Project, error: null };
+    } catch (error) {
+      return { project: null, error: error as Error };
+    }
+  }, [supabase, user]);
+
+  // Submit a project for library review
+  const submitForReview = useCallback(async (projectId: string) => {
+    if (!supabase || !user) {
+      return { error: new Error("Not authenticated") };
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("projects")
+        .update({
+          is_public: true,
+          accession_status: "submitted" as AccessionStatus,
+          submitted_at: new Date().toISOString(),
+        })
+        .eq("id", projectId)
+        .eq("owner_id", user.id); // Only owner can submit
+
+      if (error) {
+        return { error: new Error(error.message) };
+      }
+
+      // Update local state
+      setProjects(prev => prev.map(p =>
+        p.id === projectId
+          ? { ...p, is_public: true, accession_status: "submitted" as AccessionStatus }
+          : p
+      ));
+
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  }, [supabase, user]);
+
   return (
     <ProjectsContext.Provider
       value={{
@@ -811,6 +1095,17 @@ _Add relevant references, documentation links, or related scholarship:_
         setShowMembersModal,
         membersModalProjectId,
         setMembersModalProjectId,
+        // Library
+        libraryProjects,
+        isLoadingLibrary,
+        showLibraryModal,
+        setShowLibraryModal,
+        viewingLibraryProjectId,
+        setViewingLibraryProjectId,
+        fetchLibraryProjects,
+        loadLibraryProject,
+        copyLibraryProject,
+        submitForReview,
       }}
     >
       {children}

@@ -31,6 +31,9 @@ export type CollaboratorRole = "viewer" | "editor" | "admin";
 // Member roles
 export type MemberRole = "owner" | "editor" | "viewer";
 
+// Accession status for library workflow
+export type AccessionStatus = "draft" | "submitted" | "reviewed" | "approved";
+
 export interface Database {
   public: {
     Tables: {
@@ -41,6 +44,7 @@ export interface Database {
           initials: string | null;
           affiliation: string | null;
           avatar_url: string | null;
+          is_admin: boolean;
           created_at: string;
         };
         Insert: {
@@ -49,6 +53,7 @@ export interface Database {
           initials?: string | null;
           affiliation?: string | null;
           avatar_url?: string | null;
+          is_admin?: boolean;
           created_at?: string;
         };
         Update: {
@@ -57,6 +62,7 @@ export interface Database {
           initials?: string | null;
           affiliation?: string | null;
           avatar_url?: string | null;
+          is_admin?: boolean;
           created_at?: string;
         };
       };
@@ -68,6 +74,12 @@ export interface Database {
           owner_id: string;
           mode: string;
           session_data: Json | null;
+          is_public: boolean;
+          accession_status: AccessionStatus;
+          submitted_at: string | null;
+          reviewed_at: string | null;
+          approved_at: string | null;
+          approved_by: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -78,6 +90,12 @@ export interface Database {
           owner_id: string;
           mode?: string;
           session_data?: Json | null;
+          is_public?: boolean;
+          accession_status?: AccessionStatus;
+          submitted_at?: string | null;
+          reviewed_at?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -88,6 +106,12 @@ export interface Database {
           owner_id?: string;
           mode?: string;
           session_data?: Json | null;
+          is_public?: boolean;
+          accession_status?: AccessionStatus;
+          submitted_at?: string | null;
+          reviewed_at?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -252,6 +276,7 @@ export interface Database {
     Enums: {
       annotation_type: AnnotationType;
       collaborator_role: CollaboratorRole;
+      accession_status: AccessionStatus;
     };
   };
 }
@@ -298,4 +323,9 @@ export interface ProjectInviteWithProject extends ProjectInvite {
 
 export interface MemberWithProfile extends ProjectMember {
   profile?: Profile;
+}
+
+// Library project with owner info for display
+export interface LibraryProject extends Project {
+  owner?: Profile;
 }

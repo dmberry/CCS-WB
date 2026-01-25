@@ -55,6 +55,7 @@ import {
   FileCode,
   MessageSquareText,
   Info,
+  Library,
 } from "lucide-react";
 import { CodeEditorPanel, generateAnnotatedCode, parseAnnotatedMarkdown } from "@/components/code";
 import { ContextPreview } from "@/components/chat";
@@ -183,6 +184,10 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     setShowMembersModal,
     setMembersModalProjectId,
     refreshProjects,
+    setShowLibraryModal,
+    viewingLibraryProjectId,
+    setViewingLibraryProjectId,
+    copyLibraryProject,
   } = useProjects();
   const { markLocalUpdate } = useProjectSync();
   const aiEnabled = aiSettings.aiEnabled;
@@ -1678,6 +1683,25 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                 {/* Divider before projects list */}
                 <div className="border-t border-parchment my-1" />
 
+                {/* Browse Library button */}
+                <button
+                  onClick={() => {
+                    setShowLibraryModal(true);
+                    setShowCloudMenu(false);
+                  }}
+                  className={cn(
+                    "w-full flex items-center gap-2 px-2 py-1.5 rounded-sm",
+                    "text-[11px] text-slate hover:text-ink hover:bg-cream",
+                    "transition-colors"
+                  )}
+                >
+                  <Library className="h-3 w-3" />
+                  Browse Library
+                </button>
+
+                {/* Divider before projects list */}
+                <div className="border-t border-parchment my-1" />
+
                 {/* Projects list */}
                 <div className="max-h-[200px] overflow-y-auto">
                   {isLoadingProjects ? (
@@ -1944,6 +1968,47 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           />
         </div>
       </header>
+
+      {/* Read-only library project banner */}
+      {viewingLibraryProjectId && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 px-4 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Eye className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <span className="font-sans text-[11px] text-amber-800 dark:text-amber-200">
+              Viewing read-only library project
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                const { project } = await copyLibraryProject(viewingLibraryProjectId);
+                if (project) {
+                  // Load the copied project
+                  const { session: newSession } = await loadProject(project.id);
+                  if (newSession) {
+                    importSession(newSession);
+                    setCurrentProjectId(project.id);
+                  }
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-burgundy text-ivory rounded-lg font-sans text-[11px] font-medium hover:bg-burgundy-dark transition-colors"
+            >
+              <Copy className="h-3.5 w-3.5" />
+              Copy to My Projects
+            </button>
+            <button
+              onClick={() => {
+                setViewingLibraryProjectId(null);
+                resetSession();
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate/10 text-slate rounded-lg font-sans text-[11px] font-medium hover:bg-slate/20 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main layout - two or three panels depending on AI enabled */}
       <div ref={containerRef} className="flex-1 flex overflow-hidden">

@@ -259,3 +259,91 @@ CREATE POLICY "Owners can update projects" ON projects
 DROP POLICY IF EXISTS "Owners can delete projects" ON projects;
 CREATE POLICY "Owners can delete projects" ON projects
   FOR DELETE USING (owner_id = auth.uid());
+
+-- =============================================================================
+-- Library Feature: Public Projects & Accessioning Workflow
+-- =============================================================================
+
+-- Add library-related columns to projects table
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT FALSE;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS accession_status TEXT DEFAULT 'draft'
+  CHECK (accession_status IN ('draft', 'submitted', 'reviewed', 'approved'));
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS approved_by UUID REFERENCES profiles(id);
+
+-- Index for efficient library queries
+CREATE INDEX IF NOT EXISTS idx_projects_library ON projects(is_public, accession_status)
+  WHERE is_public = TRUE AND accession_status = 'approved';
+
+-- Add admin flag to profiles table
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;
+
+-- Helper function for admin check (used in RLS policies)
+CREATE OR REPLACE FUNCTION is_admin(p_user_id UUID)
+RETURNS BOOLEAN AS $$
+  SELECT COALESCE((SELECT is_admin FROM profiles WHERE id = p_user_id), FALSE);
+$$ LANGUAGE sql SECURITY DEFINER;
+
+-- =============================================================================
+-- Library RLS Policies
+-- =============================================================================
+
+-- Update projects SELECT policy to include library access
+DROP POLICY IF EXISTS "Users can view own and member projects" ON projects;
+CREATE POLICY "Users can view own, member, and library projects" ON projects
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND (
+      -- User is the owner
+      owner_id = auth.uid() OR
+      -- User is a member (using helper function to avoid recursion)
+      is_project_member(id, auth.uid()) OR
+      -- Project is in the public library (approved)
+      (is_public = TRUE AND accession_status = 'approved')
+    )
+  );
+
+-- Update code_files SELECT policy to include library access
+DROP POLICY IF EXISTS "Authenticated users can view code_files" ON code_files;
+CREATE POLICY "Users can view code_files for accessible projects" ON code_files
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND (
+      EXISTS (
+        SELECT 1 FROM projects p
+        WHERE p.id = code_files.project_id
+        AND (
+          p.owner_id = auth.uid() OR
+          is_project_member(p.id, auth.uid()) OR
+          (p.is_public = TRUE AND p.accession_status = 'approved')
+        )
+      )
+    )
+  );
+
+-- Update annotations SELECT policy to include library access
+DROP POLICY IF EXISTS "Authenticated users can view annotations" ON annotations;
+CREATE POLICY "Users can view annotations for accessible projects" ON annotations
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL AND (
+      EXISTS (
+        SELECT 1 FROM projects p
+        WHERE p.id = annotations.project_id
+        AND (
+          p.owner_id = auth.uid() OR
+          is_project_member(p.id, auth.uid()) OR
+          (p.is_public = TRUE AND p.accession_status = 'approved')
+        )
+      )
+    )
+  );
+
+-- Admins can update accession status on any project
+DROP POLICY IF EXISTS "Admins can update accession status" ON projects;
+CREATE POLICY "Admins can update accession status" ON projects
+  FOR UPDATE USING (
+    is_admin(auth.uid()) OR owner_id = auth.uid()
+  )
+  WITH CHECK (
+    is_admin(auth.uid()) OR owner_id = auth.uid()
+  );
