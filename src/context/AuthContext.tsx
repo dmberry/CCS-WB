@@ -19,7 +19,7 @@ import type { User, Session, AuthError } from "@supabase/supabase-js";
 import type { Database, Profile, ProfileInsert } from "@/lib/supabase/types";
 
 // Auth provider types
-export type AuthProvider = "google" | "github";
+export type AuthProvider = "google" | "github" | "apple";
 
 interface AuthContextValue {
   // Configuration state
