@@ -18,6 +18,7 @@ import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { useAuth } from "./AuthContext";
 import type { Project, ProjectWithOwner, Profile, MemberWithProfile, MemberRole } from "@/lib/supabase/types";
 import type { Session, EntryMode } from "@/types/session";
+import { DEFAULT_DISPLAY_SETTINGS } from "@/types/session";
 
 interface ProjectsContextValue {
   // State
@@ -389,6 +390,7 @@ _Add relevant references, documentation links, or related scholarship:_
         references: baseSession.references || [],
         critiqueArtifacts: baseSession.critiqueArtifacts || [],
         settings: baseSession.settings || { teachMeMode: false },
+        displaySettings: baseSession.displaySettings || DEFAULT_DISPLAY_SETTINGS,
         currentPhase: baseSession.currentPhase || "opening",
         feedbackEscalation: baseSession.feedbackEscalation || 0,
         createdAt: baseSession.createdAt || projectData.created_at,
