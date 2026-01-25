@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <!-- Under Construction - Traffic Cone with Warning Sign -->
+
+  <!-- Traffic cone -->
+  <polygon points="40,15 25,65 55,65" fill="#ff6600" stroke="#cc4400" stroke-width="2"/>
+
+  <!-- Cone stripes -->
+  <rect x="30" y="25" width="20" height="5" fill="#ffffff"/>
+  <rect x="28" y="40" width="24" height="5" fill="#ffffff"/>
+  <rect x="26" y="55" width="28" height="5" fill="#ffffff"/>
+
+  <!-- Cone base -->
+  <rect x="22" y="65" width="36" height="8" rx="2" fill="#333333"/>
+
+  <!-- Sparkle effects -->
+  <text x="10" y="25" font-size="10" fill="#ffff00">✦</text>
+  <text x="65" y="35" font-size="8" fill="#ff00ff">★</text>
+  <text x="15" y="55" font-size="6" fill="#00ffff">✧</text>
+  <text x="60" y="60" font-size="8" fill="#ffff00">✦</text>
+
+  <!-- Hard hat at top -->
+  <ellipse cx="40" cy="12" rx="12" ry="6" fill="#ffcc00" stroke="#cc9900" stroke-width="1"/>
+  <rect x="32" y="8" width="16" height="5" fill="#ffcc00"/>
+</svg>

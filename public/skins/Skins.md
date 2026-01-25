@@ -5,6 +5,7 @@ Custom visual themes for the CCS Workbench. Enable skins in Settings > Appearanc
 ## Included Skins
 
 - myspace: Myspace Memories
+- geocities: Geocities Nostalgia
 
 ## Adding Your Own
 

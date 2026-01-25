@@ -1,0 +1,68 @@
+{
+  "name": "Geocities Nostalgia",
+  "author": "Webmaster",
+  "version": "1.0",
+  "description": "WELCOME TO MY HOMEPAGE!!! Under construction since 1997. Best viewed in Netscape Navigator 4.0 at 800x600.",
+  "mode": "dark-only",
+  "fonts": {
+    "display": "'Comic Sans MS', 'Times New Roman', cursive, serif",
+    "body": "'Times New Roman', 'MS Sans Serif', Georgia, serif",
+    "mono": "'Courier New', 'Fixedsys', Courier, monospace"
+  },
+  "colors": {
+    "dark": {
+      "--ink": "180 100% 50%",
+      "--charcoal": "60 100% 50%",
+      "--slate": "300 100% 70%",
+      "--ivory": "240 100% 5%",
+      "--cream": "240 80% 8%",
+      "--parchment": "280 100% 30%",
+      "--burgundy": "120 100% 50%",
+      "--gold": "60 100% 50%",
+      "--background": "240 100% 5%",
+      "--foreground": "180 100% 50%",
+      "--popover": "240 80% 10%",
+      "--popover-foreground": "60 100% 50%",
+      "--muted": "280 50% 15%",
+      "--muted-foreground": "300 80% 60%",
+      "--border": "280 100% 40%",
+      "--input": "240 60% 15%",
+      "--primary": "120 100% 50%",
+      "--primary-foreground": "0 0% 0%",
+      "--ring": "300 100% 50%",
+      "--card": "240 80% 8%",
+      "--card-foreground": "180 100% 50%",
+      "--secondary": "60 100% 50%",
+      "--secondary-foreground": "0 0% 0%",
+      "--accent": "300 100% 50%",
+      "--accent-foreground": "0 0% 100%"
+    }
+  },
+  "clippy": {
+    "avoidCreditBox": true,
+    "messages": [
+      "This page is UNDER CONSTRUCTION! Come back later!",
+      "Please sign my guestbook before you leave!",
+      "You are visitor number 000042 to this code!",
+      "Best viewed in Netscape Navigator 4.0 at 800x600",
+      "Click here to join my webring!",
+      "This code needs more <blink> tags.",
+      "Have you tried adding a MIDI file that autoplays?",
+      "Don't forget to add this to your bookmarks!",
+      "Email the webmaster: code_master@geocities.com",
+      "This function brought to you by AngelFire FREE hosting!",
+      "WARNING: This code may cause seizures (too many GIFs)",
+      "Your browser does not support frames. Get a better one!",
+      "Made with Notepad on Windows 95.",
+      "Last updated: December 31, 1999",
+      "Y2K compliant code certified!",
+      "Add me to your AOL Buddy List!",
+      "Get Netscape NOW! (It's free!)",
+      "This variable is best viewed with eyes closed.",
+      "Welcome to my cyber home page!!!",
+      "I got this code from a free scripts archive!",
+      "Please disable your pop-up blocker to view this code.",
+      "Join my mailing list for code updates!"
+    ]
+  }
+}
