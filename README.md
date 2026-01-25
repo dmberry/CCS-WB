@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 2.4.0** | CCS Methodology v2.5
+**Version 2.5.0** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -284,6 +284,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 2.5.0 | **File management & display settings**: New File button creates blank markdown files, Commit Changes saves current content as new base version, Download ZIP exports project with code files and annotations, OAuth redirect preserves current page, display settings (annotation font/indent/brightness, panel layout) persist per-project, files pane font size setting, Safari tab suspension fixes |
 | 2.4.0 | **Cloud collaboration**: Supabase-powered project sharing with OAuth (Google, GitHub, Apple), shareable invite links, member management modal, real-time annotation and code sync with 5-second polling, staleness detection prevents overwriting collaborators' changes, user profiles with initials attribution on annotations |
 | 2.3.4 | **Require connection test**: AI chat only works after successful connection test; clear messaging guides users to test connection before chatting |
 | 2.3.3 | **Onboarding improvements**: AI disabled by default (user must configure and enable), PDF export now highlights annotation lines too, copy button fixed dimensions prevent toolbar height glitch |
