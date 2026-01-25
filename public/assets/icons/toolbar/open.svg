@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Open folder - neutral yellow/tan -->
+  <path d="M2 8 L2 28 L28 28 L30 12 L14 12 L12 8 Z" fill="#d4a84b" stroke="#9a7832" stroke-width="1"/>
+  <path d="M2 8 L12 8 L14 12 L2 12 Z" fill="#e8c878" stroke="#9a7832" stroke-width="1"/>
+  <!-- Folder front (open effect) -->
+  <path d="M4 14 L28 14 L26 26 L6 26 Z" fill="#dbb85c" stroke="#9a7832" stroke-width="1"/>
+</svg>

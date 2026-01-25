@@ -4,6 +4,7 @@ import "./globals.css";
 import { SessionProvider } from "@/context/SessionContext";
 import { AISettingsProvider } from "@/context/AISettingsContext";
 import { AppSettingsProvider } from "@/context/AppSettingsContext";
+import { SkinsProvider } from "@/context/SkinsContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProjectsProvider } from "@/context/ProjectsContext";
 import { LoginModal } from "@/components/auth/LoginModal";
@@ -98,21 +99,32 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased bg-ivory text-ink selection:bg-burgundy/20 selection:text-burgundy-900">
         <AppSettingsProvider>
-          <AISettingsProvider>
-            <AuthProvider>
-              <SessionProvider>
-                <ProjectsProvider>
-                  {children}
-                  <ProjectsModal />
-                  <MembersModal />
-                  <ProjectSyncBanner />
-                  <Clippy />
-                </ProjectsProvider>
-              </SessionProvider>
-              <LoginModal />
-            </AuthProvider>
-          </AISettingsProvider>
+          <SkinsProvider>
+            <AISettingsProvider>
+              <AuthProvider>
+                <SessionProvider>
+                  <ProjectsProvider>
+                    {children}
+                    <ProjectsModal />
+                    <MembersModal />
+                    <ProjectSyncBanner />
+                    <Clippy />
+                  </ProjectsProvider>
+                </SessionProvider>
+                <LoginModal />
+              </AuthProvider>
+            </AISettingsProvider>
+          </SkinsProvider>
         </AppSettingsProvider>
+        {/* Skin credit box - hidden by default, skins can show and style this */}
+        <div id="skin-credit-box" className="skin-credit-box" aria-hidden="true">
+          <div className="skin-credit-header">My Friend Space</div>
+          <div className="skin-credit-content">
+            <div className="skin-credit-avatar"></div>
+            <div className="skin-credit-name">Tom</div>
+            <div className="skin-credit-text">You have 1 friends.</div>
+          </div>
+        </div>
       </body>
     </html>
   );

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Classic open book icon -->
+  <!-- Left page -->
+  <path d="M4 6 L16 8 L16 28 L4 26 Z" fill="#f5f5dc" stroke="#8b7500" stroke-width="1"/>
+  <!-- Right page -->
+  <path d="M16 8 L28 6 L28 26 L16 28 Z" fill="#fffaf0" stroke="#8b7500" stroke-width="1"/>
+  <!-- Spine -->
+  <line x1="16" y1="8" x2="16" y2="28" stroke="#8b7500" stroke-width="2"/>
+  <!-- Text lines left -->
+  <line x1="6" y1="12" x2="14" y2="13" stroke="#666" stroke-width="1"/>
+  <line x1="6" y1="16" x2="14" y2="17" stroke="#666" stroke-width="1"/>
+  <line x1="6" y1="20" x2="14" y2="21" stroke="#666" stroke-width="1"/>
+  <!-- Text lines right -->
+  <line x1="18" y1="13" x2="26" y2="12" stroke="#666" stroke-width="1"/>
+  <line x1="18" y1="17" x2="26" y2="16" stroke="#666" stroke-width="1"/>
+  <line x1="18" y1="21" x2="26" y2="20" stroke="#666" stroke-width="1"/>
+</svg>

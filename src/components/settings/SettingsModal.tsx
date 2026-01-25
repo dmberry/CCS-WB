@@ -5,6 +5,7 @@ import { X, Bot, Palette, Info, Minus, Plus, Code, User, Loader2, Mail, LogOut, 
 import { cn } from "@/lib/utils";
 import { AIProviderSettings } from "./AIProviderSettings";
 import { useAppSettings } from "@/context/AppSettingsContext";
+import { useSkins } from "@/context/SkinsContext";
 import { useAuth, type AuthProvider } from "@/context/AuthContext";
 import type { UserProfile } from "@/types/app-settings";
 import {
@@ -70,6 +71,18 @@ export function SettingsModal({
     signInWithMagicLink,
     signOut,
   } = useAuth();
+
+  const {
+    skinsEnabled,
+    setSkinsEnabled,
+    activeSkinId,
+    setActiveSkinId,
+    availableSkins,
+    isLoadingManifest,
+    activeSkin,
+    isLoadingSkin,
+    skinForcedMode,
+  } = useSkins();
 
   // Collaboration login state
   const [collabEmail, setCollabEmail] = useState("");
@@ -720,12 +733,17 @@ export function SettingsModal({
               </div>
 
               {/* Theme (Accent Colour) */}
-              <div className="pt-3 border-t border-parchment">
+              <div className={cn(
+                "pt-3 border-t border-parchment",
+                skinsEnabled && activeSkin && "opacity-50"
+              )}>
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-display text-caption text-ink">Theme</h3>
                     <p className="font-sans text-[10px] text-slate-muted">
-                      Accent colour for buttons and links
+                      {skinsEnabled && activeSkin
+                        ? "Disabled while skin is active"
+                        : "Accent colour for buttons and links"}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -742,7 +760,11 @@ export function SettingsModal({
                     <select
                       value={settings.accentColour}
                       onChange={(e) => setAccentColour(e.target.value as AccentColourId)}
-                      className="px-3 py-1.5 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors"
+                      disabled={skinsEnabled && !!activeSkin}
+                      className={cn(
+                        "px-3 py-1.5 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors",
+                        skinsEnabled && activeSkin && "cursor-not-allowed"
+                      )}
                     >
                       {ACCENT_COLOURS.map(({ id, name }) => (
                         <option key={id} value={id}>
@@ -752,6 +774,92 @@ export function SettingsModal({
                     </select>
                   </div>
                 </div>
+              </div>
+
+              {/* Custom Skins */}
+              <div className="pt-3 border-t border-parchment">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="font-display text-caption text-ink">Custom Skins</h3>
+                    <p className="font-sans text-[10px] text-slate-muted">
+                      Load custom visual themes from <code className="font-mono text-[9px] bg-cream px-1 rounded">public/skins/</code>
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setSkinsEnabled(!skinsEnabled)}
+                    className={cn(
+                      "relative w-8 h-4 rounded-full transition-colors flex-shrink-0",
+                      skinsEnabled ? "bg-burgundy" : "bg-parchment-dark"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform",
+                        skinsEnabled ? "translate-x-4" : "translate-x-0.5"
+                      )}
+                    />
+                  </button>
+                </div>
+
+                {skinsEnabled && (
+                  <div className="space-y-2">
+                    {/* Skin Selection */}
+                    <div className="flex items-center justify-between">
+                      <label className="font-sans text-caption text-ink">
+                        Active Skin
+                      </label>
+                      <select
+                        value={activeSkinId || ""}
+                        onChange={(e) => setActiveSkinId(e.target.value || null)}
+                        disabled={isLoadingManifest}
+                        className="px-3 py-1.5 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors min-w-[140px]"
+                      >
+                        <option value="">None</option>
+                        {availableSkins.map((skin) => (
+                          <option key={skin.id} value={skin.id}>
+                            {skin.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Loading indicator */}
+                    {(isLoadingManifest || isLoadingSkin) && (
+                      <p className="font-sans text-[10px] text-slate-muted italic">
+                        Loading...
+                      </p>
+                    )}
+
+                    {/* Skin info when active */}
+                    {activeSkin && (
+                      <div className="bg-cream rounded-sm p-2 space-y-1">
+                        <p className="font-sans text-[10px] text-ink">
+                          <span className="font-medium">{activeSkin.name}</span>
+                          {activeSkin.config.author && (
+                            <span className="text-slate-muted"> by {activeSkin.config.author}</span>
+                          )}
+                        </p>
+                        {activeSkin.config.description && (
+                          <p className="font-sans text-[10px] text-slate-muted italic">
+                            {activeSkin.config.description}
+                          </p>
+                        )}
+                        {skinForcedMode && (
+                          <p className="font-sans text-[10px] text-burgundy">
+                            This skin forces {skinForcedMode} mode
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* No skins available */}
+                    {!isLoadingManifest && availableSkins.length === 0 && (
+                      <p className="font-sans text-[10px] text-slate-muted italic">
+                        No skins found. Add skin folders to <code className="font-mono text-[9px] bg-cream px-1 rounded">public/skins/</code> and list them in Skins.md
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

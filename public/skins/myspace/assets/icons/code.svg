@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Classic code/terminal icon -->
+  <!-- Window frame -->
+  <rect x="2" y="4" width="28" height="24" fill="#000080" stroke="#000040" stroke-width="1"/>
+  <!-- Title bar -->
+  <rect x="2" y="4" width="28" height="4" fill="#000080"/>
+  <!-- Screen area -->
+  <rect x="4" y="10" width="24" height="16" fill="#000000"/>
+  <!-- Code brackets -->
+  <text x="8" y="20" fill="#00ff00" font-family="monospace" font-size="10">&lt;/&gt;</text>
+  <!-- Cursor -->
+  <rect x="22" y="18" width="2" height="4" fill="#00ff00"/>
+</svg>

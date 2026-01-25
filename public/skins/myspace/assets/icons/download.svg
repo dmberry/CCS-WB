@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Classic download/export icon - arrow into tray -->
+  <!-- Download arrow -->
+  <path d="M16 2 L16 18" stroke="#000080" stroke-width="3"/>
+  <path d="M10 14 L16 20 L22 14" fill="none" stroke="#000080" stroke-width="3"/>
+  <!-- Tray/inbox -->
+  <path d="M4 18 L4 28 L28 28 L28 18" fill="none" stroke="#808080" stroke-width="2"/>
+  <rect x="4" y="24" width="24" height="4" fill="#c0c0c0" stroke="#808080"/>
+</svg>

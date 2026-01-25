@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Help icon - neutral blue circle with ? -->
+  <circle cx="16" cy="16" r="14" fill="#405080" stroke="#303860" stroke-width="1"/>
+  <circle cx="16" cy="16" r="12" fill="#506090"/>
+  <!-- Question mark -->
+  <path d="M12 11 Q12 7 16 7 Q20 7 20 11 Q20 14 16 15 L16 18"
+        fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="16" cy="23" r="2" fill="white"/>
+</svg>

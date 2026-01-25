@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Classic archive/box icon -->
+  <!-- Box lid -->
+  <rect x="2" y="4" width="28" height="8" fill="#c4a000" stroke="#8b7500" stroke-width="1"/>
+  <rect x="4" y="6" width="24" height="4" fill="#ffd700"/>
+  <!-- Box body -->
+  <rect x="4" y="12" width="24" height="16" fill="#daa520" stroke="#8b7500" stroke-width="1"/>
+  <!-- Drawer pull -->
+  <rect x="12" y="18" width="8" height="4" fill="#8b7500" stroke="#5c4d00" stroke-width="1"/>
+  <!-- Lock/clasp -->
+  <circle cx="16" cy="8" r="2" fill="#8b7500"/>
+</svg>

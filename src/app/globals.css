@@ -504,3 +504,41 @@
   opacity: 0.02;
   pointer-events: none;
 }
+
+/* ============================================
+   SKIN CREDIT BOX
+   Hidden by default - skins can show and style
+   ============================================ */
+.skin-credit-box {
+  display: none;
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  z-index: 9998;
+  pointer-events: auto;
+}
+
+/* When a skin is active, the skin can show this */
+.skin-active .skin-credit-box {
+  /* Skins override display: none in their CSS */
+}
+
+.skin-credit-header {
+  display: none;
+}
+
+.skin-credit-content {
+  display: none;
+}
+
+.skin-credit-avatar {
+  display: none;
+}
+
+.skin-credit-name {
+  display: none;
+}
+
+.skin-credit-text {
+  display: none;
+}

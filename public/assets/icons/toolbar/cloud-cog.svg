@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Cloud connected with gear -->
+  <ellipse cx="14" cy="18" rx="10" ry="7" fill="#a8c8e8" stroke="#6090b0" stroke-width="1.5"/>
+  <ellipse cx="9" cy="14" rx="5" ry="4" fill="#a8c8e8" stroke="#6090b0" stroke-width="1.5"/>
+  <ellipse cx="17" cy="12" rx="6" ry="5" fill="#a8c8e8" stroke="#6090b0" stroke-width="1.5"/>
+  <ellipse cx="12" cy="10" rx="4" ry="3" fill="#a8c8e8" stroke="#6090b0" stroke-width="1.5"/>
+  <!-- Fill gaps -->
+  <ellipse cx="14" cy="18" rx="9" ry="6" fill="#a8c8e8"/>
+  <ellipse cx="9" cy="14" rx="4" ry="3" fill="#a8c8e8"/>
+  <ellipse cx="17" cy="12" rx="5" ry="4" fill="#a8c8e8"/>
+  <!-- Gear in corner -->
+  <circle cx="25" cy="25" r="6" fill="#d0a030" stroke="#a08020" stroke-width="1"/>
+  <circle cx="25" cy="25" r="2.5" fill="#606060"/>
+  <!-- Gear teeth -->
+  <rect x="24" y="18" width="2" height="3" fill="#d0a030" stroke="#a08020" stroke-width="0.5"/>
+  <rect x="24" y="29" width="2" height="3" fill="#d0a030" stroke="#a08020" stroke-width="0.5"/>
+  <rect x="18" y="24" width="3" height="2" fill="#d0a030" stroke="#a08020" stroke-width="0.5"/>
+  <rect x="29" y="24" width="3" height="2" fill="#d0a030" stroke="#a08020" stroke-width="0.5"/>
+</svg>

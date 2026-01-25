@@ -1930,6 +1930,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
               setShowSettingsModal(true);
             }}
             className="p-1.5 rounded-sm text-slate hover:text-ink hover:bg-cream transition-colors"
+            title="Settings"
           >
             <Settings className="h-4 w-4" strokeWidth={1.5} />
           </button>

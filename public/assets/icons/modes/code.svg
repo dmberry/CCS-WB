@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Code/terminal icon - neutral -->
+  <rect x="2" y="4" width="28" height="24" fill="#404050" stroke="#303040" stroke-width="1"/>
+  <rect x="2" y="4" width="28" height="4" fill="#505060"/>
+  <rect x="4" y="10" width="24" height="16" fill="#1a1a24"/>
+  <!-- Code angle brackets -->
+  <path d="M10 14 L6 18 L10 22" fill="none" stroke="#50c050" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M22 14 L26 18 L22 22" fill="none" stroke="#50c050" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="14" y1="22" x2="18" y2="14" stroke="#50c050" stroke-width="2" stroke-linecap="round"/>
+</svg>

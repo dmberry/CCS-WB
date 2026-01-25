@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSkins } from "@/context/SkinsContext";
 
 // Clippy's helpful suggestions for code annotation - expanded list
 const CLIPPY_MESSAGES = [
@@ -129,10 +130,51 @@ export function Clippy() {
   const [position, setPosition] = useState<Position>("corner");
   const [isHackerman, setIsHackerman] = useState(false);
   const [usedMessages, setUsedMessages] = useState<Set<number>>(new Set());
+  const [creditBoxVisible, setCreditBoxVisible] = useState(false);
+
+  // Get skin context for skin-aware messages
+  const { activeSkin, skinsEnabled } = useSkins();
+
+  // Combine default messages with skin-specific messages
+  const allMessages = useMemo(() => {
+    const skinMessages = activeSkin?.config?.clippy?.messages || [];
+    if (skinMessages.length > 0) {
+      // Skin messages appear more frequently - add them multiple times
+      return [...CLIPPY_MESSAGES, ...skinMessages, ...skinMessages, ...skinMessages];
+    }
+    return CLIPPY_MESSAGES;
+  }, [activeSkin]);
+
+  // Check if skin credit box is visible
+  useEffect(() => {
+    const checkCreditBox = () => {
+      const creditBox = document.getElementById("skin-credit-box");
+      if (creditBox) {
+        const style = window.getComputedStyle(creditBox);
+        const isShown = style.display !== "none" && style.visibility !== "hidden";
+        setCreditBoxVisible(isShown);
+      } else {
+        setCreditBoxVisible(false);
+      }
+    };
+
+    // Check initially and on skin changes
+    checkCreditBox();
+
+    // Set up observer for style changes
+    const observer = new MutationObserver(checkCreditBox);
+    const creditBox = document.getElementById("skin-credit-box");
+    if (creditBox) {
+      observer.observe(creditBox, { attributes: true, attributeFilter: ["style", "class"] });
+    }
+
+    // Also check when skin changes
+    return () => observer.disconnect();
+  }, [activeSkin, skinsEnabled]);
 
   // Get a random message without repeating until all used
   const getRandomMessage = useCallback((forceHackerman = false) => {
-    const messages = (forceHackerman || isHackerman) ? HACKERMAN_MESSAGES : CLIPPY_MESSAGES;
+    const messages = (forceHackerman || isHackerman) ? HACKERMAN_MESSAGES : allMessages;
     const maxIndex = messages.length;
 
     // Reset if all messages used
@@ -147,7 +189,7 @@ export function Clippy() {
     const randomIndex = available[Math.floor(Math.random() * available.length)];
     setUsedMessages(prev => new Set([...prev, randomIndex]));
     return messages[randomIndex];
-  }, [isHackerman, usedMessages]);
+  }, [isHackerman, usedMessages, allMessages]);
 
   // Secret activation: Type "clippy" or "hacker" anywhere, or via custom event
   useEffect(() => {
@@ -251,6 +293,14 @@ export function Clippy() {
   useEffect(() => {
     if (!isVisible) return;
 
+    // Determine safe corner position based on credit box
+    const getSafeCorner = (): Position => {
+      if (creditBoxVisible && activeSkin?.config?.clippy?.avoidCreditBox !== false) {
+        return "left-center"; // Move to left side when credit box is shown
+      }
+      return "corner";
+    };
+
     const moveToCenter = () => {
       // 30% chance to move to an annoying position
       if (Math.random() < 0.3) {
@@ -258,12 +308,17 @@ export function Clippy() {
         const newPos = positions[Math.floor(Math.random() * positions.length)];
         setPosition(newPos);
 
-        // Move back to corner after a few seconds
+        // Move back to safe corner after a few seconds
         setTimeout(() => {
-          setPosition("corner");
+          setPosition(getSafeCorner());
         }, 4000 + Math.random() * 3000);
       }
     };
+
+    // If credit box becomes visible while in corner, move away
+    if (position === "corner" && creditBoxVisible && activeSkin?.config?.clippy?.avoidCreditBox !== false) {
+      setPosition("left-center");
+    }
 
     const interval = setInterval(moveToCenter, 10000 + Math.random() * 5000);
     const initialMove = setTimeout(moveToCenter, 5000);
@@ -272,7 +327,7 @@ export function Clippy() {
       clearInterval(interval);
       clearTimeout(initialMove);
     };
-  }, [isVisible]);
+  }, [isVisible, creditBoxVisible, activeSkin, position]);
 
   const handleNewMessage = useCallback(() => {
     setIsAnimating(true);
@@ -302,7 +357,7 @@ export function Clippy() {
   return (
     <div
       className={cn(
-        "fixed z-[100] flex flex-col items-end gap-1 transition-all duration-500 ease-in-out",
+        "fixed z-[10000] flex flex-col items-end gap-1 transition-all duration-500 ease-in-out",
         positionClasses[position],
         position !== "corner" && "items-center"
       )}

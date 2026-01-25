@@ -1,0 +1,65 @@
+{
+  "name": "Myspace Memories",
+  "author": "Tom",
+  "version": "1.0",
+  "description": "Thanks for the add! You have 1 friends. A nostalgic trip to 2005.",
+  "mode": "light-only",
+  "fonts": {
+    "display": "'Trebuchet MS', 'Comic Sans MS', Arial, sans-serif",
+    "body": "Verdana, 'Trebuchet MS', Arial, sans-serif",
+    "mono": "'Courier New', Courier, monospace"
+  },
+  "colors": {
+    "light": {
+      "--ink": "216 100% 15%",
+      "--charcoal": "216 80% 25%",
+      "--slate": "216 40% 45%",
+      "--ivory": "210 50% 96%",
+      "--cream": "210 40% 92%",
+      "--parchment": "210 30% 85%",
+      "--burgundy": "216 100% 35%",
+      "--gold": "30 100% 50%",
+      "--background": "210 50% 96%",
+      "--foreground": "216 100% 15%",
+      "--popover": "0 0% 100%",
+      "--popover-foreground": "216 100% 15%",
+      "--muted": "210 30% 90%",
+      "--muted-foreground": "216 30% 40%",
+      "--border": "210 40% 75%",
+      "--input": "210 40% 80%",
+      "--primary": "216 100% 35%",
+      "--primary-foreground": "0 0% 100%",
+      "--ring": "30 100% 50%",
+      "--card": "0 0% 100%",
+      "--card-foreground": "216 100% 15%",
+      "--secondary": "30 100% 50%",
+      "--secondary-foreground": "0 0% 100%",
+      "--accent": "30 100% 60%",
+      "--accent-foreground": "216 100% 15%"
+    }
+  },
+  "clippy": {
+    "avoidCreditBox": true,
+    "messages": [
+      "Thanks for the add! You're in my Top 8 now.",
+      "Have you customized your profile HTML yet?",
+      "Your code would look great with some <marquee> tags.",
+      "PC4PC? Comment back!",
+      "I see you're writing code. Is it for your profile?",
+      "Tom says hi! He's everyone's first friend.",
+      "This code needs more glitter GIFs.",
+      "Back in my day, we wrote CSS in <style> tags on our profiles.",
+      "Your profile song should be 'Welcome to the Black Parade'.",
+      "Don't forget to add me to your Top Friends!",
+      "Is this code emo enough? Needs more black backgrounds.",
+      "Have you tried adding a hit counter to track visitors?",
+      "Your code is giving me 2005 vibes and I'm here for it.",
+      "RAWR XD means 'I love you' in dinosaur.",
+      "I miss when the internet was ugly and beautiful.",
+      "This function is in my extended network now.",
+      "Bulletin: New code just dropped! Check it out!",
+      "A/S/L? Just kidding, tell me about your variables.",
+      "Your while loop is so scene. Very aesthetic."
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- New document with folded corner - neutral colors -->
+  <path d="M6 2 L20 2 L26 8 L26 30 L6 30 Z" fill="#f5f5f5" stroke="#808080" stroke-width="1"/>
+  <path d="M20 2 L20 8 L26 8" fill="#d0d0d0" stroke="#808080" stroke-width="1"/>
+  <!-- Lines for text -->
+  <line x1="9" y1="12" x2="23" y2="12" stroke="#404040" stroke-width="1.5"/>
+  <line x1="9" y1="16" x2="20" y2="16" stroke="#404040" stroke-width="1.5"/>
+  <line x1="9" y1="20" x2="22" y2="20" stroke="#404040" stroke-width="1.5"/>
+  <!-- Plus sign -->
+  <circle cx="22" cy="24" r="6" fill="#408040"/>
+  <line x1="22" y1="20" x2="22" y2="28" stroke="white" stroke-width="2"/>
+  <line x1="18" y1="24" x2="26" y2="24" stroke="white" stroke-width="2"/>
+</svg>

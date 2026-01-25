@@ -180,3 +180,38 @@ export const ANNOTATION_INDENT_MAX = 160;
 // Files pane font size constraints
 export const FILES_PANE_FONT_SIZE_MIN = 8;
 export const FILES_PANE_FONT_SIZE_MAX = 14;
+
+// Custom skin types
+export type SkinMode = "both" | "light-only" | "dark-only";
+
+export interface SkinConfig {
+  name: string;
+  author: string;
+  version: string;
+  description: string;
+  mode: SkinMode;
+  fonts?: {
+    display?: string;
+    body?: string;
+    mono?: string;
+  };
+  colors?: {
+    light?: Record<string, string>;
+    dark?: Record<string, string>;
+  };
+  // Optional Clippy customization
+  clippy?: {
+    messages?: string[];           // Skin-specific messages to add to rotation
+    avoidCreditBox?: boolean;      // If true, Clippy avoids the skin credit box area
+  };
+}
+
+export interface SkinManifestEntry {
+  id: string;      // folder name
+  name: string;    // display name
+}
+
+export interface LoadedSkin extends SkinManifestEntry {
+  config: SkinConfig;
+  customCSS?: string;
+}
