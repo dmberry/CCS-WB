@@ -10,6 +10,7 @@ import { LoginModal } from "@/components/auth/LoginModal";
 import { ProjectsModal } from "@/components/projects/ProjectsModal";
 import { MembersModal } from "@/components/projects/MembersModal";
 import { ProjectSyncBanner } from "@/components/projects/ProjectSyncBanner";
+import { Clippy } from "@/components/easter-eggs/Clippy";
 
 const libreBaskerville = Libre_Baskerville({
   subsets: ["latin"],
@@ -105,6 +106,7 @@ export default function RootLayout({
                   <ProjectsModal />
                   <MembersModal />
                   <ProjectSyncBanner />
+                  <Clippy />
                 </ProjectsProvider>
               </SessionProvider>
               <LoginModal />
