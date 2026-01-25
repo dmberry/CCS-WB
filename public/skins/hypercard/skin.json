@@ -1,0 +1,70 @@
+{
+  "name": "HyperCard",
+  "author": "Bill Atkinson",
+  "version": "2.4",
+  "description": "Welcome to HyperCard. Click anywhere to continue. The revolutionary 1987 Macintosh application that democratised programming.",
+  "mode": "light-only",
+  "fonts": {
+    "display": "'Chicago', 'ChicagoFLF', 'Geneva', 'Charcoal', monospace",
+    "body": "'Geneva', 'Chicago', 'Charcoal', sans-serif",
+    "mono": "'Monaco', 'Geneva', monospace"
+  },
+  "colors": {
+    "light": {
+      "--ink": "0 0% 0%",
+      "--charcoal": "0 0% 20%",
+      "--slate": "0 0% 40%",
+      "--ivory": "0 0% 100%",
+      "--cream": "0 0% 95%",
+      "--parchment": "0 0% 85%",
+      "--burgundy": "0 0% 0%",
+      "--gold": "0 0% 50%",
+      "--background": "0 0% 100%",
+      "--foreground": "0 0% 0%",
+      "--popover": "0 0% 100%",
+      "--popover-foreground": "0 0% 0%",
+      "--muted": "0 0% 90%",
+      "--muted-foreground": "0 0% 40%",
+      "--border": "0 0% 0%",
+      "--input": "0 0% 100%",
+      "--primary": "0 0% 0%",
+      "--primary-foreground": "0 0% 100%",
+      "--ring": "0 0% 0%",
+      "--card": "0 0% 100%",
+      "--card-foreground": "0 0% 0%",
+      "--secondary": "0 0% 80%",
+      "--secondary-foreground": "0 0% 0%",
+      "--accent": "0 0% 50%",
+      "--accent-foreground": "0 0% 100%"
+    }
+  },
+  "clippy": {
+    "avoidCreditBox": true,
+    "messages": [
+      "Welcome to HyperCard. Click anywhere to continue.",
+      "This button takes you to the next card.",
+      "Think of this code as a stack of cards.",
+      "What would Bill Atkinson do?",
+      "Your script has a syntax error on line 1.",
+      "on mouseUp — the beginning of every great script.",
+      "Remember: Everything is a card. Everything.",
+      "This field contains your variables.",
+      "Try painting a button. It's very satisfying.",
+      "HyperTalk is English you can execute.",
+      "Would you like to browse, paint, or author?",
+      "This stack was last modified in 1991.",
+      "Click the Home button to return to the Home stack.",
+      "Your code is running at User Level 5.",
+      "Susan Kare designed this icon.",
+      "Put your code into a message handler.",
+      "The message box awaits your command.",
+      "Go to card 1. Always start at card 1.",
+      "This is not a bug. This is emergent behaviour.",
+      "Remember when programming was fun?",
+      "Myst was made in HyperCard. Just saying.",
+      "on idle — even your code needs rest.",
+      "answer \"Hello, World!\" — the classic.",
+      "HyperCard: Programming for the rest of us."
+    ]
+  }
+}

@@ -1,0 +1,544 @@
+/* Teletext / CEEFAX - P.888 BBC Text Service */
+/* Classic 1970s-2000s information service aesthetic */
+/* Press REVEAL to see hidden annotations */
+
+/* === TELETEXT FONT (blocky pixel style via CSS) === */
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+* {
+  font-family: 'VT323', 'Courier New', monospace !important;
+}
+
+/* === BLACK BACKGROUND === */
+body {
+  background: #000000 !important;
+}
+
+/* === BLOCKY TEXT STYLING === */
+h1, h2, h3, .font-display {
+  color: #ffff00 !important;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 1.2em !important;
+  font-weight: normal !important;
+}
+
+/* Double-height simulation for main headers */
+h1 {
+  font-size: 1.8em !important;
+  line-height: 1.2;
+  text-shadow: 0 2px 0 #ffff00;
+}
+
+/* Cyan for secondary headers */
+h2, h3 {
+  color: #00ffff !important;
+}
+
+p, span, label, div {
+  color: #ffffff !important;
+}
+
+/* === PAGE NUMBER HEADER === */
+header,
+header.bg-background {
+  background: #000000 !important;
+  border-bottom: none !important;
+  position: relative;
+}
+
+header::before {
+  content: "P.888 ◀▶ CCS WORKBENCH                                  HOLD";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #0000ff;
+  color: #ffffff;
+  padding: 2px 10px;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+header * {
+  color: #00ffff !important;
+}
+
+header svg {
+  color: #00ffff !important;
+}
+
+header button {
+  background: transparent !important;
+  border: 2px solid #ffff00 !important;
+}
+
+header button:hover {
+  background: #ffff00 !important;
+  color: #000000 !important;
+}
+
+header button:hover svg {
+  color: #000000 !important;
+}
+
+header h1 {
+  color: #00ffff !important;
+  font-size: 16px !important;
+}
+
+/* === FASTEXT NAVIGATION BAR (Red/Green/Yellow/Cyan) === */
+body::after {
+  content: "";
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: linear-gradient(to right,
+    #ff0000 0%, #ff0000 25%,
+    #00ff00 25%, #00ff00 50%,
+    #ffff00 50%, #ffff00 75%,
+    #00ffff 75%, #00ffff 100%
+  );
+  z-index: 9999;
+}
+
+/* === MAIN PAGE CARDS === */
+main .grid button.group,
+main button[class*="shadow-editorial"] {
+  background: #0000aa !important;
+  border: 2px solid #ffff00 !important;
+  box-shadow: none !important;
+}
+
+main .grid button.group * {
+  color: #ffffff !important;
+}
+
+main .grid button.group h3 {
+  color: #00ffff !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+main .grid button.group:hover {
+  background: #0000dd !important;
+  border-color: #00ffff !important;
+}
+
+/* Icon containers */
+main .grid button.group > div:first-child,
+main .grid button.group .bg-cream {
+  background: #000066 !important;
+  border: 2px solid #00ffff !important;
+}
+
+main .grid button.group > div:first-child svg,
+main .grid button.group svg {
+  color: #ffff00 !important;
+}
+
+/* Load Project button */
+main button[class*="border-burgundy"] {
+  background: #006600 !important;
+  border: 2px solid #00ff00 !important;
+  color: #00ff00 !important;
+}
+
+main button[class*="border-burgundy"]:hover {
+  background: #00aa00 !important;
+  color: #000000 !important;
+}
+
+/* === PANELS & CARDS === */
+.bg-popover,
+.bg-cream,
+.bg-card {
+  background: #000066 !important;
+  border: 2px solid #ffff00 !important;
+}
+
+/* === BUTTONS === */
+button[class*="bg-burgundy"],
+.btn-editorial {
+  background: #00aaaa !important;
+  border: 2px solid #00ffff !important;
+  color: #000000 !important;
+  text-transform: uppercase;
+}
+
+button[class*="bg-burgundy"]:hover,
+.btn-editorial:hover {
+  background: #00ffff !important;
+}
+
+/* === LINKS === */
+a, [class*="text-burgundy"] {
+  color: #00ffff !important;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #ffff00 !important;
+  background: #0000aa;
+}
+
+/* === SCROLLBARS === */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000066;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #00ffff;
+  border: 2px solid #000066;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #ffff00;
+}
+
+/* === INPUTS === */
+input, textarea, select {
+  background: #000066 !important;
+  border: 2px solid #00ffff !important;
+  color: #ffffff !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: #ffff00 !important;
+  outline: none !important;
+}
+
+input::placeholder {
+  color: #6666aa !important;
+}
+
+/* === CODE EDITOR === */
+.cm-editor,
+pre, code {
+  background: #000033 !important;
+  color: #00ff00 !important;
+  border: 2px solid #006600 !important;
+}
+
+/* === CEEFAX CREDIT BOX === */
+.skin-credit-box {
+  display: block !important;
+  width: 200px;
+  background: #0000aa;
+  border: 3px solid #ffff00;
+  font-family: 'VT323', monospace;
+}
+
+.skin-credit-header {
+  display: block !important;
+  background: #ff0000;
+  color: #ffffff !important;
+  font-size: 14px;
+  padding: 4px 8px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.skin-credit-header::before {
+  content: "■ ";
+}
+
+.skin-credit-content {
+  display: block !important;
+  padding: 10px;
+}
+
+.skin-credit-avatar {
+  display: block !important;
+  width: 100%;
+  height: auto;
+  margin: 0 0 8px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  text-align: left;
+}
+
+/* ASCII art style TV */
+.skin-credit-avatar::before {
+  content: "╔══════════════╗\\A║   BBC TWO    ║\\A║   CEEFAX     ║\\A║  ▓▓▓▓▓▓▓▓▓▓  ║\\A╚══════════════╝";
+  white-space: pre;
+  font-size: 12px;
+  line-height: 1.2;
+  color: #00ffff;
+}
+
+.skin-credit-name {
+  display: block !important;
+  color: #ffff00 !important;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.skin-credit-name::before {
+  content: "NEWS ";
+}
+
+.skin-credit-text {
+  display: block !important;
+  font-size: 12px;
+  color: #ffffff !important;
+}
+
+.skin-credit-content::after {
+  content: "See P.100 for Index";
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #00ff00;
+}
+
+/* === HORIZONTAL RULES === */
+hr {
+  border: none !important;
+  height: 4px !important;
+  background: repeating-linear-gradient(
+    to right,
+    #ff0000 0, #ff0000 25%,
+    #00ff00 25%, #00ff00 50%,
+    #ffff00 50%, #ffff00 75%,
+    #00ffff 75%, #00ffff 100%
+  ) !important;
+}
+
+/* === REVEAL EFFECT === */
+/* Hidden text that appears on hover */
+.annotation-content {
+  color: #0000aa !important;
+  background: #0000aa !important;
+}
+
+.annotation-content:hover {
+  color: #ffffff !important;
+  background: transparent !important;
+}
+
+/* === TOOLBAR ICONS === */
+header button[title="New project"] svg,
+header button[title*="new local session"] svg,
+header button[title="Save session"] svg,
+header button[title="Load session"] svg,
+header button[title*="load local session"] svg,
+header button[title="Export session log"] svg,
+header button[title="Sign in to collaborate"] svg,
+header button[title*="Connected to"] svg,
+header button[title*="Not connected to cloud"] svg,
+header button[title="Interface guide"] svg,
+header button[title="Settings"] svg {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+header button[title="New project"],
+header button[title*="new local session"],
+header button[title="Save session"],
+header button[title="Load session"],
+header button[title*="load local session"],
+header button[title="Export session log"],
+header button[title="Sign in to collaborate"],
+header button[title*="Connected to"],
+header button[title*="Not connected to cloud"],
+header button[title="Interface guide"],
+header button[title="Settings"] {
+  min-width: 32px !important;
+  min-height: 32px !important;
+  background-size: 24px 24px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+header button[title="New project"],
+header button[title*="new local session"] {
+  background-image: url('/assets/icons/toolbar/new.svg') !important;
+}
+
+header button[title="Save session"] {
+  background-image: url('/assets/icons/toolbar/save.svg') !important;
+}
+
+header button[title="Load session"],
+header button[title*="load local session"] {
+  background-image: url('/assets/icons/toolbar/open.svg') !important;
+}
+
+header button[title="Export session log"] {
+  background-image: url('/assets/icons/toolbar/download.svg') !important;
+}
+
+header button[title="Sign in to collaborate"] {
+  background-image: url('/assets/icons/toolbar/cloud-off.svg') !important;
+}
+
+header button[title*="Not connected to cloud"] {
+  background-image: url('/assets/icons/toolbar/cloud.svg') !important;
+}
+
+header button[title*="Connected to"] {
+  background-image: url('/assets/icons/toolbar/cloud-cog.svg') !important;
+}
+
+header button[title="Interface guide"] {
+  background-image: url('/assets/icons/toolbar/help.svg') !important;
+}
+
+header button[title="Settings"] {
+  background-image: url('/assets/icons/toolbar/settings.svg') !important;
+}
+
+/* === INTERFACE GUIDE POPUP === */
+header .absolute.w-80 {
+  background: #0000aa !important;
+  border: 3px solid #ffff00 !important;
+  color: #ffffff !important;
+}
+
+header .absolute.w-80 h3,
+header .absolute.w-80 h4 {
+  color: #00ffff !important;
+}
+
+header .absolute.w-80 p,
+header .absolute.w-80 span,
+header .absolute.w-80 div {
+  color: #ffffff !important;
+}
+
+header .absolute.w-80 strong {
+  color: #ffff00 !important;
+}
+
+header .absolute.w-80 button {
+  background: transparent !important;
+  min-width: auto !important;
+  min-height: auto !important;
+}
+
+header .absolute.w-80 button svg {
+  color: #00ffff !important;
+  opacity: 1 !important;
+  width: auto !important;
+  height: auto !important;
+  position: static !important;
+}
+
+/* === MAIN PAGE ICONS === */
+main header button[title="Help & Getting Started"] svg,
+main header button[title="Settings"] svg {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main header button[title="Help & Getting Started"],
+main header button[title="Settings"] {
+  min-width: 28px !important;
+  min-height: 28px !important;
+  background-size: 20px 20px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+main header button[title="Help & Getting Started"] {
+  background-image: url('/assets/icons/toolbar/help.svg') !important;
+}
+
+main header button[title="Settings"] {
+  background-image: url('/assets/icons/toolbar/settings.svg') !important;
+}
+
+/* Load Project button icon */
+main button:has(.lucide-folder-open) svg.lucide-folder-open {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main button:has(.lucide-folder-open) {
+  padding-left: 28px !important;
+  background-image: url('/assets/icons/toolbar/open.svg') !important;
+  background-size: 16px 16px !important;
+  background-repeat: no-repeat !important;
+  background-position: 8px center !important;
+}
+
+/* === ENTRY MODE CARD ICONS === */
+main .grid button.group svg.lucide-code,
+main .grid button.group svg.lucide-archive,
+main .grid button.group svg.lucide-book-open,
+main .grid button.group svg.lucide-sparkles {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main .grid button.group > div:first-child {
+  background-size: 28px 28px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+main .grid button.group:nth-child(1) > div:first-child {
+  background-image: url('/assets/icons/modes/code.svg') !important;
+}
+
+main .grid button.group:nth-child(2) > div:first-child {
+  background-image: url('/assets/icons/modes/archive.svg') !important;
+}
+
+main .grid button.group:nth-child(3) > div:first-child {
+  background-image: url('/assets/icons/modes/book.svg') !important;
+}
+
+main .grid button.group:nth-child(4) > div:first-child {
+  background-image: url('/assets/icons/modes/sparkles.svg') !important;
+}
+
+/* === FILENAME INPUT === */
+header input,
+header input[type="text"] {
+  background: #000066 !important;
+  color: #00ffff !important;
+  border: 2px solid #00ffff !important;
+}
+
+header button[title="Click to rename"] {
+  background: #000066 !important;
+  border: 2px solid #00ffff !important;
+}
+
+header button span.font-mono,
+header span.font-mono,
+header .font-mono {
+  color: #00ffff !important;
+}
+
+/* === FINAL CLEANUP === */
+.text-slate-muted,
+.text-slate {
+  background: transparent !important;
+  color: #00aaaa !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* Add margin at bottom for Fastext bar */
+main {
+  margin-bottom: 30px;
+}

@@ -7,6 +7,10 @@ Custom visual themes for the CCS Workbench. Enable skins in Settings > Appearanc
 - myspace: Myspace Memories
 - geocities: Geocities Nostalgia
 - eliza: ELIZA Terminal
+- teletext: Teletext
+- vaporwave: Vaporwave
+- teams: Microsoft Teams
+- hypercard: HyperCard
 
 ## Adding Your Own
 

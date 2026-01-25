@@ -1,0 +1,68 @@
+{
+  "name": "Teletext",
+  "author": "CEEFAX",
+  "version": "1.0",
+  "description": "P.888 HOLD ◀▶ BBC CEEFAX. Classic 1970s-2000s text information service aesthetic. Press REVEAL for hidden code.",
+  "mode": "dark-only",
+  "fonts": {
+    "display": "'Teletext', 'Courier New', 'Lucida Console', monospace",
+    "body": "'Teletext', 'Courier New', 'Lucida Console', monospace",
+    "mono": "'Teletext', 'Courier New', 'Lucida Console', monospace"
+  },
+  "colors": {
+    "dark": {
+      "--ink": "60 100% 50%",
+      "--charcoal": "180 100% 50%",
+      "--slate": "0 0% 75%",
+      "--ivory": "0 0% 0%",
+      "--cream": "240 100% 15%",
+      "--parchment": "300 100% 30%",
+      "--burgundy": "180 100% 50%",
+      "--gold": "60 100% 50%",
+      "--background": "0 0% 0%",
+      "--foreground": "0 0% 100%",
+      "--popover": "240 100% 10%",
+      "--popover-foreground": "60 100% 50%",
+      "--muted": "240 50% 20%",
+      "--muted-foreground": "180 80% 40%",
+      "--border": "300 100% 50%",
+      "--input": "240 80% 15%",
+      "--primary": "180 100% 50%",
+      "--primary-foreground": "0 0% 0%",
+      "--ring": "60 100% 50%",
+      "--card": "240 100% 12%",
+      "--card-foreground": "0 0% 100%",
+      "--secondary": "120 100% 50%",
+      "--secondary-foreground": "0 0% 0%",
+      "--accent": "0 100% 50%",
+      "--accent-foreground": "0 0% 100%"
+    }
+  },
+  "clippy": {
+    "avoidCreditBox": true,
+    "messages": [
+      "Press REVEAL to see hidden code comments.",
+      "FASTEXT: Red=Delete Green=Run Yellow=Save Cyan=Help",
+      "Page 888 - Subtitles for this code available.",
+      "HOLD to freeze this function in place.",
+      "This code brought to you by CEEFAX.",
+      "INDEX: Press 100 for main menu.",
+      "NEWS FLASH: Bug found at line 42.",
+      "WEATHER: Variable conditions expected.",
+      "Your teletext decoder needs an upgrade.",
+      "ORACLE says: This variable is undefined.",
+      "Press TEXT to toggle code annotations.",
+      "This page will auto-update. Please wait...",
+      "SERVICE INFORMATION: Code compiles at midnight.",
+      "BAMBOOZLE! Press A, B, or C to guess the output.",
+      "Mix-up: Rearrange these functions correctly.",
+      "DIGITISER says: This code is well wicked.",
+      "Teletext page loading... please hold.",
+      "BBC2 CEEFAX - Your code, your choice.",
+      "For subtitles on this syntax, press 888.",
+      "ITV ORACLE has better documentation.",
+      "This broadcast will end at closedown.",
+      "National Lottery: Your lucky line numbers are..."
+    ]
+  }
+}

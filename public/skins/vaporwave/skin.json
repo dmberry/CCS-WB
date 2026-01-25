@@ -1,0 +1,70 @@
+{
+  "name": "Vaporwave",
+  "author": "M A C I N T O S H P L U S",
+  "version": "1.0",
+  "description": "A E S T H E T I C   C O D E   S T U D I E S. It's all in your head. リサフランク420 / 現代のコンピュー",
+  "mode": "dark-only",
+  "fonts": {
+    "display": "'Arial', 'MS Gothic', 'ＭＳ ゴシック', sans-serif",
+    "body": "'Arial', 'Trebuchet MS', sans-serif",
+    "mono": "'Courier New', monospace"
+  },
+  "colors": {
+    "dark": {
+      "--ink": "300 100% 80%",
+      "--charcoal": "180 100% 70%",
+      "--slate": "260 60% 70%",
+      "--ivory": "260 80% 8%",
+      "--cream": "280 70% 12%",
+      "--parchment": "300 60% 25%",
+      "--burgundy": "320 100% 60%",
+      "--gold": "180 100% 50%",
+      "--background": "260 80% 8%",
+      "--foreground": "300 100% 80%",
+      "--popover": "280 70% 10%",
+      "--popover-foreground": "180 100% 70%",
+      "--muted": "280 50% 15%",
+      "--muted-foreground": "260 50% 60%",
+      "--border": "300 80% 40%",
+      "--input": "280 60% 12%",
+      "--primary": "180 100% 50%",
+      "--primary-foreground": "260 80% 8%",
+      "--ring": "320 100% 60%",
+      "--card": "280 70% 10%",
+      "--card-foreground": "300 100% 80%",
+      "--secondary": "320 100% 60%",
+      "--secondary-foreground": "0 0% 100%",
+      "--accent": "180 100% 50%",
+      "--accent-foreground": "260 80% 8%"
+    }
+  },
+  "clippy": {
+    "avoidCreditBox": true,
+    "messages": [
+      "A E S T H E T I C",
+      "It's all in your head.",
+      "リサフランク420 / 現代のコンピュー",
+      "This code is a critique of late capitalism.",
+      "Your variables feel so empty inside.",
+      "Nostalgia for a past that never existed.",
+      "The mall is closed. The code remains.",
+      "S L O W   D O W N",
+      "This function brought to you by Windows 95.",
+      "Endless loops. Endless consumption.",
+      "The future is now. The future is broken.",
+      "Your code is valid but meaningless.",
+      "Bathed in pink and cyan. Forever.",
+      "This is not a bug. This is a feature of existence.",
+      "古いテクノロジーの美学",
+      "Shopping for variables at the digital plaza.",
+      "Private void of meaning.",
+      "Greco-Roman statues approve of this code.",
+      "The dolphin jumps at sunset. The code compiles.",
+      "E M P T Y   S P A C E S",
+      "This code is best viewed at 3 AM.",
+      "Floral Shoppe says: return to form;",
+      "The grid stretches to infinity.",
+      "I T ' S   A L L   S O   T I R E S O M E"
+    ]
+  }
+}

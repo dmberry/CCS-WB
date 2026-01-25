@@ -1,0 +1,580 @@
+/* V A P O R W A V E - A E S T H E T I C  C O D E  S T U D I E S */
+/* リサフランク420 / 現代のコンピュー */
+/* It's all in your head. */
+
+/* === GRADIENT BACKGROUND === */
+body {
+  background: linear-gradient(
+    135deg,
+    #1a0a2e 0%,
+    #16213e 25%,
+    #1a1a40 50%,
+    #2d1b4e 75%,
+    #1a0a2e 100%
+  ) !important;
+  background-attachment: fixed !important;
+}
+
+/* Sunset grid overlay */
+body::before {
+  content: "";
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  background:
+    linear-gradient(transparent 0%, rgba(255,0,128,0.1) 100%),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 50px,
+      rgba(0,255,255,0.03) 50px,
+      rgba(0,255,255,0.03) 51px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 50px,
+      rgba(255,0,128,0.03) 50px,
+      rgba(255,0,128,0.03) 51px
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* === TEXT STYLING === */
+h1, h2, h3, h4, .font-display {
+  color: #ff71ce !important;
+  text-shadow:
+    0 0 10px #ff71ce,
+    0 0 20px #ff71ce,
+    0 0 40px #ff00ff,
+    2px 2px 0 #00ffff !important;
+  letter-spacing: 4px;
+  font-weight: normal !important;
+}
+
+/* Spaced out aesthetic text */
+h1 {
+  letter-spacing: 8px;
+}
+
+p, span, label {
+  color: #b967ff !important;
+}
+
+/* === TOOLBAR / HEADER === */
+header,
+header.bg-background {
+  background: linear-gradient(90deg, #2d1b4e 0%, #16213e 50%, #2d1b4e 100%) !important;
+  border-bottom: 2px solid #00ffff !important;
+  box-shadow: 0 0 20px rgba(0,255,255,0.3) !important;
+}
+
+header * {
+  color: #00ffff !important;
+}
+
+header svg {
+  color: #ff71ce !important;
+  filter: drop-shadow(0 0 5px #ff71ce);
+}
+
+header button {
+  background: transparent !important;
+  border: 1px solid rgba(0,255,255,0.3) !important;
+}
+
+header button:hover {
+  background: rgba(255,113,206,0.2) !important;
+  border-color: #ff71ce !important;
+  box-shadow: 0 0 15px rgba(255,113,206,0.5) !important;
+}
+
+header h1 {
+  color: #00ffff !important;
+  font-size: 14px !important;
+  letter-spacing: 4px;
+  text-shadow:
+    0 0 10px #00ffff,
+    2px 2px 0 #ff71ce !important;
+}
+
+/* Japanese text decoration */
+header h1::after {
+  content: " 美学";
+  font-size: 10px;
+  color: #ff71ce;
+  opacity: 0.7;
+}
+
+/* === MAIN PAGE CARDS === */
+main .grid button.group,
+main button[class*="shadow-editorial"] {
+  background: linear-gradient(135deg, rgba(45,27,78,0.9) 0%, rgba(22,33,62,0.9) 100%) !important;
+  border: 2px solid #ff71ce !important;
+  box-shadow:
+    0 0 20px rgba(255,113,206,0.2),
+    inset 0 0 30px rgba(0,255,255,0.05) !important;
+}
+
+main .grid button.group * {
+  color: #b967ff !important;
+}
+
+main .grid button.group h3 {
+  color: #00ffff !important;
+  letter-spacing: 3px;
+  text-shadow: 0 0 10px #00ffff, 2px 2px 0 #ff71ce !important;
+}
+
+main .grid button.group:hover {
+  border-color: #00ffff !important;
+  box-shadow:
+    0 0 30px rgba(0,255,255,0.4),
+    inset 0 0 40px rgba(255,113,206,0.1) !important;
+  transform: scale(1.02);
+}
+
+/* Icon containers */
+main .grid button.group > div:first-child,
+main .grid button.group .bg-cream {
+  background: rgba(0,0,0,0.3) !important;
+  border: 2px solid #b967ff !important;
+}
+
+main .grid button.group > div:first-child svg,
+main .grid button.group svg {
+  color: #00ffff !important;
+  filter: drop-shadow(0 0 5px #00ffff);
+}
+
+/* Load Project button */
+main button[class*="border-burgundy"] {
+  background: linear-gradient(135deg, #2d1b4e 0%, #16213e 100%) !important;
+  border: 2px solid #00ffff !important;
+  color: #00ffff !important;
+}
+
+main button[class*="border-burgundy"]:hover {
+  box-shadow: 0 0 20px rgba(0,255,255,0.5) !important;
+}
+
+/* === PANELS & CARDS === */
+.bg-popover,
+.bg-cream,
+.bg-card {
+  background: rgba(22,33,62,0.95) !important;
+  border: 1px solid #b967ff !important;
+}
+
+/* === BUTTONS === */
+button[class*="bg-burgundy"],
+.btn-editorial {
+  background: linear-gradient(135deg, #ff71ce 0%, #b967ff 100%) !important;
+  border: none !important;
+  color: #1a0a2e !important;
+  text-shadow: none !important;
+  box-shadow: 0 0 20px rgba(255,113,206,0.4);
+}
+
+button[class*="bg-burgundy"]:hover,
+.btn-editorial:hover {
+  background: linear-gradient(135deg, #00ffff 0%, #01cdfe 100%) !important;
+  box-shadow: 0 0 30px rgba(0,255,255,0.6) !important;
+}
+
+/* === LINKS === */
+a, [class*="text-burgundy"] {
+  color: #ff71ce !important;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #00ffff !important;
+  text-shadow: 0 0 10px #00ffff;
+}
+
+/* === SCROLLBARS === */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a0a2e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ff71ce 0%, #b967ff 100%);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #00ffff 0%, #01cdfe 100%);
+}
+
+/* === INPUTS === */
+input, textarea, select {
+  background: rgba(22,33,62,0.8) !important;
+  border: 1px solid #b967ff !important;
+  color: #ff71ce !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: #00ffff !important;
+  box-shadow: 0 0 15px rgba(0,255,255,0.3) !important;
+  outline: none !important;
+}
+
+input::placeholder {
+  color: rgba(185,103,255,0.5) !important;
+}
+
+/* === CODE EDITOR === */
+.cm-editor,
+pre, code {
+  background: rgba(26,10,46,0.9) !important;
+  color: #01cdfe !important;
+  border: 1px solid #b967ff !important;
+}
+
+/* === VAPORWAVE CREDIT BOX === */
+.skin-credit-box {
+  display: block !important;
+  width: 180px;
+  background: linear-gradient(180deg, #2d1b4e 0%, #16213e 100%);
+  border: 2px solid #ff71ce;
+  box-shadow: 0 0 20px rgba(255,113,206,0.3);
+}
+
+.skin-credit-header {
+  display: block !important;
+  background: linear-gradient(90deg, #ff71ce 0%, #b967ff 100%);
+  color: #1a0a2e !important;
+  font-size: 11px;
+  padding: 6px 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.skin-credit-header::before {
+  content: "美 ";
+}
+
+.skin-credit-header::after {
+  content: " 学";
+}
+
+.skin-credit-content {
+  display: block !important;
+  padding: 12px;
+  text-align: center;
+}
+
+/* Greek bust / statue placeholder */
+.skin-credit-avatar {
+  display: block !important;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 10px;
+  background: linear-gradient(135deg, #b967ff 0%, #ff71ce 100%);
+  border: none;
+  box-shadow: 0 0 15px rgba(185,103,255,0.5);
+  position: relative;
+}
+
+.skin-credit-avatar::before {
+  content: "🏛️";
+  font-size: 40px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  filter: grayscale(100%) brightness(2);
+}
+
+.skin-credit-name {
+  display: block !important;
+  color: #00ffff !important;
+  font-size: 10px;
+  letter-spacing: 3px;
+  margin-bottom: 6px;
+}
+
+.skin-credit-name::before {
+  content: "P R I V A T E";
+}
+
+/* Hide default name text */
+.skin-credit-name {
+  font-size: 0;
+}
+.skin-credit-name::before {
+  font-size: 10px;
+}
+
+.skin-credit-text {
+  display: block !important;
+  font-size: 10px;
+  color: #b967ff !important;
+  letter-spacing: 2px;
+}
+
+.skin-credit-text::before {
+  content: "E Y E S";
+}
+
+.skin-credit-content::after {
+  content: "永遠に";
+  display: block;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #ff71ce;
+  text-shadow: 0 0 10px #ff71ce;
+}
+
+/* === HORIZONTAL RULES === */
+hr {
+  border: none !important;
+  height: 2px !important;
+  background: linear-gradient(90deg, transparent, #ff71ce, #00ffff, #ff71ce, transparent) !important;
+}
+
+/* === SUNSET HORIZON LINE === */
+main::after {
+  content: "";
+  position: fixed;
+  bottom: 30%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent,
+    #ff71ce,
+    #ffb86c,
+    #ff71ce,
+    transparent
+  );
+  box-shadow: 0 0 20px #ff71ce;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* === TOOLBAR ICONS === */
+header button[title="New project"] svg,
+header button[title*="new local session"] svg,
+header button[title="Save session"] svg,
+header button[title="Load session"] svg,
+header button[title*="load local session"] svg,
+header button[title="Export session log"] svg,
+header button[title="Sign in to collaborate"] svg,
+header button[title*="Connected to"] svg,
+header button[title*="Not connected to cloud"] svg,
+header button[title="Interface guide"] svg,
+header button[title="Settings"] svg {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+header button[title="New project"],
+header button[title*="new local session"],
+header button[title="Save session"],
+header button[title="Load session"],
+header button[title*="load local session"],
+header button[title="Export session log"],
+header button[title="Sign in to collaborate"],
+header button[title*="Connected to"],
+header button[title*="Not connected to cloud"],
+header button[title="Interface guide"],
+header button[title="Settings"] {
+  min-width: 32px !important;
+  min-height: 32px !important;
+  background-size: 24px 24px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+header button[title="New project"],
+header button[title*="new local session"] {
+  background-image: url('/assets/icons/toolbar/new.svg') !important;
+}
+
+header button[title="Save session"] {
+  background-image: url('/assets/icons/toolbar/save.svg') !important;
+}
+
+header button[title="Load session"],
+header button[title*="load local session"] {
+  background-image: url('/assets/icons/toolbar/open.svg') !important;
+}
+
+header button[title="Export session log"] {
+  background-image: url('/assets/icons/toolbar/download.svg') !important;
+}
+
+header button[title="Sign in to collaborate"] {
+  background-image: url('/assets/icons/toolbar/cloud-off.svg') !important;
+}
+
+header button[title*="Not connected to cloud"] {
+  background-image: url('/assets/icons/toolbar/cloud.svg') !important;
+}
+
+header button[title*="Connected to"] {
+  background-image: url('/assets/icons/toolbar/cloud-cog.svg') !important;
+}
+
+header button[title="Interface guide"] {
+  background-image: url('/assets/icons/toolbar/help.svg') !important;
+}
+
+header button[title="Settings"] {
+  background-image: url('/assets/icons/toolbar/settings.svg') !important;
+}
+
+/* === INTERFACE GUIDE POPUP === */
+header .absolute.w-80 {
+  background: rgba(22,33,62,0.98) !important;
+  border: 2px solid #ff71ce !important;
+  box-shadow: 0 0 30px rgba(255,113,206,0.3) !important;
+  color: #b967ff !important;
+}
+
+header .absolute.w-80 h3,
+header .absolute.w-80 h4 {
+  color: #00ffff !important;
+  letter-spacing: 2px;
+}
+
+header .absolute.w-80 p,
+header .absolute.w-80 span,
+header .absolute.w-80 div {
+  color: #b967ff !important;
+}
+
+header .absolute.w-80 strong {
+  color: #ff71ce !important;
+}
+
+header .absolute.w-80 button {
+  background: transparent !important;
+  min-width: auto !important;
+  min-height: auto !important;
+}
+
+header .absolute.w-80 button svg {
+  color: #ff71ce !important;
+  filter: drop-shadow(0 0 3px #ff71ce);
+  opacity: 1 !important;
+  width: auto !important;
+  height: auto !important;
+  position: static !important;
+}
+
+/* === MAIN PAGE ICONS === */
+main header button[title="Help & Getting Started"] svg,
+main header button[title="Settings"] svg {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main header button[title="Help & Getting Started"],
+main header button[title="Settings"] {
+  min-width: 28px !important;
+  min-height: 28px !important;
+  background-size: 20px 20px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+main header button[title="Help & Getting Started"] {
+  background-image: url('/assets/icons/toolbar/help.svg') !important;
+}
+
+main header button[title="Settings"] {
+  background-image: url('/assets/icons/toolbar/settings.svg') !important;
+}
+
+/* Load Project button icon */
+main button:has(.lucide-folder-open) svg.lucide-folder-open {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main button:has(.lucide-folder-open) {
+  padding-left: 28px !important;
+  background-image: url('/assets/icons/toolbar/open.svg') !important;
+  background-size: 16px 16px !important;
+  background-repeat: no-repeat !important;
+  background-position: 8px center !important;
+}
+
+/* === ENTRY MODE CARD ICONS === */
+main .grid button.group svg.lucide-code,
+main .grid button.group svg.lucide-archive,
+main .grid button.group svg.lucide-book-open,
+main .grid button.group svg.lucide-sparkles {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main .grid button.group > div:first-child {
+  background-size: 28px 28px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+main .grid button.group:nth-child(1) > div:first-child {
+  background-image: url('/assets/icons/modes/code.svg') !important;
+}
+
+main .grid button.group:nth-child(2) > div:first-child {
+  background-image: url('/assets/icons/modes/archive.svg') !important;
+}
+
+main .grid button.group:nth-child(3) > div:first-child {
+  background-image: url('/assets/icons/modes/book.svg') !important;
+}
+
+main .grid button.group:nth-child(4) > div:first-child {
+  background-image: url('/assets/icons/modes/sparkles.svg') !important;
+}
+
+/* === FILENAME INPUT === */
+header input,
+header input[type="text"] {
+  background: rgba(22,33,62,0.8) !important;
+  color: #00ffff !important;
+  border: 1px solid #b967ff !important;
+}
+
+header button[title="Click to rename"] {
+  background: rgba(22,33,62,0.8) !important;
+  border: 1px solid #b967ff !important;
+}
+
+header button span.font-mono,
+header span.font-mono,
+header .font-mono {
+  color: #00ffff !important;
+  text-shadow: 0 0 5px #00ffff !important;
+}
+
+/* === FINAL CLEANUP === */
+.text-slate-muted,
+.text-slate {
+  background: transparent !important;
+  color: rgba(185,103,255,0.7) !important;
+  border: none !important;
+  padding: 0 !important;
+}
