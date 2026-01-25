@@ -147,6 +147,14 @@ export function ProjectsModal() {
     setActionLoading(`load-${project.id}`);
     setError(null);
 
+    // If already in a different project, save and leave it first
+    if (currentProjectId && currentProjectId !== project.id) {
+      console.log("Leaving current project before joining new one:", currentProjectId);
+      await saveProject(currentProjectId, session);
+      setCurrentProjectId(null);
+      resetSession();
+    }
+
     const { session: loadedSession, error } = await loadProject(project.id);
 
     if (error) {
