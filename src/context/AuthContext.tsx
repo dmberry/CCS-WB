@@ -58,28 +58,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isSupabaseEnabled = isSupabaseConfigured();
   const supabase = isSupabaseEnabled ? getSupabaseClient() : null;
 
-  // Fetch user profile from database
+  // Fetch user profile from database with timeout
   const fetchProfile = useCallback(async (userId: string) => {
     if (!supabase) return null;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    console.log("Fetching profile for user:", userId);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
 
-    if (error) {
-      console.error("Error fetching profile:", error);
+      console.log("Profile fetch result:", { data, error, errorKeys: error ? Object.keys(error) : null });
+
+      if (error) {
+        // PGRST116 means no rows found - this is expected for new users
+        if (error.code !== "PGRST116") {
+          console.warn("Profile fetch issue (non-critical):", error.message || error.code);
+        }
+        return null;
+      }
+
+      return data;
+    } catch (err) {
+      // Any error - just log and continue without profile
+      console.warn("Profile fetch failed - continuing without profile:", err);
       return null;
     }
-
-    return data;
   }, [supabase]);
 
   // Create profile if it doesn't exist
   const createProfile = useCallback(async (user: User) => {
     if (!supabase) return null;
+
+    console.log("Creating profile for user:", user.id);
 
     // Generate initials from email or name
     const displayName = user.user_metadata?.full_name || user.email?.split("@")[0] || "User";
@@ -88,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .map((n: string) => n[0])
       .join("")
       .toUpperCase()
-      .slice(0, 2);
+      .slice(0, 3);
 
     const newProfile: ProfileInsert = {
       id: user.id,
@@ -98,48 +112,84 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       avatar_url: user.user_metadata?.avatar_url || null,
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
-      .from("profiles")
-      .upsert(newProfile)
-      .select()
-      .single();
+    console.log("New profile data:", newProfile);
 
-    if (error) {
-      console.error("Error creating profile:", error);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from("profiles")
+        .upsert(newProfile, { onConflict: "id" })
+        .select()
+        .single();
+
+      console.log("Profile upsert result:", { data, error });
+
+      if (error) {
+        console.error("Error creating profile:", JSON.stringify(error, null, 2));
+        // If upsert fails, try insert
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: insertData, error: insertError } = await (supabase as any)
+          .from("profiles")
+          .insert(newProfile)
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error("Error inserting profile:", insertError);
+          return null;
+        }
+        return insertData;
+      }
+
+      return data;
+    } catch (err) {
+      console.error("Profile creation failed:", err);
       return null;
     }
-
-    return data;
   }, [supabase]);
 
   // Initialize auth state
   useEffect(() => {
+    let mounted = true;
+
     if (!supabase) {
       setIsLoading(false);
       return;
     }
 
-    // Get initial session
+    // Get initial session with timeout
     const initAuth = async () => {
-      try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+      // Set a timeout to ensure loading doesn't hang forever
+      const timeoutId = setTimeout(() => {
+        if (mounted) {
+          console.warn("Auth initialization timed out");
+          setIsLoading(false);
+        }
+      }, 5000);
 
-        if (initialSession?.user) {
+      try {
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error("Error getting session:", error);
+        } else if (initialSession?.user && mounted) {
           setSession(initialSession);
           setUser(initialSession.user);
 
-          // Fetch or create profile
-          let userProfile = await fetchProfile(initialSession.user.id);
-          if (!userProfile) {
-            userProfile = await createProfile(initialSession.user);
-          }
-          setProfile(userProfile);
+          // Fetch or create profile (don't block loading)
+          fetchProfile(initialSession.user.id).then(async (userProfile) => {
+            if (!mounted) return;
+            if (!userProfile) {
+              userProfile = await createProfile(initialSession.user);
+            }
+            if (mounted) setProfile(userProfile);
+          });
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
       } finally {
-        setIsLoading(false);
+        clearTimeout(timeoutId);
+        if (mounted) setIsLoading(false);
       }
     };
 
@@ -148,6 +198,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, newSession) => {
+        if (!mounted) return;
+
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
@@ -157,7 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (!userProfile) {
             userProfile = await createProfile(newSession.user);
           }
-          setProfile(userProfile);
+          if (mounted) setProfile(userProfile);
 
           // Close login modal on successful sign in
           if (event === "SIGNED_IN") {
@@ -170,6 +222,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [supabase, fetchProfile, createProfile]);
@@ -206,14 +259,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   }, [supabase]);
 
-  // Sign out
+  // Sign out with timeout
   const signOut = useCallback(async () => {
     if (!supabase) {
       return { error: new Error("Supabase not configured") as unknown as AuthError };
     }
 
-    const { error } = await supabase.auth.signOut();
-    return { error };
+    // Add timeout to prevent hanging
+    const signOutPromise = supabase.auth.signOut();
+    const timeoutPromise = new Promise<{ error: AuthError }>((_, reject) => {
+      setTimeout(() => reject(new Error("Sign out timed out")), 5000);
+    });
+
+    try {
+      const result = await Promise.race([signOutPromise, timeoutPromise]);
+      // Clear local state regardless
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      return result;
+    } catch (err) {
+      console.error("Sign out error:", err);
+      // Force clear local state even on error
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      return { error: err as AuthError };
+    }
   }, [supabase]);
 
   // Update user profile

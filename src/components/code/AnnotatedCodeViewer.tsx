@@ -249,6 +249,11 @@ export function AnnotatedCodeViewer({
                                     {LINE_ANNOTATION_LABELS[annotation.type]}:
                                   </span>{" "}
                                   <span className="font-body">{annotation.content}</span>
+                                  {annotation.addedBy && (
+                                    <span className="ml-1.5 text-[7px] opacity-60 uppercase tracking-wide">
+                                      {annotation.addedBy}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex gap-1 flex-shrink-0">
                                   <button

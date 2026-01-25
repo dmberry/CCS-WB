@@ -386,16 +386,11 @@ export function AppSettingsProvider({
     localStorage.removeItem(PROFILE_STORAGE_KEY);
   }, []);
 
-  // Get display name (initials > name > empty)
+  // Get display name (initials only - no fallback to name)
+  // Users must explicitly set initials for annotation attribution
   const getDisplayName = useCallback(() => {
-    if (profile.initials.trim()) {
-      return profile.initials.trim();
-    }
-    if (profile.name.trim()) {
-      return profile.name.trim();
-    }
-    return "";
-  }, [profile.name, profile.initials]);
+    return profile.initials.trim();
+  }, [profile.initials]);
 
   return (
     <AppSettingsContext.Provider

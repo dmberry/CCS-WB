@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { X, Bot, Palette, Info, Minus, Plus, Code, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X, Bot, Palette, Info, Minus, Plus, Code, User, Loader2, Mail, LogOut, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AIProviderSettings } from "./AIProviderSettings";
 import { useAppSettings } from "@/context/AppSettingsContext";
+import { useAuth, type AuthProvider } from "@/context/AuthContext";
 import type { UserProfile } from "@/types/app-settings";
 import {
   FONT_SIZE_MIN,
@@ -32,6 +33,12 @@ export function SettingsModal({
   initialTab = "appearance",
 }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+
+  // Sync activeTab when initialTab prop changes (e.g., when opened from different buttons)
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
   const {
     settings,
     setGlobalCodeFontSize,
@@ -45,7 +52,60 @@ export function SettingsModal({
     updateProfile,
   } = useAppSettings();
 
+  const {
+    isAuthenticated,
+    profile: authProfile,
+    user,
+    isSupabaseEnabled,
+    signInWithProvider,
+    signInWithMagicLink,
+    signOut,
+  } = useAuth();
+
+  // Collaboration login state
+  const [collabEmail, setCollabEmail] = useState("");
+  const [collabLoading, setCollabLoading] = useState<AuthProvider | "email" | "signout" | null>(null);
+  const [collabError, setCollabError] = useState<string | null>(null);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+
+  // When logged in, use auth profile name; otherwise use local profile name
+  const displayName = isAuthenticated && authProfile?.display_name
+    ? authProfile.display_name
+    : profile.name;
+
   if (!isOpen) return null;
+
+  // Collaboration handlers
+  const handleProviderSignIn = async (provider: AuthProvider) => {
+    setCollabLoading(provider);
+    setCollabError(null);
+    const { error } = await signInWithProvider(provider);
+    if (error) {
+      setCollabError(error.message);
+      setCollabLoading(null);
+    }
+  };
+
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!collabEmail.trim()) return;
+    setCollabLoading("email");
+    setCollabError(null);
+    setMagicLinkSent(false);
+    const { error } = await signInWithMagicLink(collabEmail.trim());
+    if (error) {
+      setCollabError(error.message);
+    } else {
+      setMagicLinkSent(true);
+    }
+    setCollabLoading(null);
+  };
+
+  const handleSignOut = async () => {
+    setCollabLoading("signout");
+    await signOut();
+    setCollabLoading(null);
+  };
 
   const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
     { id: "profile", label: "Profile", icon: <User className="h-4 w-4" /> },
@@ -103,119 +163,227 @@ export function SettingsModal({
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === "profile" && (
             <div className="space-y-4">
-              <div>
-                <h3 className="font-display text-caption text-ink mb-1">Your Profile</h3>
-                <p className="font-sans text-[10px] text-slate-muted mb-3">
-                  Set your name and affiliation. This information is displayed in chat and can be included in session exports.
-                </p>
-
-                {/* Name */}
-                <div className="space-y-3">
-                  <div>
-                    <label className="block font-sans text-caption font-medium text-ink mb-1">
-                      Name or Initials
-                    </label>
-                    <input
-                      type="text"
-                      value={profile.name}
-                      onChange={(e) => updateProfile({ name: e.target.value })}
-                      placeholder="J. Smith"
-                      className="w-full px-3 py-2 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors placeholder:text-slate-muted"
-                    />
-                  </div>
-
-                  {/* Initials */}
-                  <div>
-                    <label className="block font-sans text-caption font-medium text-ink mb-1">
-                      Initials
-                    </label>
-                    <p className="font-sans text-[10px] text-slate-muted mb-1">
-                      Displayed in chat and stored with annotations
-                    </p>
-                    <input
-                      type="text"
-                      value={profile.initials}
-                      onChange={(e) => updateProfile({ initials: e.target.value })}
-                      placeholder="DMB"
-                      className="w-full px-3 py-2 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors placeholder:text-slate-muted"
-                    />
-                  </div>
-
-                  {/* Affiliation */}
-                  <div>
-                    <label className="block font-sans text-caption font-medium text-ink mb-1">
-                      Affiliation
-                    </label>
-                    <input
-                      type="text"
-                      value={profile.affiliation}
-                      onChange={(e) => updateProfile({ affiliation: e.target.value })}
-                      placeholder="University of Sussex"
-                      className="w-full px-3 py-2 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors placeholder:text-slate-muted"
-                    />
-                  </div>
-
-                  {/* Bio */}
-                  <div>
-                    <label className="block font-sans text-caption font-medium text-ink mb-1">
-                      Bio
-                    </label>
-                    <p className="font-sans text-[10px] text-slate-muted mb-1">
-                      Brief description for session exports
-                    </p>
-                    <textarea
-                      value={profile.bio}
-                      onChange={(e) => updateProfile({ bio: e.target.value })}
-                      placeholder="Researcher in critical code studies and digital humanities..."
-                      rows={3}
-                      className="w-full px-3 py-2 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors resize-none placeholder:text-slate-muted"
-                    />
-                  </div>
+              {/* Collaboration / Login - at top */}
+              {isSupabaseEnabled && (
+                <div className="pb-3 border-b border-parchment">
+                  {isAuthenticated ? (
+                    // Signed in state - show photo and info
+                    <div className="flex items-center gap-3">
+                      {authProfile?.avatar_url ? (
+                        <img
+                          src={authProfile.avatar_url}
+                          alt=""
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-burgundy/20 flex items-center justify-center">
+                          <span className="font-sans text-caption font-medium text-burgundy">
+                            {(authProfile?.display_name || user?.email || "U")[0].toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-sans text-caption text-ink truncate">
+                          {authProfile?.display_name || user?.email}
+                        </p>
+                        <p className="font-sans text-[10px] text-slate-muted truncate">
+                          {user?.email}
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleSignOut}
+                        disabled={collabLoading !== null}
+                        className={cn(
+                          "flex items-center gap-1 px-2 py-1 font-sans text-[10px] text-slate-muted hover:text-ink transition-colors",
+                          "disabled:opacity-50 disabled:cursor-not-allowed"
+                        )}
+                      >
+                        {collabLoading === "signout" ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <LogOut className="h-3 w-3" />
+                        )}
+                        Sign out
+                      </button>
+                    </div>
+                  ) : (
+                    // Sign in options
+                    <div className="space-y-2">
+                      <p className="font-sans text-[10px] text-slate-muted">
+                        Sign in to collaborate on shared projects
+                      </p>
+                      {collabError && (
+                        <p className="font-sans text-[10px] text-error">{collabError}</p>
+                      )}
+                      {magicLinkSent && (
+                        <p className="font-sans text-[10px] text-success">
+                          Check your email for a sign-in link.
+                        </p>
+                      )}
+                      {/* OAuth + Email row */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleProviderSignIn("google")}
+                          disabled={collabLoading !== null}
+                          className={cn(
+                            "flex items-center justify-center gap-1 px-2 py-1.5",
+                            "bg-white border border-parchment-dark rounded-sm",
+                            "font-sans text-[10px] text-ink",
+                            "hover:bg-cream transition-colors",
+                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                          )}
+                        >
+                          {collabLoading === "google" ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                            </svg>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleProviderSignIn("github")}
+                          disabled={collabLoading !== null}
+                          className={cn(
+                            "flex items-center justify-center gap-1 px-2 py-1.5",
+                            "bg-ink border border-ink rounded-sm",
+                            "font-sans text-[10px] text-ivory",
+                            "hover:bg-ink/90 transition-colors",
+                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                          )}
+                        >
+                          {collabLoading === "github" ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                            </svg>
+                          )}
+                        </button>
+                        <form onSubmit={handleMagicLink} className="flex gap-1 flex-1">
+                          <div className="relative flex-1">
+                            <Mail className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-muted" />
+                            <input
+                              type="email"
+                              value={collabEmail}
+                              onChange={(e) => setCollabEmail(e.target.value)}
+                              placeholder="Email"
+                              disabled={collabLoading !== null}
+                              className={cn(
+                                "w-full pl-7 pr-2 py-1.5",
+                                "bg-card border border-parchment-dark rounded-sm",
+                                "font-sans text-[10px] text-ink",
+                                "placeholder:text-slate-muted",
+                                "focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy",
+                                "disabled:opacity-50 disabled:cursor-not-allowed"
+                              )}
+                            />
+                          </div>
+                          <button
+                            type="submit"
+                            disabled={!collabEmail.trim() || collabLoading !== null}
+                            className={cn(
+                              "px-2 py-1.5",
+                              "bg-burgundy border border-burgundy rounded-sm",
+                              "font-sans text-[10px] text-ivory",
+                              "hover:bg-burgundy-dark transition-colors",
+                              "disabled:opacity-50 disabled:cursor-not-allowed"
+                            )}
+                          >
+                            {collabLoading === "email" ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              "→"
+                            )}
+                          </button>
+                        </form>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              )}
+
+              {/* Profile fields - Name, Initials, Affiliation on one row */}
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="block font-sans text-[10px] font-medium text-ink mb-1">Name</label>
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => !isAuthenticated && updateProfile({ name: e.target.value })}
+                    placeholder="J. Smith"
+                    readOnly={isAuthenticated}
+                    className={cn(
+                      "w-full px-2 py-1.5 font-sans text-caption border border-parchment-dark rounded-sm transition-colors placeholder:text-slate-muted/50 placeholder:italic",
+                      isAuthenticated
+                        ? "bg-muted text-slate-muted cursor-not-allowed"
+                        : "bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy"
+                    )}
+                  />
+                </div>
+                <div className="w-14">
+                  <label className="block font-sans text-[10px] font-medium text-ink mb-1">Initials</label>
+                  <input
+                    type="text"
+                    value={profile.initials}
+                    onChange={(e) => updateProfile({ initials: e.target.value.toUpperCase().slice(0, 4) })}
+                    placeholder="DMB"
+                    maxLength={4}
+                    className="w-full px-1 py-1.5 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors placeholder:text-slate-muted/50 placeholder:italic uppercase text-center"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block font-sans text-[10px] font-medium text-ink mb-1">Affiliation</label>
+                  <input
+                    type="text"
+                    value={profile.affiliation}
+                    onChange={(e) => updateProfile({ affiliation: e.target.value })}
+                    placeholder="University"
+                    className="w-full px-2 py-1.5 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors placeholder:text-slate-muted/50 placeholder:italic"
+                  />
+                </div>
+              </div>
+
+              {/* Bio */}
+              <div>
+                <label className="block font-sans text-[10px] font-medium text-ink mb-1">
+                  Bio <span className="text-slate-muted font-normal">(for exports)</span>
+                </label>
+                <textarea
+                  value={profile.bio}
+                  onChange={(e) => updateProfile({ bio: e.target.value })}
+                  placeholder="Researcher in critical code studies..."
+                  rows={2}
+                  className="w-full px-2 py-1.5 font-sans text-caption text-foreground bg-card border border-parchment-dark rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy transition-colors resize-none placeholder:text-slate-muted/50 placeholder:italic"
+                />
               </div>
 
               {/* Anonymous Mode */}
-              <div className="pt-3 border-t border-parchment">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="font-display text-caption text-ink">Anonymous Mode</h3>
-                    <p className="font-sans text-[10px] text-slate-muted">
-                      When enabled, your profile information will be excluded from session exports
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => updateProfile({ anonymousMode: !profile.anonymousMode })}
+              <div className="flex items-center justify-between gap-4 pt-2">
+                <div>
+                  <span className="font-sans text-[10px] font-medium text-ink">Anonymous Mode</span>
+                  <span className="font-sans text-[10px] text-slate-muted ml-1">
+                    (exclude profile from exports)
+                  </span>
+                </div>
+                <button
+                  onClick={() => updateProfile({ anonymousMode: !profile.anonymousMode })}
+                  className={cn(
+                    "relative w-8 h-4 rounded-full transition-colors flex-shrink-0",
+                    profile.anonymousMode ? "bg-burgundy" : "bg-parchment-dark"
+                  )}
+                >
+                  <span
                     className={cn(
-                      "relative w-10 h-5 rounded-full transition-colors flex-shrink-0",
-                      profile.anonymousMode ? "bg-burgundy" : "bg-parchment-dark"
+                      "absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform",
+                      profile.anonymousMode ? "translate-x-4" : "translate-x-0.5"
                     )}
-                  >
-                    <span
-                      className={cn(
-                        "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform",
-                        profile.anonymousMode ? "translate-x-5" : "translate-x-0.5"
-                      )}
-                    />
-                  </button>
-                </div>
+                  />
+                </button>
               </div>
-
-              {/* Preview */}
-              {(profile.name || profile.initials) && (
-                <div className="pt-3 border-t border-parchment">
-                  <h4 className="font-display text-caption text-ink mb-2">Chat Preview</h4>
-                  <div className="bg-burgundy/10 rounded-sm px-3 py-2">
-                    <p className="font-body text-caption text-ink">
-                      Your messages will be labelled like this.
-                    </p>
-                    <div className="flex items-center mt-1 justify-end">
-                      <span className="font-sans text-[9px] text-slate-muted">
-                        12:00 PM, {profile.initials || profile.name}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

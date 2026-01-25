@@ -28,6 +28,9 @@ export type AnnotationType =
 // Collaborator roles
 export type CollaboratorRole = "viewer" | "editor" | "admin";
 
+// Member roles
+export type MemberRole = "owner" | "editor" | "viewer";
+
 export interface Database {
   public: {
     Tables: {
@@ -63,7 +66,8 @@ export interface Database {
           name: string;
           description: string | null;
           owner_id: string;
-          is_public: boolean;
+          mode: string;
+          session_data: Json | null;
           created_at: string;
           updated_at: string;
         };
@@ -72,7 +76,8 @@ export interface Database {
           name: string;
           description?: string | null;
           owner_id: string;
-          is_public?: boolean;
+          mode?: string;
+          session_data?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -81,28 +86,32 @@ export interface Database {
           name?: string;
           description?: string | null;
           owner_id?: string;
-          is_public?: boolean;
+          mode?: string;
+          session_data?: Json | null;
           created_at?: string;
           updated_at?: string;
         };
       };
-      project_collaborators: {
+      project_members: {
         Row: {
+          id: string;
           project_id: string;
           user_id: string;
-          role: CollaboratorRole;
+          role: MemberRole;
           joined_at: string;
         };
         Insert: {
+          id?: string;
           project_id: string;
           user_id: string;
-          role?: CollaboratorRole;
+          role?: MemberRole;
           joined_at?: string;
         };
         Update: {
+          id?: string;
           project_id?: string;
           user_id?: string;
-          role?: CollaboratorRole;
+          role?: MemberRole;
           joined_at?: string;
         };
       };
@@ -208,6 +217,35 @@ export interface Database {
           created_at?: string;
         };
       };
+      project_invites: {
+        Row: {
+          id: string;
+          project_id: string;
+          token: string;
+          role: "editor" | "viewer";
+          created_by: string | null;
+          created_at: string;
+          expires_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          token: string;
+          role?: "editor" | "viewer";
+          created_by?: string | null;
+          created_at?: string;
+          expires_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          token?: string;
+          role?: "editor" | "viewer";
+          created_by?: string | null;
+          created_at?: string;
+          expires_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -221,26 +259,29 @@ export interface Database {
 // Convenience types for row data
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type Project = Database["public"]["Tables"]["projects"]["Row"];
-export type ProjectCollaborator = Database["public"]["Tables"]["project_collaborators"]["Row"];
+export type ProjectMember = Database["public"]["Tables"]["project_members"]["Row"];
 export type CodeFile = Database["public"]["Tables"]["code_files"]["Row"];
 export type Annotation = Database["public"]["Tables"]["annotations"]["Row"];
 export type ChatMessage = Database["public"]["Tables"]["chat_messages"]["Row"];
+export type ProjectInvite = Database["public"]["Tables"]["project_invites"]["Row"];
 
 // Types for inserting data
 export type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
 export type ProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
+export type ProjectMemberInsert = Database["public"]["Tables"]["project_members"]["Insert"];
 export type CodeFileInsert = Database["public"]["Tables"]["code_files"]["Insert"];
 export type AnnotationInsert = Database["public"]["Tables"]["annotations"]["Insert"];
 export type ChatMessageInsert = Database["public"]["Tables"]["chat_messages"]["Insert"];
+export type ProjectInviteInsert = Database["public"]["Tables"]["project_invites"]["Insert"];
 
 // Extended types with relations
 export interface ProjectWithOwner extends Project {
   owner?: Profile;
 }
 
-export interface ProjectWithCollaborators extends Project {
+export interface ProjectWithMembers extends Project {
   owner?: Profile;
-  collaborators?: (ProjectCollaborator & { user?: Profile })[];
+  members?: (ProjectMember & { user?: Profile })[];
 }
 
 export interface AnnotationWithUser extends Annotation {
@@ -249,4 +290,12 @@ export interface AnnotationWithUser extends Annotation {
 
 export interface CodeFileWithAnnotations extends CodeFile {
   annotations?: AnnotationWithUser[];
+}
+
+export interface ProjectInviteWithProject extends ProjectInvite {
+  project?: Project;
+}
+
+export interface MemberWithProfile extends ProjectMember {
+  profile?: Profile;
 }

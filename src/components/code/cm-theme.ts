@@ -190,6 +190,18 @@ const ccsLightTheme = EditorView.theme(
       opacity: "0.5",
       cursor: "not-allowed",
     },
+    // Signed-as indicator in annotation editor
+    ".cm-annotation-signed-as": {
+      fontSize: "8px",
+      color: "hsl(var(--muted-foreground))",
+      marginLeft: "6px",
+      fontStyle: "normal",
+    },
+    ".cm-annotation-unsigned": {
+      fontSize: "7px",
+      fontStyle: "italic",
+      opacity: "0.5",
+    },
     // Line click highlight in annotate mode
     ".cm-line-clickable": {
       cursor: "pointer",
@@ -234,6 +246,33 @@ const ccsLightTheme = EditorView.theme(
     },
     ".cm-line-dimmed:hover": {
       opacity: "0.4",
+    },
+    // Remote annotation arrival animation - yellow flash
+    ".cm-annotation-remote-new": {
+      animation: "remote-annotation-flash 1.5s ease-out",
+    },
+    ".cm-annotation-remote-new .cm-annotation-bar": {
+      animation: "remote-annotation-bar-flash 1.5s ease-out",
+    },
+    "@keyframes remote-annotation-flash": {
+      "0%": {
+        backgroundColor: "hsl(48 100% 70% / 0.4)",
+        transform: "translateX(-4px)",
+      },
+      "15%": {
+        transform: "translateX(0)",
+      },
+      "100%": {
+        backgroundColor: "transparent",
+      },
+    },
+    "@keyframes remote-annotation-bar-flash": {
+      "0%": {
+        boxShadow: "0 0 12px 4px hsl(48 100% 55% / 0.6)",
+      },
+      "100%": {
+        boxShadow: "none",
+      },
     },
   },
   { dark: false }
@@ -421,6 +460,18 @@ const ccsDarkTheme = EditorView.theme(
       opacity: "0.5",
       cursor: "not-allowed",
     },
+    // Signed-as indicator in annotation editor
+    ".cm-annotation-signed-as": {
+      fontSize: "8px",
+      color: "hsl(var(--muted-foreground))",
+      marginLeft: "6px",
+      fontStyle: "normal",
+    },
+    ".cm-annotation-unsigned": {
+      fontSize: "7px",
+      fontStyle: "italic",
+      opacity: "0.5",
+    },
     // Line click highlight in annotate mode
     ".cm-line-clickable": {
       cursor: "pointer",
@@ -465,6 +516,33 @@ const ccsDarkTheme = EditorView.theme(
     },
     ".cm-line-dimmed:hover": {
       opacity: "0.35",
+    },
+    // Remote annotation arrival animation - yellow flash (dark mode)
+    ".cm-annotation-remote-new": {
+      animation: "remote-annotation-flash-dark 1.5s ease-out",
+    },
+    ".cm-annotation-remote-new .cm-annotation-bar": {
+      animation: "remote-annotation-bar-flash-dark 1.5s ease-out",
+    },
+    "@keyframes remote-annotation-flash-dark": {
+      "0%": {
+        backgroundColor: "hsl(48 100% 50% / 0.3)",
+        transform: "translateX(-4px)",
+      },
+      "15%": {
+        transform: "translateX(0)",
+      },
+      "100%": {
+        backgroundColor: "transparent",
+      },
+    },
+    "@keyframes remote-annotation-bar-flash-dark": {
+      "0%": {
+        boxShadow: "0 0 12px 4px hsl(48 100% 45% / 0.5)",
+      },
+      "100%": {
+        boxShadow: "none",
+      },
     },
   },
   { dark: true }

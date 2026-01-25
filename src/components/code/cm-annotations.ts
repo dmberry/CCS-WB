@@ -107,7 +107,8 @@ class InlineAnnotationEditor extends WidgetType {
     readonly editState: InlineEditState,
     readonly callbacks: InlineEditCallbacks,
     readonly isDark: boolean,
-    readonly isNew: boolean // true for new annotation, false for editing existing
+    readonly isNew: boolean, // true for new annotation, false for editing existing
+    readonly userInitials?: string // User initials for "signed as" display
   ) {
     super();
     // Initialise internal state from editState
@@ -122,7 +123,8 @@ class InlineAnnotationEditor extends WidgetType {
       this.editState.startLineNumber === other.editState.startLineNumber &&
       this.editState.annotationId === other.editState.annotationId &&
       this.isDark === other.isDark &&
-      this.isNew === other.isNew
+      this.isNew === other.isNew &&
+      this.userInitials === other.userInitials
     );
   }
 
@@ -237,6 +239,19 @@ class InlineAnnotationEditor extends WidgetType {
     };
     actions.appendChild(cancelBtn);
 
+    // "Signed as" indicator - shows initials or prompts to set them
+    const signedAs = document.createElement("span");
+    signedAs.className = "cm-annotation-signed-as";
+    if (this.userInitials) {
+      signedAs.textContent = this.userInitials;
+      signedAs.title = `Signed as ${this.userInitials}`;
+    } else {
+      signedAs.textContent = "unsigned";
+      signedAs.classList.add("cm-annotation-unsigned");
+      signedAs.title = "Set your initials in Settings → Profile";
+    }
+    actions.appendChild(signedAs);
+
     wrapper.appendChild(actions);
 
     // Focus the input after a short delay to allow DOM insertion
@@ -288,7 +303,8 @@ class AnnotationWidget extends WidgetType {
     readonly onDelete: ((id: string) => void) | undefined,
     readonly isDark: boolean,
     readonly isHighlighted: boolean = false,
-    readonly displaySettings: AnnotationDisplaySettings = DEFAULT_ANNOTATION_DISPLAY_SETTINGS
+    readonly displaySettings: AnnotationDisplaySettings = DEFAULT_ANNOTATION_DISPLAY_SETTINGS,
+    readonly isRemoteNew: boolean = false // Newly arrived from another user
   ) {
     super();
   }
@@ -298,11 +314,13 @@ class AnnotationWidget extends WidgetType {
       this.annotation.id === other.annotation.id &&
       this.annotation.content === other.annotation.content &&
       this.annotation.type === other.annotation.type &&
+      this.annotation.addedBy === other.annotation.addedBy &&
       this.isDark === other.isDark &&
       this.isHighlighted === other.isHighlighted &&
       this.displaySettings.brightness === other.displaySettings.brightness &&
       this.displaySettings.showBadge === other.displaySettings.showBadge &&
-      this.displaySettings.showPillBackground === other.displaySettings.showPillBackground
+      this.displaySettings.showPillBackground === other.displaySettings.showPillBackground &&
+      this.isRemoteNew === other.isRemoteNew
     );
   }
 
@@ -325,6 +343,11 @@ class AnnotationWidget extends WidgetType {
     // Apply highlight styling if this annotation type is highlighted
     if (this.isHighlighted) {
       wrapper.classList.add("cm-annotation-highlighted");
+    }
+
+    // Apply yellow flash animation for newly arrived remote annotations
+    if (this.isRemoteNew) {
+      wrapper.classList.add("cm-annotation-remote-new");
     }
 
     // Annotation bar - contains badge and content, stretches to fill space
@@ -375,13 +398,34 @@ class AnnotationWidget extends WidgetType {
     // Content (flows after badge within the bar)
     const content = document.createElement("span");
     content.className = "cm-annotation-content";
-    content.textContent = this.annotation.content;
+
+    // Build content text
+    let contentText = this.annotation.content;
     // If badge is hidden, prefix with type indicator (and line range for blocks)
     if (!showBadge) {
       const isBlock = this.annotation.endLineNumber && this.annotation.endLineNumber !== this.annotation.lineNumber;
       const lineRange = isBlock ? `L${this.annotation.lineNumber}-${this.annotation.endLineNumber} ` : "";
-      content.textContent = `[${lineRange}${ANNOTATION_PREFIXES[this.annotation.type]}] ${this.annotation.content}`;
+      contentText = `[${lineRange}${ANNOTATION_PREFIXES[this.annotation.type]}] ${this.annotation.content}`;
     }
+
+    // Add content text
+    content.appendChild(document.createTextNode(contentText));
+
+    // Author initials (tiny font, inline immediately after content text)
+    if (this.annotation.addedBy) {
+      const initials = document.createElement("span");
+      initials.className = "cm-annotation-initials";
+      initials.textContent = ` ${this.annotation.addedBy}`;
+      initials.style.cssText = `
+        font-size: 0.65em;
+        opacity: 0.6;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      `;
+      content.appendChild(initials);
+    }
+
     bar.appendChild(content);
 
     wrapper.appendChild(bar);
@@ -435,7 +479,9 @@ export function createSimpleAnnotationsExtension(
   editState?: InlineEditState,
   editCallbacks?: InlineEditCallbacks,
   highlightedType?: LineAnnotationType | null,
-  displaySettings?: AnnotationDisplaySettings
+  displaySettings?: AnnotationDisplaySettings,
+  newRemoteAnnotationIds?: Set<string>,
+  userInitials?: string
 ): Extension {
   // Use defaults if settings not provided
   const settings = displaySettings || DEFAULT_ANNOTATION_DISPLAY_SETTINGS;
@@ -470,7 +516,7 @@ export function createSimpleAnnotationsExtension(
         if (editState?.annotationId === ann.id && editCallbacks) {
           // Show inline editor for this annotation
           const widget = Decoration.widget({
-            widget: new InlineAnnotationEditor(editState, editCallbacks, isDark, false),
+            widget: new InlineAnnotationEditor(editState, editCallbacks, isDark, false, userInitials),
             block: true,
             side: 1,
           });
@@ -478,8 +524,9 @@ export function createSimpleAnnotationsExtension(
         } else {
           // Show normal annotation widget
           const isHighlighted = highlightedType === ann.type;
+          const isRemoteNew = newRemoteAnnotationIds?.has(ann.id) ?? false;
           const widget = Decoration.widget({
-            widget: new AnnotationWidget(ann, onEdit, onDelete, isDark, isHighlighted, settings),
+            widget: new AnnotationWidget(ann, onEdit, onDelete, isDark, isHighlighted, settings, isRemoteNew),
             block: true,
             side: 1,
           });
@@ -494,7 +541,7 @@ export function createSimpleAnnotationsExtension(
       if (lineNumber >= 1 && lineNumber <= state.doc.lines) {
         const line = state.doc.line(lineNumber);
         const widget = Decoration.widget({
-          widget: new InlineAnnotationEditor(editState, editCallbacks, isDark, true),
+          widget: new InlineAnnotationEditor(editState, editCallbacks, isDark, true, userInitials),
           block: true,
           side: 1,
         });

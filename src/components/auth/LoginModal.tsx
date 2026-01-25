@@ -83,41 +83,40 @@ export function LoginModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
+    <div
+      className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50"
+      onClick={handleClose}
+    >
       <div
-        className="absolute inset-0 bg-ink/40"
-        onClick={handleClose}
-      />
-
-      {/* Modal */}
-      <div className="relative bg-card rounded-lg shadow-editorial-lg border border-parchment w-full max-w-sm mx-4">
+        className="bg-popover rounded-sm shadow-lg w-full max-w-xs mx-4 modal-content"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-parchment">
-          <h2 className="font-serif text-lg text-ink">Sign in to collaborate</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-parchment">
+          <h2 className="font-display text-caption text-ink">Sign in to collaborate</h2>
           <button
             onClick={handleClose}
-            className="p-1 text-slate-muted hover:text-ink transition-colors"
+            className="p-1 text-slate hover:text-ink transition-colors"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" strokeWidth={1.5} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-4">
+        <div className="p-6 space-y-4">
           {/* Error message */}
           {error && (
-            <div className="flex items-start gap-2 p-3 bg-error/10 border border-error/30 rounded-md">
-              <AlertCircle className="h-4 w-4 text-error flex-shrink-0 mt-0.5" />
-              <p className="font-sans text-caption text-error">{error}</p>
+            <div className="flex items-start gap-2 p-2 bg-error/10 border border-error/30 rounded-sm">
+              <AlertCircle className="h-3.5 w-3.5 text-error flex-shrink-0 mt-0.5" />
+              <p className="font-sans text-[10px] text-error">{error}</p>
             </div>
           )}
 
           {/* Magic link success message */}
           {magicLinkSent && (
-            <div className="flex items-start gap-2 p-3 bg-success/10 border border-success/30 rounded-md">
-              <CheckCircle className="h-4 w-4 text-success flex-shrink-0 mt-0.5" />
-              <p className="font-sans text-caption text-success">
+            <div className="flex items-start gap-2 p-2 bg-success/10 border border-success/30 rounded-sm">
+              <CheckCircle className="h-3.5 w-3.5 text-success flex-shrink-0 mt-0.5" />
+              <p className="font-sans text-[10px] text-success">
                 Check your email for a sign-in link.
               </p>
             </div>
@@ -129,17 +128,17 @@ export function LoginModal() {
               onClick={() => handleProviderSignIn("google")}
               disabled={isLoading !== null}
               className={cn(
-                "w-full flex items-center justify-center gap-2 px-4 py-2.5",
-                "bg-white border border-parchment-dark rounded-md",
+                "w-full flex items-center justify-center gap-2 px-3 py-2",
+                "bg-white border border-parchment-dark rounded-sm",
                 "font-sans text-caption text-ink",
                 "hover:bg-cream transition-colors",
                 "disabled:opacity-50 disabled:cursor-not-allowed"
               )}
             >
               {isLoading === "google" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <GoogleIcon className="h-4 w-4" />
+                <GoogleIcon className="h-3.5 w-3.5" />
               )}
               Continue with Google
             </button>
@@ -148,17 +147,17 @@ export function LoginModal() {
               onClick={() => handleProviderSignIn("github")}
               disabled={isLoading !== null}
               className={cn(
-                "w-full flex items-center justify-center gap-2 px-4 py-2.5",
-                "bg-ink border border-ink rounded-md",
+                "w-full flex items-center justify-center gap-2 px-3 py-2",
+                "bg-ink border border-ink rounded-sm",
                 "font-sans text-caption text-ivory",
                 "hover:bg-ink/90 transition-colors",
                 "disabled:opacity-50 disabled:cursor-not-allowed"
               )}
             >
               {isLoading === "github" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <GitHubIcon className="h-4 w-4" />
+                <GitHubIcon className="h-3.5 w-3.5" />
               )}
               Continue with GitHub
             </button>
@@ -170,7 +169,7 @@ export function LoginModal() {
               <div className="w-full border-t border-parchment" />
             </div>
             <div className="relative flex justify-center">
-              <span className="px-2 bg-card font-sans text-caption text-slate-muted">
+              <span className="px-2 bg-popover font-sans text-[10px] text-slate-muted">
                 or
               </span>
             </div>
@@ -179,7 +178,7 @@ export function LoginModal() {
           {/* Magic link form */}
           <form onSubmit={handleMagicLink} className="space-y-2">
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-muted" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-muted" />
               <input
                 type="email"
                 value={email}
@@ -187,8 +186,8 @@ export function LoginModal() {
                 placeholder="Enter your email"
                 disabled={isLoading !== null}
                 className={cn(
-                  "w-full pl-9 pr-3 py-2.5",
-                  "bg-card border border-parchment-dark rounded-md",
+                  "w-full pl-8 pr-3 py-2",
+                  "bg-card border border-parchment-dark rounded-sm",
                   "font-sans text-caption text-ink",
                   "placeholder:text-slate-muted",
                   "focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy",
@@ -200,15 +199,15 @@ export function LoginModal() {
               type="submit"
               disabled={!email.trim() || isLoading !== null}
               className={cn(
-                "w-full flex items-center justify-center gap-2 px-4 py-2.5",
-                "bg-burgundy border border-burgundy rounded-md",
+                "w-full flex items-center justify-center gap-2 px-3 py-2",
+                "bg-burgundy border border-burgundy rounded-sm",
                 "font-sans text-caption text-ivory",
                 "hover:bg-burgundy-dark transition-colors",
                 "disabled:opacity-50 disabled:cursor-not-allowed"
               )}
             >
               {isLoading === "email" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 "Send magic link"
               )}

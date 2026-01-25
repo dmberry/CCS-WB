@@ -197,8 +197,16 @@
   font-size: calc(var(--ui-font-size) - 2px);
 }
 
+.text-ui-base {
+  font-size: var(--ui-font-size);
+}
+
 .text-ui-lg {
   font-size: calc(var(--ui-font-size) + 2px);
+}
+
+.text-ui-title {
+  font-size: calc(var(--ui-font-size) + 4px);
 }
 
 /* Modal container - scales all text within based on UI font size setting */

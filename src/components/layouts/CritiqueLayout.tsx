@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo, useImperativeHandle, forwardRef } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "@/context/SessionContext";
+import { useCollaborativeSession } from "@/hooks/useCollaborativeSession";
 import { useAISettings } from "@/context/AISettingsContext";
 import { cn, formatTimestamp, fetchWithTimeout, retryWithBackoff, generateId, getCurrentTimestamp } from "@/lib/utils";
 import type { Message, CodeReference, ExperienceLevel } from "@/types";
@@ -37,13 +37,35 @@ import {
   Search,
   PanelRight,
   PanelRightClose,
+  Cloud,
+  CloudOff,
+  CloudCog,
+  Users,
+  UploadCloud,
+  DownloadCloud,
+  XCircle,
+  LogIn,
+  LogOut,
+  User,
+  UserPlus,
+  UserMinus,
+  RefreshCw,
+  Shield,
+  Calendar,
+  FileCode,
+  MessageSquareText,
+  Info,
 } from "lucide-react";
 import { CodeEditorPanel, generateAnnotatedCode, parseAnnotatedMarkdown } from "@/components/code";
 import { ContextPreview } from "@/components/chat";
 import { GuidedPrompts } from "@/components/prompts";
 import { SettingsModal } from "@/components/settings/SettingsModal";
+import { UserMenu } from "@/components/auth/UserMenu";
 import { AISettingsPanel } from "@/components/settings/AISettingsPanel";
 import { useAppSettings } from "@/context/AppSettingsContext";
+import { useAuth } from "@/context/AuthContext";
+import { useProjects } from "@/context/ProjectsContext";
+import { useProjectSync } from "@/hooks/useProjectSync";
 import { FONT_SIZE_MIN, FONT_SIZE_MAX } from "@/types/app-settings";
 import { PROVIDER_CONFIGS } from "@/lib/ai/config";
 import {
@@ -72,6 +94,14 @@ export interface CritiqueLayoutRef {
 
 // Opening prompt for critique mode
 const CRITIQUE_OPENING = "What code would you like to explore? You can paste it directly, upload a file, or describe what you're looking at. I'm curious what drew your attention to this particular piece of software.";
+
+// Mode colors for badges
+const MODE_COLORS: Record<string, string> = {
+  critique: "bg-burgundy/10 text-burgundy",
+  archaeology: "bg-amber-100 text-amber-700",
+  interpret: "bg-emerald-100 text-emerald-700",
+  create: "bg-blue-100 text-blue-700",
+};
 
 // Languages for code critique (broader than create mode)
 const CRITIQUE_LANGUAGES = [
@@ -125,11 +155,39 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     setCodeContent,
     removeCodeContent,
     addLineAnnotation,
+    updateLineAnnotation,
+    removeLineAnnotation,
     clearLineAnnotations,
-  } = useSession();
+    // Collaborative features
+    isInProject,
+    isCollaborationConnected,
+    refreshFromCloud,
+    saveAllToCloud,
+    resetSession,
+    newRemoteAnnotationIds,
+  } = useCollaborativeSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured, connectionStatus, isAiReady } = useAISettings();
   const { settings: appSettings, getFontSizes, setModeCodeFontSize, setModeChatFontSize, getDisplayName, profile } = useAppSettings();
+  const { isAuthenticated, setShowLoginModal, profile: authProfile, user } = useAuth();
+  const {
+    currentProjectId,
+    projects,
+    isLoading: isLoadingProjects,
+    saveProject,
+    loadProject,
+    createProject,
+    setCurrentProjectId,
+    setShowMembersModal,
+    setMembersModalProjectId,
+  } = useProjects();
+  const { markLocalUpdate } = useProjectSync();
   const aiEnabled = aiSettings.aiEnabled;
+
+  // Get current project info for shared project indicator
+  const currentProject = useMemo(() =>
+    currentProjectId ? projects.find(p => p.id === currentProjectId) : null,
+    [currentProjectId, projects]
+  );
   const router = useRouter();
 
   // Get font sizes from app settings for critique mode
@@ -147,6 +205,11 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [showModeDropdown, setShowModeDropdown] = useState(false);
   const [showGuidedPrompts, setShowGuidedPrompts] = useState(false);
   const [showExperienceHelp, setShowExperienceHelp] = useState(false);
+  const [showCloudMenu, setShowCloudMenu] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [populateWithSession, setPopulateWithSession] = useState(false);
+  const [cloudActionLoading, setCloudActionLoading] = useState<string | null>(null);
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [codeInputText, setCodeInputText] = useState("");
   const [codeInputName, setCodeInputName] = useState("");
@@ -168,6 +231,10 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [showChatSearch, setShowChatSearch] = useState(false);
   const [chatSearchQuery, setChatSearchQuery] = useState("");
   const chatSearchInputRef = useRef<HTMLInputElement>(null);
+
+  // Project info dropdown state
+  const [showProjectInfo, setShowProjectInfo] = useState(false);
+  const projectInfoRef = useRef<HTMLDivElement>(null);
 
   // Resizable panel state (percentage width for code panel)
   const DEFAULT_CODE_PANEL_WIDTH = 70;
@@ -616,12 +683,90 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     setShowGuidedPrompts(false);
   }, []);
 
-  // Save session with code contents
+  // Save session with code contents (downloads local file)
   const handleSaveSession = useCallback(() => {
-    // Open save modal instead of native prompt
     setSaveModalName(projectName || "Untitled");
     setShowSaveModal(true);
   }, [projectName]);
+
+  // Save to cloud (for cloud projects)
+  const [isSavingToCloud, setIsSavingToCloud] = useState(false);
+  const handleSaveToCloud = useCallback(async () => {
+    if (!currentProjectId) return;
+
+    setIsSavingToCloud(true);
+    console.log("handleSaveToCloud: Saving to Supabase", currentProjectId);
+    markLocalUpdate();
+    const { error } = await saveProject(currentProjectId, session);
+    if (error) {
+      console.error("Failed to save to cloud:", error);
+    } else {
+      console.log("handleSaveToCloud: Saved successfully");
+    }
+    setIsSavingToCloud(false);
+  }, [currentProjectId, session, saveProject, markLocalUpdate]);
+
+  // NOTE: Auto-save to session_data removed - annotations and files sync via their own tables.
+  // Manual "Save to Cloud" creates a snapshot for backup/restore purposes.
+  // This avoids conflicts when multiple users are editing simultaneously.
+
+  // Refresh from cloud (to fix sync issues)
+  const [isRefreshingFromCloud, setIsRefreshingFromCloud] = useState(false);
+  const handleRefreshFromCloud = useCallback(async () => {
+    if (!currentProjectId) return;
+
+    setIsRefreshingFromCloud(true);
+    console.log("handleRefreshFromCloud: Refreshing from Supabase", currentProjectId);
+    const { success, error } = await refreshFromCloud();
+    if (error) {
+      console.error("Failed to refresh from cloud:", error);
+    } else if (success) {
+      console.log("handleRefreshFromCloud: Refreshed successfully");
+    }
+    setIsRefreshingFromCloud(false);
+  }, [currentProjectId, refreshFromCloud]);
+
+  // Load a project from the cloud menu
+  const handleLoadProject = useCallback(async (projectId: string) => {
+    setCloudActionLoading(`load-${projectId}`);
+    const { session: loadedSession, error } = await loadProject(projectId);
+    if (error) {
+      console.error("Failed to load project:", error);
+    } else if (loadedSession) {
+      importSession(loadedSession);
+    }
+    setCloudActionLoading(null);
+    setShowCloudMenu(false);
+  }, [loadProject, importSession]);
+
+  // Create a new project from the cloud menu
+  const handleCreateProject = useCallback(async () => {
+    if (!newProjectName.trim()) return;
+
+    setCloudActionLoading("create");
+    const { project, error } = await createProject(
+      newProjectName.trim(),
+      undefined,
+      session.mode
+    );
+
+    if (error) {
+      console.error("Failed to create project:", error);
+    } else if (project) {
+      // Optionally save current session to the new project
+      if (populateWithSession) {
+        await saveProject(project.id, session);
+      }
+      setCurrentProjectId(project.id);
+      markLocalUpdate();
+    }
+
+    setNewProjectName("");
+    setIsCreatingProject(false);
+    setPopulateWithSession(false);
+    setCloudActionLoading(null);
+    setShowCloudMenu(false);
+  }, [newProjectName, session, createProject, saveProject, setCurrentProjectId, markLocalUpdate, populateWithSession]);
 
   // Confirm save from modal
   const handleConfirmSave = useCallback(() => {
@@ -807,6 +952,10 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
         setShowModeDropdown(false);
         setShowExperienceHelp(false);
         setShowFontSizePopover(false);
+        setShowCloudMenu(false);
+        setShowProjectInfo(false);
+        setIsCreatingProject(false);
+        setNewProjectName("");
       }
       // Close code input panel if clicking outside of it
       if (!target.closest('[data-code-input]')) {
@@ -949,8 +1098,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="border-b border-parchment bg-background px-4 py-1 flex items-center justify-between z-10 relative">
-        <div className="flex items-center gap-4">
+      <header className="border-b border-parchment bg-background px-2 sm:px-4 py-1 flex items-center justify-between z-10 relative min-w-0">
+        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
           <button
             onClick={onNavigateHome}
             className="font-display text-sm text-ink hover:text-burgundy transition-colors"
@@ -1002,8 +1151,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
               </div>
             )}
           </div>
-          {/* Experience level indicator - clickable to change */}
-          <div className="relative" data-dropdown>
+          {/* Experience level indicator - clickable to change (hidden on narrow screens) */}
+          <div className="relative hidden md:block" data-dropdown>
             <button
               onClick={() => setShowExperienceHelp(!showExperienceHelp)}
               className="font-sans text-[10px] text-slate hover:text-ink px-2 py-0.5 border border-parchment hover:border-slate-muted rounded-sm transition-colors flex items-center gap-1"
@@ -1047,28 +1196,138 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           </div>
         </div>
 
-        {/* Center: Full filename with extension - click to rename */}
-        <button
-          onClick={() => {
-            const newName = prompt("Rename project:", projectName || "Untitled");
-            if (newName !== null && newName.trim()) {
-              setProjectName(newName.trim());
-            }
-          }}
-          className="absolute left-1/2 transform -translate-x-1/2 hover:bg-cream px-2 py-0.5 rounded-sm transition-colors"
-          title="Click to rename"
-        >
-          {projectName ? (
-            <span className="font-mono text-xs text-ink">
-              {projectName.replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase()}-{MODE_CODES[session.mode] || "XX"}.ccs
-            </span>
-          ) : (
-            <span className="font-mono text-xs text-slate-muted italic">
-              untitled-{MODE_CODES[session.mode] || "XX"}.ccs
-            </span>
-          )}
-        </button>
-        <div className="flex items-center gap-1">
+        {/* Center: Project/session name - shows cloud project name when connected, otherwise local session name */}
+        {currentProjectId ? (
+          // Cloud project: clickable name with info dropdown
+          <div className="hidden sm:block absolute left-1/2 transform -translate-x-1/2" data-dropdown ref={projectInfoRef}>
+            <button
+              onClick={() => setShowProjectInfo(!showProjectInfo)}
+              className={cn(
+                "flex items-center gap-1 px-2 py-0.5 rounded-sm transition-colors max-w-[200px]",
+                showProjectInfo ? "bg-cream" : "hover:bg-cream"
+              )}
+              title="Click for project info"
+            >
+              <span className="font-mono text-xs text-ink font-medium truncate">
+                {currentProject?.name || "Cloud Project"}
+              </span>
+              <ChevronDown className={cn("h-2.5 w-2.5 text-slate transition-transform flex-shrink-0", showProjectInfo && "rotate-180")} strokeWidth={1.5} />
+            </button>
+
+            {/* Project Info Dropdown */}
+            {showProjectInfo && currentProject && (
+              <div className={cn(
+                "absolute top-full left-1/2 -translate-x-1/2 mt-1 z-50",
+                "w-[280px] py-2 px-3",
+                "bg-card rounded-lg shadow-lg border border-parchment"
+              )}>
+                {/* Project Name */}
+                <h3 className="font-serif text-sm font-medium text-ink mb-2 truncate">
+                  {currentProject.name}
+                </h3>
+
+                {/* Owner */}
+                <div className="flex items-center gap-2 mb-2 text-[11px]">
+                  {user?.id === currentProject.owner_id ? (
+                    <>
+                      <Shield className="h-3 w-3 text-slate" />
+                      <span className="text-ink font-medium">You own this project</span>
+                    </>
+                  ) : currentProject.owner ? (
+                    <>
+                      <Users className="h-3 w-3 text-slate" />
+                      <span className="text-slate">
+                        Shared by <span className="text-ink">{currentProject.owner.display_name}</span>
+                        {currentProject.owner.affiliation && (
+                          <span className="text-slate/60"> ({currentProject.owner.affiliation})</span>
+                        )}
+                      </span>
+                    </>
+                  ) : null}
+                </div>
+
+                {/* Description */}
+                {currentProject.description && (
+                  <p className="text-[11px] text-slate mb-2 line-clamp-2">
+                    {currentProject.description}
+                  </p>
+                )}
+
+                {/* Stats */}
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate/70 mb-2 py-2 border-t border-b border-parchment">
+                  <span className="flex items-center gap-1">
+                    <FileCode className="h-3 w-3" />
+                    {session.codeFiles.length} files
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MessageSquareText className="h-3 w-3" />
+                    {session.lineAnnotations?.length || 0} annotations
+                  </span>
+                  <span className={cn(
+                    "inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium",
+                    MODE_COLORS[currentProject.mode as keyof typeof MODE_COLORS] || "bg-slate/10 text-slate"
+                  )}>
+                    {MODE_LABELS[currentProject.mode as keyof typeof MODE_LABELS] || currentProject.mode}
+                  </span>
+                </div>
+
+                {/* Dates */}
+                <div className="flex flex-col gap-1 text-[10px] text-slate/70 mb-3">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Created: {new Date(currentProject.created_at).toLocaleDateString()}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Modified: {new Date(currentProject.updated_at).toLocaleDateString()}
+                  </span>
+                </div>
+
+                {/* Actions */}
+                {user?.id === currentProject.owner_id && (
+                  <button
+                    onClick={() => {
+                      setShowProjectInfo(false);
+                      setMembersModalProjectId(currentProject.id);
+                      setShowMembersModal(true);
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded",
+                      "text-[11px] font-medium text-burgundy",
+                      "bg-burgundy/10 hover:bg-burgundy/20 transition-colors"
+                    )}
+                  >
+                    <UserPlus className="h-3 w-3" />
+                    Manage Members
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          // Local session: editable name with .ccs extension
+          <button
+            onClick={() => {
+              const newName = prompt("Rename project:", projectName || "Untitled");
+              if (newName !== null && newName.trim()) {
+                setProjectName(newName.trim());
+              }
+            }}
+            className="hidden sm:block absolute left-1/2 transform -translate-x-1/2 hover:bg-cream px-2 py-0.5 rounded-sm transition-colors max-w-[200px] truncate"
+            title="Click to rename"
+          >
+            {projectName ? (
+              <span className="font-mono text-xs text-ink">
+                {projectName.replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase()}-{MODE_CODES[session.mode] || "XX"}.ccs
+              </span>
+            ) : (
+              <span className="font-mono text-xs text-slate-muted italic">
+                untitled-{MODE_CODES[session.mode] || "XX"}.ccs
+              </span>
+            )}
+          </button>
+        )}
+        <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
           <input
             ref={sessionLoadInputRef}
             type="file"
@@ -1078,8 +1337,14 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           />
           <button
             onClick={() => setShowNewProjectModal(true)}
-            className="p-1.5 text-slate hover:text-ink"
-            title="New project"
+            disabled={!!currentProjectId}
+            className={cn(
+              "hidden sm:block p-1.5 transition-colors",
+              currentProjectId
+                ? "text-slate/40 cursor-not-allowed"
+                : "text-slate hover:text-ink"
+            )}
+            title={currentProjectId ? "Exit cloud project to create new local session" : "New project"}
           >
             <FilePlus2 className="h-4 w-4" strokeWidth={1.5} />
           </button>
@@ -1092,12 +1357,18 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           </button>
           <button
             onClick={() => sessionLoadInputRef.current?.click()}
-            className="p-1.5 text-slate hover:text-ink"
-            title="Load session"
+            disabled={!!currentProjectId}
+            className={cn(
+              "hidden sm:block p-1.5 transition-colors",
+              currentProjectId
+                ? "text-slate/40 cursor-not-allowed"
+                : "text-slate hover:text-ink"
+            )}
+            title={currentProjectId ? "Exit cloud project to load local session" : "Load session"}
           >
             <FolderOpen className="h-4 w-4" strokeWidth={1.5} />
           </button>
-          <div className="w-px h-4 bg-parchment mx-1" />
+          <div className="hidden sm:block w-px h-4 bg-parchment mx-1" />
           <button onClick={() => setShowExportModal(true)} className="p-1.5 text-slate hover:text-ink" title="Export session log">
             <Download className="h-4 w-4" strokeWidth={1.5} />
           </button>
@@ -1124,9 +1395,315 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           >
             {!aiEnabled ? "AI: Off" : connectionStatus === "success" ? "AI: On" : "AI: ??"}
           </button>
-          <div className="w-px h-4 bg-parchment mx-1" />
-          {/* Help button - opens help popover */}
-          <div className="relative">
+          {/* Cloud projects button - next to AI status */}
+          <div className="relative" data-dropdown>
+            <button
+              onClick={() => {
+                if (!isAuthenticated) {
+                  setShowLoginModal(true);
+                } else {
+                  setShowCloudMenu(!showCloudMenu);
+                }
+              }}
+              className={cn(
+                "p-1.5 rounded-sm transition-colors",
+                showCloudMenu
+                  ? "bg-cream"
+                  : "hover:bg-cream"
+              )}
+              title={
+                !isAuthenticated
+                  ? "Sign in to collaborate"
+                  : currentProjectId
+                    ? `Connected to ${currentProject?.name || "cloud project"}`
+                    : "Not connected to cloud project"
+              }
+            >
+              {/* CloudOff = logged out, Cloud = logged in, CloudCog = connected to project */}
+              {!isAuthenticated ? (
+                <CloudOff className="h-4 w-4 text-slate/40" strokeWidth={1.5} />
+              ) : currentProjectId ? (
+                <CloudCog className="h-4 w-4 text-ink" strokeWidth={1.5} />
+              ) : (
+                <Cloud className="h-4 w-4 text-slate" strokeWidth={1.5} />
+              )}
+            </button>
+            {showCloudMenu && isAuthenticated && (
+              <div className="absolute top-full right-0 mt-1 z-50 min-w-[220px] max-w-[280px] w-[280px] bg-popover rounded-sm shadow-lg border border-parchment p-1">
+                {/* New Project section at top */}
+                {isCreatingProject ? (
+                  <div className="px-2 py-2 border-b border-parchment">
+                    <input
+                      type="text"
+                      value={newProjectName}
+                      onChange={(e) => setNewProjectName(e.target.value)}
+                      placeholder="Project name"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleCreateProject();
+                        } else if (e.key === "Escape") {
+                          setIsCreatingProject(false);
+                          setNewProjectName("");
+                        }
+                      }}
+                      className={cn(
+                        "w-full px-2 py-1 mb-2 text-[11px] text-ink",
+                        "bg-cream border border-parchment rounded-sm",
+                        "focus:outline-none focus:ring-1 focus:ring-burgundy focus:border-burgundy"
+                      )}
+                    />
+                    <div className="flex gap-1">
+                      <button
+                        onClick={handleCreateProject}
+                        disabled={!newProjectName.trim() || cloudActionLoading === "create"}
+                        className={cn(
+                          "flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-sm",
+                          "text-[11px]",
+                          "bg-burgundy/10 text-burgundy hover:bg-burgundy/20",
+                          "transition-colors disabled:opacity-50"
+                        )}
+                      >
+                        {cloudActionLoading === "create" ? (
+                          <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                        ) : (
+                          "Create"
+                        )}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsCreatingProject(false);
+                          setNewProjectName("");
+                        }}
+                        className={cn(
+                          "px-2 py-1.5 rounded-sm text-[11px]",
+                          "text-slate-muted hover:text-ink hover:bg-cream",
+                          "transition-colors"
+                        )}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="px-2 py-1.5 flex items-center justify-between gap-2 border-b border-parchment">
+                    <label className="flex items-center gap-1.5 cursor-pointer group">
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          checked={populateWithSession}
+                          onChange={(e) => setPopulateWithSession(e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className={cn(
+                          "w-3 h-3 border rounded-sm transition-all",
+                          populateWithSession
+                            ? "bg-burgundy border-burgundy"
+                            : "bg-cream border-parchment-dark group-hover:border-burgundy/50"
+                        )}>
+                          {populateWithSession && (
+                            <svg className="w-full h-full text-ivory" viewBox="0 0 16 16" fill="none">
+                              <path d="M4 8L7 11L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-[9px] text-slate-muted group-hover:text-ink transition-colors">
+                        Keep current project
+                      </span>
+                    </label>
+                    <button
+                      onClick={() => setIsCreatingProject(true)}
+                      className={cn(
+                        "flex items-center justify-center gap-1 px-2 py-1.5 rounded-sm",
+                        "text-[11px]",
+                        "bg-burgundy/10 text-burgundy hover:bg-burgundy/20",
+                        "transition-colors"
+                      )}
+                    >
+                      <Plus className="h-2.5 w-2.5" />
+                      New
+                    </button>
+                  </div>
+                )}
+
+                {/* Divider before projects list */}
+                <div className="border-t border-parchment my-1" />
+
+                {/* Projects list */}
+                <div className="max-h-[200px] overflow-y-auto">
+                  {isLoadingProjects ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin text-slate-muted" />
+                    </div>
+                  ) : projects.length === 0 ? (
+                    <div className="px-2 py-3 text-center">
+                      <p className="text-[11px] text-slate-muted">No projects yet</p>
+                    </div>
+                  ) : (
+                    projects.map((project) => {
+                      const isCurrentProject = currentProjectId === project.id;
+                      const isOwner = user?.id === project.owner_id;
+                      return (
+                        <div
+                          key={project.id}
+                          className={cn(
+                            "flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm",
+                            isCurrentProject
+                              ? "bg-burgundy/10 border-l-2 border-burgundy"
+                              : "hover:bg-cream"
+                          )}
+                        >
+                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                            {isCurrentProject && (
+                              <Check className="h-3 w-3 text-burgundy flex-shrink-0" strokeWidth={2} />
+                            )}
+                            {/* Owner/member indicator */}
+                            {isOwner ? (
+                              <Shield className="h-2.5 w-2.5 text-slate/40 flex-shrink-0" />
+                            ) : (
+                              <User className="h-2.5 w-2.5 text-slate/40 flex-shrink-0" />
+                            )}
+                            <div className="min-w-0 max-w-[160px]">
+                              <span
+                                className={cn(
+                                  "text-[11px] truncate block font-medium",
+                                  isCurrentProject ? "text-burgundy" : "text-ink"
+                                )}
+                                title={project.name}
+                              >
+                                {project.name}
+                              </span>
+                              {!isOwner && project.owner && (
+                                <span className="text-[9px] text-slate-muted">
+                                  by {project.owner.display_name || project.owner.initials}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            {/* Owner actions - only show for current project */}
+                            {isCurrentProject && isOwner && (
+                              <div className="flex items-center gap-1 mr-1.5 border-r border-parchment pr-2">
+                                <button
+                                  onClick={() => {
+                                    setMembersModalProjectId(project.id);
+                                    setShowMembersModal(true);
+                                    setShowCloudMenu(false);
+                                  }}
+                                  className={cn(
+                                    "flex items-center justify-center p-1 rounded",
+                                    "text-slate/40 hover:text-burgundy hover:bg-burgundy/5",
+                                    "transition-colors cursor-pointer"
+                                  )}
+                                  title="Manage members"
+                                >
+                                  <Users className="h-3 w-3" />
+                                </button>
+                              </div>
+                            )}
+                            {/* Join/Leave button */}
+                            {isCurrentProject ? (
+                              <button
+                                onClick={async () => {
+                                  // Save using saveProject (includes README update)
+                                  if (currentProjectId) {
+                                    await saveProject(currentProjectId, session);
+                                  }
+                                  setCurrentProjectId(null);
+                                  resetSession();
+                                  setShowCloudMenu(false);
+                                }}
+                                className={cn(
+                                  "flex items-center justify-center gap-1 px-2 py-1.5 rounded-sm",
+                                  "text-[11px] text-slate-muted hover:text-error hover:bg-cream",
+                                  "transition-colors"
+                                )}
+                              >
+                                <LogOut className="h-2.5 w-2.5" />
+                                Leave
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleLoadProject(project.id)}
+                                disabled={!!cloudActionLoading}
+                                className={cn(
+                                  "flex items-center justify-center gap-1 px-2 py-1.5 rounded-sm",
+                                  "text-[11px] bg-burgundy/10 text-burgundy hover:bg-burgundy/20",
+                                  "transition-colors disabled:opacity-50"
+                                )}
+                              >
+                                {cloudActionLoading === `load-${project.id}` ? (
+                                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                                ) : (
+                                  <LogIn className="h-2.5 w-2.5" />
+                                )}
+                                Join
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Save/Refresh icons (only when in a project) */}
+                {currentProjectId && (
+                  <>
+                    <div className="border-t border-parchment mt-1" />
+                    <div className="flex items-center justify-center gap-3 px-2 py-1.5">
+                      <button
+                        onClick={() => {
+                          handleSaveToCloud();
+                          setShowCloudMenu(false);
+                        }}
+                        disabled={isSavingToCloud}
+                        title="Save to cloud"
+                        className={cn(
+                          "flex items-center gap-1 px-1.5 py-1 rounded-sm",
+                          "text-[10px] text-slate-muted hover:text-ink",
+                          "hover:bg-cream transition-colors",
+                          "disabled:opacity-50"
+                        )}
+                      >
+                        {isSavingToCloud ? (
+                          <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                        ) : (
+                          <Save className="h-2.5 w-2.5" />
+                        )}
+                        Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleRefreshFromCloud();
+                          setShowCloudMenu(false);
+                        }}
+                        disabled={isRefreshingFromCloud}
+                        title="Refresh from cloud"
+                        className={cn(
+                          "flex items-center gap-1 px-1.5 py-1 rounded-sm",
+                          "text-[10px] text-slate-muted hover:text-ink",
+                          "hover:bg-cream transition-colors",
+                          "disabled:opacity-50"
+                        )}
+                      >
+                        {isRefreshingFromCloud ? (
+                          <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-2.5 w-2.5" />
+                        )}
+                        Refresh
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="hidden sm:block w-px h-4 bg-parchment mx-1" />
+          {/* Help button - opens help popover (hidden on narrow screens) */}
+          <div className="relative hidden sm:block">
             <button
               onClick={() => setShowHelpPopover(!showHelpPopover)}
               className={cn(
@@ -1200,6 +1777,14 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           >
             <Settings className="h-4 w-4" strokeWidth={1.5} />
           </button>
+          {/* User menu - shows avatar dropdown when logged in */}
+          <UserMenu
+            className="ml-1"
+            onProfileClick={() => {
+              setSettingsTab("profile");
+              setShowSettingsModal(true);
+            }}
+          />
         </div>
       </header>
 
@@ -1256,6 +1841,11 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
               }
             }}
             userInitials={profile.initials}
+            onAddLineAnnotation={addLineAnnotation}
+            onUpdateLineAnnotation={updateLineAnnotation}
+            onRemoveLineAnnotation={removeLineAnnotation}
+            onClearLineAnnotations={clearLineAnnotations}
+            newRemoteAnnotationIds={newRemoteAnnotationIds}
           />
         </div>
 

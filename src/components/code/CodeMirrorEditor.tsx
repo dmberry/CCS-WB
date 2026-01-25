@@ -62,6 +62,10 @@ export interface CodeMirrorEditorProps {
   annotationDisplaySettings?: AnnotationDisplaySettings;
   /** Callback when cursor position changes (line, column) */
   onCursorPositionChange?: (line: number, column: number) => void;
+  /** IDs of annotations that just arrived from remote (for yellow flash animation) */
+  newRemoteAnnotationIds?: Set<string>;
+  /** User initials for "signed as" display in annotation editor */
+  userInitials?: string;
   /** CSS class for the container */
   className?: string;
 }
@@ -83,6 +87,8 @@ export function CodeMirrorEditor({
   highlightedAnnotationType,
   annotationDisplaySettings,
   onCursorPositionChange,
+  newRemoteAnnotationIds,
+  userInitials,
   className,
 }: CodeMirrorEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -196,7 +202,9 @@ export function CodeMirrorEditor({
               inlineEditState,
               inlineEditCallbacks,
               highlightedAnnotationType,
-              annotationDisplaySettings
+              annotationDisplaySettings,
+              newRemoteAnnotationIds,
+              userInitials
             )
           : []
       ),
@@ -378,12 +386,14 @@ export function CodeMirrorEditor({
               inlineEditState,
               inlineEditCallbacks,
               highlightedAnnotationType,
-              annotationDisplaySettings
+              annotationDisplaySettings,
+              newRemoteAnnotationIds,
+              userInitials
             )
           : []
       ),
     });
-  }, [annotations, readOnly, stableOnEdit, stableOnDelete, isDark, inlineEditState, inlineEditCallbacks, highlightedAnnotationType, annotationDisplaySettings]);
+  }, [annotations, readOnly, stableOnEdit, stableOnDelete, isDark, inlineEditState, inlineEditCallbacks, highlightedAnnotationType, annotationDisplaySettings, newRemoteAnnotationIds, userInitials]);
 
   // Update highlight annotated lines extension when setting or annotations change
   useEffect(() => {

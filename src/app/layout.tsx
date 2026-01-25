@@ -5,7 +5,11 @@ import { SessionProvider } from "@/context/SessionContext";
 import { AISettingsProvider } from "@/context/AISettingsContext";
 import { AppSettingsProvider } from "@/context/AppSettingsContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { ProjectsProvider } from "@/context/ProjectsContext";
 import { LoginModal } from "@/components/auth/LoginModal";
+import { ProjectsModal } from "@/components/projects/ProjectsModal";
+import { MembersModal } from "@/components/projects/MembersModal";
+import { ProjectSyncBanner } from "@/components/projects/ProjectSyncBanner";
 
 const libreBaskerville = Libre_Baskerville({
   subsets: ["latin"],
@@ -31,17 +35,30 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "CCS Workbench",
+  title: "Critical Code Studies Workbench",
   description:
-    "Critical Code Studies Laboratory: Close reading and hermeneutic analysis of software as cultural artefact",
+    "Annotation and digital methods for the hermeneutic analysis of code. Available as a web app or desktop application.",
   keywords: [
     "critical code studies",
     "code hermeneutics",
     "software analysis",
     "code archaeology",
     "digital humanities",
-    "code critique",
+    "code annotation",
   ],
+  openGraph: {
+    title: "Critical Code Studies Workbench",
+    description:
+      "Annotation and digital methods for the hermeneutic analysis of code. Available as a web app or desktop application.",
+    type: "website",
+    siteName: "CCS Workbench",
+  },
+  twitter: {
+    card: "summary",
+    title: "Critical Code Studies Workbench",
+    description:
+      "Annotation and digital methods for the hermeneutic analysis of code.",
+  },
 };
 
 export default function RootLayout({
@@ -53,12 +70,43 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${libreBaskerville.variable} ${sourceSerif.variable} ${inter.variable}`}
+      suppressHydrationWarning
     >
+      <head>
+        {/* Inline script to prevent dark mode flash - runs before React hydration */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var stored = localStorage.getItem('ccs-wb-settings');
+                  if (stored) {
+                    var parsed = JSON.parse(stored);
+                    var theme = parsed.settings && parsed.settings.theme;
+                    var isDark = theme === 'dark' ||
+                      (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                    if (isDark) {
+                      document.documentElement.classList.add('dark');
+                    }
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="font-body antialiased bg-ivory text-ink selection:bg-burgundy/20 selection:text-burgundy-900">
         <AppSettingsProvider>
           <AISettingsProvider>
             <AuthProvider>
-              <SessionProvider>{children}</SessionProvider>
+              <SessionProvider>
+                <ProjectsProvider>
+                  {children}
+                  <ProjectsModal />
+                  <MembersModal />
+                  <ProjectSyncBanner />
+                </ProjectsProvider>
+              </SessionProvider>
               <LoginModal />
             </AuthProvider>
           </AISettingsProvider>

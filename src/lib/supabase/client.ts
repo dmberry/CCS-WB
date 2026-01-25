@@ -30,8 +30,24 @@ export function getSupabaseClient(): SupabaseClient<Database> | null {
     return null;
   }
 
-  // Create and cache the client
-  supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey);
+  // Create and cache the client with resilient auth settings
+  supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      // Use a no-op lock to prevent AbortError from Web Locks API timing out on slow connections
+      // This disables cross-tab synchronization but makes auth more resilient
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => {
+        // Just execute the function without acquiring a lock
+        return await fn();
+      },
+      // Detect session from URL (for OAuth callbacks)
+      detectSessionInUrl: true,
+      // Persist session in localStorage
+      persistSession: true,
+      // Auto-refresh tokens
+      autoRefreshToken: true,
+    },
+  });
   return supabaseClient;
 }
 

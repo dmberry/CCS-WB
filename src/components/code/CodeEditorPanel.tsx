@@ -37,6 +37,7 @@ import type { LineAnnotation, LineAnnotationType, CodeReference } from "@/types"
 import { PROGRAMMING_LANGUAGES } from "@/types/app-settings";
 import { CodeMirrorEditor } from "./CodeMirrorEditor";
 import type { InlineEditState, InlineEditCallbacks } from "./cm-annotations";
+import { ConfirmDialog } from "../shared/ConfirmDialog";
 
 interface CodeEditorPanelProps {
   codeFiles: CodeReference[];
@@ -56,6 +57,13 @@ interface CodeEditorPanelProps {
   onToggleFullScreen?: () => void; // Callback to toggle full screen mode
   onRequestMinPanelWidth?: (minWidthPercent: number) => void; // Request minimum panel width (for auto-extend)
   userInitials?: string; // User initials to store with annotations (for multi-user support)
+  // Annotation methods (optional - falls back to useSession if not provided)
+  onAddLineAnnotation?: (annotation: Omit<LineAnnotation, "id" | "createdAt">) => void;
+  onUpdateLineAnnotation?: (id: string, updates: Partial<Omit<LineAnnotation, "id" | "codeFileId" | "createdAt">>) => void;
+  onRemoveLineAnnotation?: (id: string) => void;
+  onClearLineAnnotations?: (codeFileId: string) => void;
+  // Remote annotation IDs for animation (yellow flash when collaborator adds annotation)
+  newRemoteAnnotationIds?: Set<string>;
 }
 
 // Historical punch card languages that typically used 80-column format
@@ -356,14 +364,25 @@ export function CodeEditorPanel({
   onToggleFullScreen,
   onRequestMinPanelWidth,
   userInitials,
+  onAddLineAnnotation,
+  onUpdateLineAnnotation,
+  onRemoveLineAnnotation,
+  onClearLineAnnotations,
+  newRemoteAnnotationIds,
 }: CodeEditorPanelProps) {
   const {
     session,
-    addLineAnnotation,
-    updateLineAnnotation,
-    removeLineAnnotation,
-    clearLineAnnotations,
+    addLineAnnotation: sessionAddLineAnnotation,
+    updateLineAnnotation: sessionUpdateLineAnnotation,
+    removeLineAnnotation: sessionRemoveLineAnnotation,
+    clearLineAnnotations: sessionClearLineAnnotations,
   } = useSession();
+
+  // Use prop methods if provided, otherwise fall back to session methods
+  const addLineAnnotation = onAddLineAnnotation ?? sessionAddLineAnnotation;
+  const updateLineAnnotation = onUpdateLineAnnotation ?? sessionUpdateLineAnnotation;
+  const removeLineAnnotation = onRemoveLineAnnotation ?? sessionRemoveLineAnnotation;
+  const clearLineAnnotations = onClearLineAnnotations ?? sessionClearLineAnnotations;
 
   const [selectedFileId, setSelectedFileId] = useState<string | null>(
     codeFiles.length > 0 ? codeFiles[0].id : null
@@ -371,15 +390,28 @@ export function CodeEditorPanel({
   const [editorMode, setEditorMode] = useState<EditorMode>("annotate");
   // Store the "clean" code (without embedded annotations) for edit mode
   const [editModeCode, setEditModeCode] = useState<string>("");
-  // Track previous file count to detect new files being added
-  const prevFileCountRef = useRef(codeFiles.length);
+  // Track previous file IDs to detect which files were newly added
+  const prevFileIdsRef = useRef<Set<string>>(new Set(codeFiles.map(f => f.id)));
 
-  // Auto-select newly added files, or first file if none selected
+  // Auto-select newly added LOCAL files, or first file if none selected
+  // Don't auto-select files added by remote collaborators (source === "shared")
   useEffect(() => {
     if (codeFiles.length > 0) {
-      // If a new file was added (count increased), select the newest one (last in array)
-      if (codeFiles.length > prevFileCountRef.current) {
-        setSelectedFileId(codeFiles[codeFiles.length - 1].id);
+      const currentIds = new Set(codeFiles.map(f => f.id));
+      const prevIds = prevFileIdsRef.current;
+
+      // Find newly added files (in current but not in previous)
+      const newFiles = codeFiles.filter(f => !prevIds.has(f.id));
+
+      if (newFiles.length > 0) {
+        // Only auto-select if the new file is local (not from a collaborator)
+        // Files from collaborators have source === "shared"
+        const localNewFiles = newFiles.filter(f => f.source !== "shared");
+        if (localNewFiles.length > 0) {
+          // Select the last locally-added file
+          setSelectedFileId(localNewFiles[localNewFiles.length - 1].id);
+        }
+        // If only shared files were added, keep current selection
       } else {
         // If no file selected or selected file no longer exists, select the first one
         const selectedExists = codeFiles.some((f) => f.id === selectedFileId);
@@ -387,10 +419,13 @@ export function CodeEditorPanel({
           setSelectedFileId(codeFiles[0].id);
         }
       }
+
+      // Update tracking ref
+      prevFileIdsRef.current = currentIds;
     } else {
       setSelectedFileId(null);
+      prevFileIdsRef.current = new Set();
     }
-    prevFileCountRef.current = codeFiles.length;
   }, [codeFiles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [editingLine, setEditingLine] = useState<number | null>(null);
@@ -402,6 +437,7 @@ export function CodeEditorPanel({
   const [editType, setEditType] = useState<LineAnnotationType>("observation");
   const [showAnnotationHelp, setShowAnnotationHelp] = useState(false);
   const [fileMenuOpen, setFileMenuOpen] = useState<string | null>(null);
+  const [deleteConfirmFile, setDeleteConfirmFile] = useState<{ id: string; name: string } | null>(null);
   const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [showDisplaySettings, setShowDisplaySettings] = useState(false);
@@ -1350,15 +1386,10 @@ export function CodeEditorPanel({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm(`Delete "${file.name}"?`)) {
-                                  onDeleteFile?.(file.id);
-                                  if (selectedFileId === file.id) {
-                                    setSelectedFileId(sortedFiles.find(f => f.id !== file.id)?.id || null);
-                                  }
-                                }
+                                setDeleteConfirmFile({ id: file.id, name: file.name });
                                 setFileMenuOpen(null);
                               }}
-                              className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-error hover:bg-red-50"
+                              className="w-full flex items-center gap-2 px-3 py-1.5 text-[10px] text-error hover:bg-red-50 dark:hover:bg-red-950/50"
                             >
                               <Trash2 className="h-3 w-3" strokeWidth={1.5} />
                               Delete
@@ -2145,6 +2176,8 @@ export function CodeEditorPanel({
               highlightedAnnotationType={highlightedType}
               annotationDisplaySettings={annotationDisplaySettings}
               onCursorPositionChange={isPunchCardFormat ? handleCursorPositionChange : undefined}
+              newRemoteAnnotationIds={newRemoteAnnotationIds}
+              userInitials={userInitials}
               className="flex-1"
             />
           )}
@@ -2180,6 +2213,24 @@ export function CodeEditorPanel({
           </div>
         </div>
       )}
+
+      {/* Delete file confirmation dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirmFile !== null}
+        title={`Delete "${deleteConfirmFile?.name}"?`}
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (deleteConfirmFile) {
+            onDeleteFile?.(deleteConfirmFile.id);
+            if (selectedFileId === deleteConfirmFile.id) {
+              setSelectedFileId(sortedFiles.find(f => f.id !== deleteConfirmFile.id)?.id || null);
+            }
+          }
+          setDeleteConfirmFile(null);
+        }}
+        onCancel={() => setDeleteConfirmFile(null)}
+      />
     </div>
   );
 }
