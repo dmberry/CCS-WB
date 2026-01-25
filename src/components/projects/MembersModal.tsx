@@ -46,7 +46,7 @@ export function MembersModal() {
 
   const [members, setMembers] = useState<MemberWithProfile[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
-  const [inviteRole, setInviteRole] = useState<"editor" | "viewer">("viewer");
+  const [inviteRole, setInviteRole] = useState<"editor" | "viewer">("editor");
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -89,7 +89,7 @@ export function MembersModal() {
     setInviteUrl(null);
     setCopiedLink(false);
     setError(null);
-    setInviteRole("viewer");
+    setInviteRole("editor");
   };
 
   const handleGenerateLink = async () => {
