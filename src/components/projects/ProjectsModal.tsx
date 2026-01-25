@@ -105,6 +105,17 @@ export function ProjectsModal() {
     setActionLoading("create");
     setError(null);
 
+    // If already in a project, save it first before creating new one
+    if (currentProjectId) {
+      console.log("Saving current project before creating new one:", currentProjectId);
+      await saveProject(currentProjectId, session);
+      setCurrentProjectId(null);
+      // Only reset if NOT copying current session to new project
+      if (!saveCurrentSession) {
+        resetSession();
+      }
+    }
+
     const { project, initialSession, error } = await createProject(
       newProjectName.trim(),
       newProjectDescription.trim() || undefined,
