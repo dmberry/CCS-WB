@@ -255,18 +255,20 @@ input::placeholder {
   color: #888888 !important;
 }
 
-/* === CODE EDITOR === */
+/* === CODE EDITOR - Must override * rule for monospace === */
 .cm-editor,
-pre, code {
+.cm-editor *,
+pre, code,
+pre *, code * {
   background: #ffffff !important;
   color: #000000 !important;
   border: 1px solid #000000 !important;
-  font-family: 'Monaco', 'Geneva', monospace !important;
+  font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace !important;
 }
 
 /* === HYPERCARD CREDIT BOX - Card stack widget === */
 .skin-credit-box {
-  display: block !important;
+  display: none !important;
   width: 180px;
   background: #ffffff;
   border: 2px solid #000000;

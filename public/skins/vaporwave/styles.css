@@ -242,7 +242,7 @@ pre, code {
 
 /* === VAPORWAVE CREDIT BOX === */
 .skin-credit-box {
-  display: block !important;
+  display: none !important;
   width: 180px;
   background: linear-gradient(180deg, #2d1b4e 0%, #16213e 100%);
   border: 2px solid #ff71ce;

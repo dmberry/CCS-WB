@@ -255,7 +255,7 @@ pre, code {
 
 /* === TEAMS CREDIT BOX - "Meeting" widget === */
 .skin-credit-box {
-  display: block !important;
+  display: none !important;
   width: 200px;
   background: #ffffff;
   border: 1px solid #e0e0e0;

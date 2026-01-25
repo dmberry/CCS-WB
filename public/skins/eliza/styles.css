@@ -267,7 +267,7 @@ pre, code {
 
 /* === ELIZA CREDIT BOX === */
 .skin-credit-box {
-  display: block !important;
+  display: none !important;
   width: 200px;
   background: #001a00;
   border: 1px solid #00ff00;

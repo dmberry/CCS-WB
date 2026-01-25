@@ -227,7 +227,7 @@ pre, code {
 
 /* === C64 CREDIT BOX === */
 .skin-credit-box {
-  display: block !important;
+  display: none !important;
   width: 200px;
   background: #4040a0;
   border: 4px solid #a0a0ff;

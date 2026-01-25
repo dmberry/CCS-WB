@@ -781,9 +781,6 @@ export function SettingsModal({
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h3 className="font-display text-caption text-ink">Custom Skins</h3>
-                    <p className="font-sans text-[10px] text-slate-muted">
-                      Load custom visual themes from <code className="font-mono text-[9px] bg-cream px-1 rounded">public/skins/</code>
-                    </p>
                   </div>
                   <button
                     onClick={() => setSkinsEnabled(!skinsEnabled)}

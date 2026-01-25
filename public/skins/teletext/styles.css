@@ -229,7 +229,7 @@ pre, code {
 
 /* === CEEFAX CREDIT BOX === */
 .skin-credit-box {
-  display: block !important;
+  display: none !important;
   width: 200px;
   background: #0000aa;
   border: 3px solid #ffff00;
