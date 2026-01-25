@@ -24,8 +24,7 @@ import { useAppSettings } from "@/context/AppSettingsContext";
 import { getCCSTheme, getFontSizeTheme } from "./cm-theme";
 import { loadLanguage, normaliseLanguage, getLanguageColor } from "./cm-languages";
 import { createSimpleAnnotationsExtension, createAnnotateGutter, createHighlightAnnotatedLinesExtension, createSubtleAnnotationHighlightExtension, InlineEditState, InlineEditCallbacks } from "./cm-annotations";
-import type { LineAnnotation, LineAnnotationType } from "@/types";
-import type { AnnotationDisplaySettings } from "./CodeEditorPanel";
+import type { LineAnnotation, LineAnnotationType, AnnotationDisplaySettings } from "@/types";
 
 export interface CodeMirrorEditorProps {
   /** The code content to display */
