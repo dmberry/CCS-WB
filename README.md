@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 2.5.1** | CCS Methodology v2.5
+**Version 2.6.0** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -110,6 +110,7 @@ Models can be customised by editing `public/models.md`. Add or remove models wit
 ### Appearance
 - **Dark mode**: Light, dark, or system-matched themes via Settings → Appearance
 - **Theme colours**: Six accent colour palettes (Burgundy, Forest, Navy, Plum, Rust, Slate) that tint both UI elements and backgrounds
+- **Custom skins**: Nostalgic visual themes (Myspace included) with custom colours, fonts, and Clippy messages; create your own skins in `public/skins/`
 - **Customisable fonts**: Adjust code, chat, and UI font sizes independently
 
 ### Keyboard Shortcuts
@@ -252,7 +253,9 @@ CCS-WB/
 ├── Critical-Code-Studies-Skill.md    # CCS methodology v2.5
 ├── CCS-Bibliography.md               # Reference bibliography
 └── public/
-    └── models.md                     # User-editable AI models config
+    ├── models.md                     # User-editable AI models config
+    ├── assets/icons/                 # Shared retro icons for skins
+    └── skins/                        # Custom visual themes (see README)
 ```
 
 ## Critical Code Studies Methodology
@@ -284,6 +287,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 2.6.0 | **Custom skins**: Retro-themed visual skins system with nostalgic Myspace skin included, skin-aware Clippy with custom messages, shared retro icons, skin credit box support; enable in Settings → Appearance |
 | 2.5.1 | **Easter eggs**: Hidden features for the discerning scholar (try typing "clippy" or "hacker" anywhere outside text fields) |
 | 2.5.0 | **File management & display settings**: New File button creates blank markdown files, Commit Changes saves current content as new base version, Download ZIP exports project with code files and annotations, OAuth redirect preserves current page, display settings (annotation font/indent/brightness, panel layout) persist per-project, files pane font size setting, Safari tab suspension fixes |
 | 2.4.0 | **Cloud collaboration**: Supabase-powered project sharing with OAuth (Google, GitHub, Apple), shareable invite links, member management modal, real-time annotation and code sync with 5-second polling, staleness detection prevents overwriting collaborators' changes, user profiles with initials attribution on annotations |

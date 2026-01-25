@@ -5,7 +5,7 @@
  */
 
 /** Application version - sourced from next.config.js env at build time */
-export const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "1.8.2";
+export const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "2.6.0";
 
 /** Fetch latest version from API (for client components that need live updates) */
 export async function getAppVersion(): Promise<string> {
