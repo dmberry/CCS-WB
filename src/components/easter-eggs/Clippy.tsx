@@ -149,7 +149,7 @@ export function Clippy() {
     return messages[randomIndex];
   }, [isHackerman, usedMessages]);
 
-  // Secret activation: Type "clippy" or "hacker" anywhere
+  // Secret activation: Type "clippy" or "hacker" anywhere, or via custom event
   useEffect(() => {
     let buffer = "";
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -185,8 +185,20 @@ export function Clippy() {
       }
     };
 
+    // Custom event for toggling Clippy from outside (e.g., help text click)
+    const handleToggleClippy = () => {
+      setIsVisible((prev) => !prev);
+      setPosition("corner");
+      setIsHackerman(false);
+      setUsedMessages(new Set());
+    };
+
     window.addEventListener("keypress", handleKeyPress);
-    return () => window.removeEventListener("keypress", handleKeyPress);
+    window.addEventListener("toggle-clippy", handleToggleClippy);
+    return () => {
+      window.removeEventListener("keypress", handleKeyPress);
+      window.removeEventListener("toggle-clippy", handleToggleClippy);
+    };
   }, []);
 
   // Change message periodically when visible

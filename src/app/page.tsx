@@ -369,6 +369,17 @@ export default function WelcomePage() {
                 </p>
               </section>
 
+              {/* Easter egg hint */}
+              <p className="text-[9px] text-slate-muted/50 italic mt-3 pt-3 border-t border-parchment/50">
+                It looks like you&apos;re reading the help.{" "}
+                <button
+                  onClick={() => window.dispatchEvent(new CustomEvent("toggle-clippy"))}
+                  className="underline hover:text-slate-muted cursor-pointer"
+                >
+                  Would you like help with that?
+                </button>
+              </p>
+
               {/* Close Button */}
               <div className="flex justify-end pt-2">
                 <button
