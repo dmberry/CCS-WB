@@ -1,0 +1,635 @@
+/* ELIZA Terminal - VT-220 Green Phosphor Display */
+/* MIT AI Lab, 1966 - Joseph Weizenbaum */
+/* "HELLO. I AM ELIZA. TELL ME ABOUT YOUR CODE." */
+
+/* === IMPORT TERMINAL FONT === */
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+/* === CRT SCREEN EFFECT === */
+body {
+  background-color: #001a00 !important;
+  position: relative;
+}
+
+/* Scanline overlay */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  z-index: 9999;
+}
+
+/* CRT screen curvature and vignette */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 0%,
+    transparent 60%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+  z-index: 9998;
+}
+
+/* === PHOSPHOR GLOW TEXT === */
+* {
+  font-family: 'VT323', 'Courier New', 'Lucida Console', monospace !important;
+}
+
+h1, h2, h3, h4, .font-display, p, span, label, div {
+  color: #00ff00 !important;
+  text-shadow:
+    0 0 2px #00ff00,
+    0 0 5px #00ff00,
+    0 0 10px rgba(0, 255, 0, 0.5) !important;
+}
+
+/* Dimmer text for secondary elements */
+.text-slate, .text-slate-muted, .text-muted-foreground {
+  color: #00aa00 !important;
+  text-shadow: 0 0 2px #00aa00 !important;
+}
+
+/* === TOOLBAR / HEADER === */
+header,
+header.bg-background {
+  background: #001a00 !important;
+  border-bottom: 1px solid #00ff00 !important;
+  box-shadow:
+    0 0 10px rgba(0, 255, 0, 0.3),
+    inset 0 -1px 0 rgba(0, 255, 0, 0.2) !important;
+}
+
+header *,
+header button,
+header span {
+  color: #00ff00 !important;
+}
+
+header svg {
+  color: #00ff00 !important;
+  filter: drop-shadow(0 0 2px #00ff00);
+}
+
+header button {
+  background: transparent !important;
+  border: 1px solid #004400 !important;
+}
+
+header button:hover {
+  background: rgba(0, 255, 0, 0.1) !important;
+  border-color: #00ff00 !important;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.3) !important;
+}
+
+/* Header title - terminal prompt style */
+header h1 {
+  font-size: 16px !important;
+  letter-spacing: 1px;
+  text-transform: uppercase !important;
+}
+
+header h1::before {
+  content: "> ";
+  color: #00ff00;
+  animation: blink 1s step-end infinite;
+}
+
+/* === MAIN PAGE CARDS === */
+main .grid button.group,
+main button[class*="shadow-editorial"] {
+  background: #001a00 !important;
+  border: 1px solid #00ff00 !important;
+  box-shadow:
+    0 0 5px rgba(0, 255, 0, 0.2),
+    inset 0 0 20px rgba(0, 255, 0, 0.05) !important;
+}
+
+main .grid button.group *,
+main button[class*="shadow-editorial"] * {
+  color: #00ff00 !important;
+}
+
+main .grid button.group h3 {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+main .grid button.group h3::before {
+  content: "[ ";
+}
+
+main .grid button.group h3::after {
+  content: " ]";
+}
+
+main .grid button.group:hover {
+  background: rgba(0, 255, 0, 0.05) !important;
+  box-shadow:
+    0 0 15px rgba(0, 255, 0, 0.3),
+    inset 0 0 30px rgba(0, 255, 0, 0.1) !important;
+}
+
+/* Icon containers */
+main .grid button.group > div:first-child,
+main .grid button.group .bg-cream {
+  background: #002200 !important;
+  border: 1px solid #00aa00 !important;
+}
+
+main .grid button.group > div:first-child svg,
+main .grid button.group .bg-cream svg,
+main .grid button.group svg {
+  color: #00ff00 !important;
+  filter: drop-shadow(0 0 3px #00ff00);
+}
+
+/* Load Project button */
+main button[class*="border-burgundy"] {
+  background: transparent !important;
+  border: 1px solid #00ff00 !important;
+  color: #00ff00 !important;
+}
+
+main button[class*="border-burgundy"]:hover {
+  background: rgba(0, 255, 0, 0.1) !important;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.3) !important;
+}
+
+/* === PANELS & CARDS === */
+.bg-popover,
+.bg-cream,
+.bg-card {
+  background: #001500 !important;
+  border: 1px solid #00aa00 !important;
+}
+
+/* === BUTTONS === */
+button[class*="bg-burgundy"],
+.btn-editorial {
+  background: #003300 !important;
+  border: 1px solid #00ff00 !important;
+  color: #00ff00 !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+button[class*="bg-burgundy"]:hover,
+.btn-editorial:hover {
+  background: #004400 !important;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.4) !important;
+}
+
+button[class*="bg-burgundy"]:active,
+.btn-editorial:active {
+  background: #002200 !important;
+}
+
+/* === LINKS === */
+a, [class*="text-burgundy"] {
+  color: #00ff00 !important;
+  text-decoration: underline;
+}
+
+a:hover {
+  color: #88ff88 !important;
+  text-shadow: 0 0 10px #00ff00 !important;
+}
+
+/* === SCROLLBARS - Minimal terminal style === */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #001a00;
+  border-left: 1px solid #004400;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #00aa00;
+  border: 1px solid #00ff00;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00ff00;
+  box-shadow: 0 0 5px #00ff00;
+}
+
+/* === INPUTS === */
+input, textarea, select {
+  background: #001a00 !important;
+  border: 1px solid #00aa00 !important;
+  color: #00ff00 !important;
+  caret-color: #00ff00;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: #00ff00 !important;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.3) !important;
+  outline: none !important;
+}
+
+input::placeholder {
+  color: #006600 !important;
+}
+
+/* === CODE EDITOR === */
+.cm-editor,
+pre, code {
+  background: #000a00 !important;
+  color: #00ff00 !important;
+  border: 1px solid #003300 !important;
+}
+
+/* Line numbers in green */
+.cm-lineNumbers {
+  color: #006600 !important;
+}
+
+/* === ELIZA CREDIT BOX === */
+.skin-credit-box {
+  display: block !important;
+  width: 200px;
+  background: #001a00;
+  border: 1px solid #00ff00;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+  font-family: 'VT323', monospace;
+}
+
+.skin-credit-header {
+  display: block !important;
+  background: #003300;
+  color: #00ff00 !important;
+  font-size: 14px;
+  padding: 6px 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  border-bottom: 1px solid #00ff00;
+  text-shadow: 0 0 5px #00ff00;
+}
+
+.skin-credit-header::before {
+  content: ">> ";
+}
+
+.skin-credit-content {
+  display: block !important;
+  padding: 12px;
+  text-align: left;
+}
+
+/* ELIZA prompt character */
+.skin-credit-avatar {
+  display: block !important;
+  width: 100%;
+  height: auto;
+  margin: 0 0 10px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  font-size: 12px;
+  color: #00ff00 !important;
+  text-align: left;
+}
+
+.skin-credit-avatar::before {
+  content: "MIT AI LAB\\AMAC-LISP>ELIZA\\A\\ARUN DOCTOR\\A\\A*HELLO.\\A*I AM ELIZA.\\A*PLEASE TELL ME\\A*YOUR PROBLEM.";
+  white-space: pre;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #00ff00;
+  text-shadow: 0 0 3px #00ff00;
+}
+
+.skin-credit-name {
+  display: block !important;
+  color: #00aa00 !important;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.skin-credit-name::before {
+  content: "WEIZENBAUM, J. (1966)";
+}
+
+/* Hide the default name text */
+.skin-credit-name {
+  font-size: 0;
+}
+.skin-credit-name::before {
+  font-size: 11px;
+}
+
+.skin-credit-text {
+  display: block !important;
+  font-size: 11px;
+  color: #00ff00 !important;
+}
+
+.skin-credit-text::before {
+  content: "> ";
+  animation: blink 1s step-end infinite;
+}
+
+.skin-credit-content::after {
+  content: "COMM. OF THE ACM, VOL. 9";
+  display: block;
+  margin-top: 8px;
+  font-size: 10px;
+  color: #006600;
+}
+
+/* === BLINKING CURSOR === */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Add blinking cursor to active inputs */
+input:focus::after,
+textarea:focus::after {
+  content: "█";
+  animation: blink 1s step-end infinite;
+}
+
+/* === HORIZONTAL RULES === */
+hr {
+  border: none !important;
+  height: 1px !important;
+  background: #00ff00 !important;
+  box-shadow: 0 0 5px #00ff00;
+}
+
+hr::before {
+  content: "----------------------------------------";
+  display: block;
+  color: #00ff00;
+  text-align: center;
+  font-size: 10px;
+  margin-bottom: -8px;
+  text-shadow: 0 0 3px #00ff00;
+}
+
+/* === CUSTOM TOOLBAR ICONS === */
+header button[title="New project"] svg,
+header button[title*="new local session"] svg,
+header button[title="Save session"] svg,
+header button[title="Load session"] svg,
+header button[title*="load local session"] svg,
+header button[title="Export session log"] svg,
+header button[title="Sign in to collaborate"] svg,
+header button[title*="Connected to"] svg,
+header button[title*="Not connected to cloud"] svg,
+header button[title="Interface guide"] svg,
+header button[title="Settings"] svg {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+header button[title="New project"],
+header button[title*="new local session"],
+header button[title="Save session"],
+header button[title="Load session"],
+header button[title*="load local session"],
+header button[title="Export session log"],
+header button[title="Sign in to collaborate"],
+header button[title*="Connected to"],
+header button[title*="Not connected to cloud"],
+header button[title="Interface guide"],
+header button[title="Settings"] {
+  min-width: 32px !important;
+  min-height: 32px !important;
+  background-size: 24px 24px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+header button[title="New project"],
+header button[title*="new local session"] {
+  background-image: url('/assets/icons/toolbar/new.svg') !important;
+}
+
+header button[title="Save session"] {
+  background-image: url('/assets/icons/toolbar/save.svg') !important;
+}
+
+header button[title="Load session"],
+header button[title*="load local session"] {
+  background-image: url('/assets/icons/toolbar/open.svg') !important;
+}
+
+header button[title="Export session log"] {
+  background-image: url('/assets/icons/toolbar/download.svg') !important;
+}
+
+header button[title="Sign in to collaborate"] {
+  background-image: url('/assets/icons/toolbar/cloud-off.svg') !important;
+}
+
+header button[title*="Not connected to cloud"] {
+  background-image: url('/assets/icons/toolbar/cloud.svg') !important;
+}
+
+header button[title*="Connected to"] {
+  background-image: url('/assets/icons/toolbar/cloud-cog.svg') !important;
+}
+
+header button[title="Interface guide"] {
+  background-image: url('/assets/icons/toolbar/help.svg') !important;
+}
+
+header button[title="Settings"] {
+  background-image: url('/assets/icons/toolbar/settings.svg') !important;
+}
+
+/* === INTERFACE GUIDE POPUP === */
+header .absolute.w-80 {
+  background: #001a00 !important;
+  border: 1px solid #00ff00 !important;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.3) !important;
+  color: #00ff00 !important;
+}
+
+header .absolute.w-80 h3,
+header .absolute.w-80 h4 {
+  color: #00ff00 !important;
+  text-transform: uppercase;
+}
+
+header .absolute.w-80 p,
+header .absolute.w-80 span,
+header .absolute.w-80 div {
+  color: #00ff00 !important;
+}
+
+header .absolute.w-80 strong {
+  color: #88ff88 !important;
+}
+
+header .absolute.w-80 button {
+  background: transparent !important;
+  min-width: auto !important;
+  min-height: auto !important;
+}
+
+header .absolute.w-80 button svg {
+  color: #00ff00 !important;
+  filter: drop-shadow(0 0 2px #00ff00);
+  opacity: 1 !important;
+  width: auto !important;
+  height: auto !important;
+  position: static !important;
+}
+
+/* === MAIN PAGE ICONS === */
+main header button[title="Help & Getting Started"] svg,
+main header button[title="Settings"] svg {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main header button[title="Help & Getting Started"],
+main header button[title="Settings"] {
+  min-width: 28px !important;
+  min-height: 28px !important;
+  background-size: 20px 20px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+main header button[title="Help & Getting Started"] {
+  background-image: url('/assets/icons/toolbar/help.svg') !important;
+}
+
+main header button[title="Settings"] {
+  background-image: url('/assets/icons/toolbar/settings.svg') !important;
+}
+
+/* Load Project button icon */
+main button:has(.lucide-folder-open) svg.lucide-folder-open {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main button:has(.lucide-folder-open) {
+  padding-left: 28px !important;
+  background-image: url('/assets/icons/toolbar/open.svg') !important;
+  background-size: 16px 16px !important;
+  background-repeat: no-repeat !important;
+  background-position: 8px center !important;
+}
+
+/* === ENTRY MODE CARD ICONS === */
+main .grid button.group svg.lucide-code,
+main .grid button.group svg.lucide-archive,
+main .grid button.group svg.lucide-book-open,
+main .grid button.group svg.lucide-sparkles {
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+}
+
+main .grid button.group > div:first-child {
+  background-size: 28px 28px !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+main .grid button.group:nth-child(1) > div:first-child {
+  background-image: url('/assets/icons/modes/code.svg') !important;
+}
+
+main .grid button.group:nth-child(2) > div:first-child {
+  background-image: url('/assets/icons/modes/archive.svg') !important;
+}
+
+main .grid button.group:nth-child(3) > div:first-child {
+  background-image: url('/assets/icons/modes/book.svg') !important;
+}
+
+main .grid button.group:nth-child(4) > div:first-child {
+  background-image: url('/assets/icons/modes/sparkles.svg') !important;
+}
+
+/* === FILENAME INPUT === */
+header input,
+header input[type="text"] {
+  background: #001a00 !important;
+  color: #00ff00 !important;
+  border: 1px solid #006600 !important;
+  text-shadow: 0 0 3px #00ff00;
+}
+
+header button[title="Click to rename"] {
+  background: #001a00 !important;
+  border: 1px solid #00aa00 !important;
+}
+
+header button span.font-mono,
+header span.font-mono,
+header .font-mono {
+  color: #00ff00 !important;
+  text-shadow: 0 0 5px #00ff00 !important;
+}
+
+/* === TERMINAL PROMPT STYLE FOR MESSAGES === */
+/* Add prompt character to chat messages */
+.message-content p::first-letter {
+  text-transform: uppercase;
+}
+
+/* === SUBTLE CRT FLICKER === */
+@keyframes flicker {
+  0% { opacity: 0.97; }
+  5% { opacity: 1; }
+  10% { opacity: 0.98; }
+  15% { opacity: 1; }
+  20% { opacity: 0.96; }
+  25% { opacity: 1; }
+  30% { opacity: 0.99; }
+  100% { opacity: 1; }
+}
+
+body {
+  animation: flicker 0.15s infinite;
+}
+
+/* === MODALS === */
+[class*="shadow-editorial"],
+.modal-content {
+  box-shadow: 0 0 30px rgba(0, 255, 0, 0.3) !important;
+}
+
+/* === FINAL CLEANUP === */
+.text-slate-muted {
+  background: transparent !important;
+  color: #00aa00 !important;
+  border: none !important;
+  padding: 0 !important;
+}

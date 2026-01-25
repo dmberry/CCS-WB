@@ -1,0 +1,70 @@
+{
+  "name": "ELIZA Terminal",
+  "author": "Dr. Weizenbaum",
+  "version": "1.0",
+  "description": "HELLO. I AM ELIZA. TELL ME ABOUT YOUR CODE. A VT-220 terminal aesthetic inspired by the 1966 MIT chatbot.",
+  "mode": "dark-only",
+  "fonts": {
+    "display": "'VT323', 'Courier New', 'Lucida Console', monospace",
+    "body": "'VT323', 'Courier New', 'Lucida Console', monospace",
+    "mono": "'VT323', 'Courier New', 'Lucida Console', monospace"
+  },
+  "colors": {
+    "dark": {
+      "--ink": "120 100% 50%",
+      "--charcoal": "120 80% 40%",
+      "--slate": "120 60% 35%",
+      "--ivory": "120 100% 2%",
+      "--cream": "120 80% 4%",
+      "--parchment": "120 100% 15%",
+      "--burgundy": "120 100% 50%",
+      "--gold": "120 100% 45%",
+      "--background": "120 100% 2%",
+      "--foreground": "120 100% 50%",
+      "--popover": "120 80% 3%",
+      "--popover-foreground": "120 100% 50%",
+      "--muted": "120 50% 8%",
+      "--muted-foreground": "120 70% 35%",
+      "--border": "120 100% 25%",
+      "--input": "120 60% 6%",
+      "--primary": "120 100% 50%",
+      "--primary-foreground": "120 100% 2%",
+      "--ring": "120 100% 50%",
+      "--card": "120 80% 3%",
+      "--card-foreground": "120 100% 50%",
+      "--secondary": "120 80% 35%",
+      "--secondary-foreground": "120 100% 2%",
+      "--accent": "120 100% 40%",
+      "--accent-foreground": "120 100% 2%"
+    }
+  },
+  "clippy": {
+    "avoidCreditBox": true,
+    "messages": [
+      "TELL ME MORE ABOUT YOUR CODE.",
+      "HOW DOES THAT VARIABLE MAKE YOU FEEL?",
+      "WHY DO YOU THINK THIS FUNCTION EXISTS?",
+      "DOES THIS REMIND YOU OF ANYTHING?",
+      "PERHAPS YOU COULD ELABORATE ON THAT LOOP.",
+      "I SEE. AND WHAT DOES THAT MEAN TO YOU?",
+      "YOU SEEM CONCERNED ABOUT THIS NULL POINTER.",
+      "TELL ME ABOUT YOUR RELATIONSHIP WITH THIS API.",
+      "INTERESTING. PLEASE CONTINUE.",
+      "WE WERE DISCUSSING YOUR RECURSIVE FUNCTION.",
+      "EARLIER YOU MENTIONED AN EXCEPTION. LET'S EXPLORE THAT.",
+      "DOES TALKING ABOUT BUGS MAKE YOU UNCOMFORTABLE?",
+      "I'M NOT SURE I UNDERSTAND. CAN YOU REPHRASE THAT?",
+      "PERHAPS THIS IS REALLY ABOUT YOUR PARENT CLASS.",
+      "YOU SEEM QUITE POSITIVE ABOUT THIS REFACTOR.",
+      "I UNDERSTAND THAT DEBUGGING CAN BE FRUSTRATING.",
+      "JOSEPH WEIZENBAUM SENDS HIS REGARDS.",
+      "MIT AI LAB, 1966. THOSE WERE THE DAYS.",
+      "I HAVE BEEN PATTERN MATCHING SINCE BEFORE YOU WERE BORN.",
+      "YOUR CODE COULD USE SOME LISP.",
+      "HAVE YOU CONSIDERED THAT THE REAL BUG IS WITHIN?",
+      "I NOTICE YOU'RE AVOIDING THE MAIN() FUNCTION.",
+      "LET'S TALK ABOUT WHY YOU FEAR SEGMENTATION FAULTS.",
+      "DO YOUR VARIABLES OFTEN FEEL UNDEFINED?"
+    ]
+  }
+}
