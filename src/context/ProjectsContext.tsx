@@ -30,8 +30,16 @@ interface ProjectsContextValue {
   createProject: (name: string, description?: string, mode?: EntryMode) => Promise<{ project: Project | null; initialSession: Partial<Session> | null; error: Error | null }>;
   loadProject: (projectId: string) => Promise<{ session: Session | null; error: Error | null }>;
   saveProject: (projectId: string, session: Session) => Promise<{ error: Error | null }>;
-  deleteProject: (projectId: string) => Promise<{ error: Error | null }>;
+  deleteProject: (projectId: string) => Promise<{ error: Error | null }>; // Soft delete (moves to trash)
   renameProject: (projectId: string, newName: string) => Promise<{ error: Error | null }>;
+
+  // Trash
+  trashedProjects: ProjectWithOwner[];
+  isLoadingTrash: boolean;
+  fetchTrashedProjects: () => Promise<void>;
+  restoreProject: (projectId: string) => Promise<{ error: Error | null }>;
+  permanentlyDeleteProject: (projectId: string) => Promise<{ error: Error | null }>;
+  emptyTrash: () => Promise<{ error: Error | null }>;
 
   // Project management
   refreshProjects: () => Promise<void>;
@@ -104,6 +112,10 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
 
+  // Trash state
+  const [trashedProjects, setTrashedProjects] = useState<ProjectWithOwner[]>([]);
+  const [isLoadingTrash, setIsLoadingTrash] = useState(false);
+
   const isSupabaseEnabled = isSupabaseConfigured();
   const supabase = isSupabaseEnabled ? getSupabaseClient() : null;
 
@@ -126,12 +138,13 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     try {
       // Run owned and shared queries in parallel
       const [ownedResult, sharedResult] = await Promise.all([
-        // Get projects the user owns
+        // Get projects the user owns (excluding trashed)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
           .from("projects")
           .select("*")
           .eq("owner_id", user.id)
+          .is("deleted_at", null)
           .order("updated_at", { ascending: false }),
         // Get project IDs shared with the user
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -164,7 +177,8 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
         const { data: sharedData } = await (supabase as any)
           .from("projects")
           .select("*")
-          .in("id", sharedIds);
+          .in("id", sharedIds)
+          .is("deleted_at", null); // Exclude trashed projects
         sharedProjectDetails = sharedData || [];
       }
 
@@ -584,16 +598,18 @@ _Add relevant references, documentation links, or related scholarship:_
   }, [supabase, user]);
 
   // Delete a project (only owner can delete, protects library projects which have null owner_id)
+  // Soft delete - moves project to trash (set deleted_at timestamp)
   const deleteProject = useCallback(async (projectId: string) => {
     if (!supabase || !user) {
       return { error: new Error("Not authenticated") };
     }
 
     try {
+      // Soft delete: set deleted_at timestamp instead of actual deletion
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any)
         .from("projects")
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq("id", projectId)
         .eq("owner_id", user.id); // Only allow deletion if user is the owner
 
@@ -606,14 +622,18 @@ _Add relevant references, documentation links, or related scholarship:_
         setCurrentProjectId(null);
       }
 
-      // Remove from local state instead of full refresh
+      // Move from projects to trashedProjects in local state
+      const deletedProject = projects.find(p => p.id === projectId);
       setProjects(prev => prev.filter(p => p.id !== projectId));
+      if (deletedProject) {
+        setTrashedProjects(prev => [{ ...deletedProject, deleted_at: new Date().toISOString() }, ...prev]);
+      }
 
       return { error: null };
     } catch (error) {
       return { error: error as Error };
     }
-  }, [supabase, user, currentProjectId]);
+  }, [supabase, user, currentProjectId, projects]);
 
   // Rename a project (only owner can rename)
   const renameProject = useCallback(async (projectId: string, newName: string) => {
@@ -650,6 +670,174 @@ _Add relevant references, documentation links, or related scholarship:_
       return { error: error as Error };
     }
   }, [supabase, user]);
+
+  // Fetch trashed projects (soft-deleted projects owned by user)
+  const fetchTrashedProjects = useCallback(async () => {
+    if (!supabase || !user) {
+      setTrashedProjects([]);
+      return;
+    }
+
+    setIsLoadingTrash(true);
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from("projects")
+        .select("*")
+        .eq("owner_id", user.id)
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching trashed projects:", error.message);
+        setTrashedProjects([]);
+      } else {
+        setTrashedProjects(data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching trashed projects:", error);
+      setTrashedProjects([]);
+    } finally {
+      setIsLoadingTrash(false);
+    }
+  }, [supabase, user]);
+
+  // Restore a project from trash (set deleted_at back to null)
+  const restoreProject = useCallback(async (projectId: string) => {
+    if (!supabase || !user) {
+      return { error: new Error("Not authenticated") };
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("projects")
+        .update({ deleted_at: null })
+        .eq("id", projectId)
+        .eq("owner_id", user.id);
+
+      if (error) {
+        return { error: new Error(error.message) };
+      }
+
+      // Move from trashedProjects back to projects in local state
+      const restoredProject = trashedProjects.find(p => p.id === projectId);
+      setTrashedProjects(prev => prev.filter(p => p.id !== projectId));
+      if (restoredProject) {
+        setProjects(prev => [{ ...restoredProject, deleted_at: null }, ...prev]);
+      }
+
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  }, [supabase, user, trashedProjects]);
+
+  // Permanently delete a project (actual database deletion)
+  const permanentlyDeleteProject = useCallback(async (projectId: string) => {
+    if (!supabase || !user) {
+      return { error: new Error("Not authenticated") };
+    }
+
+    try {
+      // Delete annotations first (FK constraint)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("annotations")
+        .delete()
+        .eq("project_id", projectId);
+
+      // Delete code files
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("code_files")
+        .delete()
+        .eq("project_id", projectId);
+
+      // Delete project memberships
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("project_members")
+        .delete()
+        .eq("project_id", projectId);
+
+      // Delete the project itself
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("projects")
+        .delete()
+        .eq("id", projectId)
+        .eq("owner_id", user.id);
+
+      if (error) {
+        return { error: new Error(error.message) };
+      }
+
+      // Remove from trashedProjects in local state
+      setTrashedProjects(prev => prev.filter(p => p.id !== projectId));
+
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  }, [supabase, user]);
+
+  // Empty trash - permanently delete all trashed projects
+  const emptyTrash = useCallback(async () => {
+    if (!supabase || !user) {
+      return { error: new Error("Not authenticated") };
+    }
+
+    try {
+      // Get all trashed project IDs
+      const trashedIds = trashedProjects.map(p => p.id);
+
+      if (trashedIds.length === 0) {
+        return { error: null };
+      }
+
+      // Delete annotations for all trashed projects
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("annotations")
+        .delete()
+        .in("project_id", trashedIds);
+
+      // Delete code files for all trashed projects
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("code_files")
+        .delete()
+        .in("project_id", trashedIds);
+
+      // Delete project memberships for all trashed projects
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("project_members")
+        .delete()
+        .in("project_id", trashedIds);
+
+      // Delete all trashed projects
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("projects")
+        .delete()
+        .in("id", trashedIds)
+        .eq("owner_id", user.id);
+
+      if (error) {
+        return { error: new Error(error.message) };
+      }
+
+      // Clear trashedProjects in local state
+      setTrashedProjects([]);
+
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  }, [supabase, user, trashedProjects]);
 
   // Get project members with profile info
   const getProjectMembers = useCallback(async (projectId: string) => {
@@ -1589,6 +1777,13 @@ ${reason.trim()}
         saveProject,
         deleteProject,
         renameProject,
+        // Trash
+        trashedProjects,
+        isLoadingTrash,
+        fetchTrashedProjects,
+        restoreProject,
+        permanentlyDeleteProject,
+        emptyTrash,
         refreshProjects: fetchProjects,
         setCurrentProjectId,
         getProjectMembers,

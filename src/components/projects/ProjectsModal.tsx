@@ -31,6 +31,8 @@ import {
   Crown,
   Pencil,
   Check,
+  RotateCcw,
+  AlertTriangle,
 } from "lucide-react";
 import type { ProjectWithOwner } from "@/lib/supabase/types";
 import type { EntryMode, Session } from "@/types/session";
@@ -69,14 +71,32 @@ export function ProjectsModal() {
     setShowMembersModal,
     setMembersModalProjectId,
     refreshProjects,
+    // Trash
+    trashedProjects,
+    isLoadingTrash,
+    fetchTrashedProjects,
+    restoreProject,
+    permanentlyDeleteProject,
+    emptyTrash,
   } = useProjects();
+
+  // Tab state: "projects" or "trash"
+  const [activeTab, setActiveTab] = useState<"projects" | "trash">("projects");
 
   // Refresh projects when modal opens (handles stale state from Safari suspension)
   useEffect(() => {
     if (showProjectsModal) {
       refreshProjects();
+      setActiveTab("projects"); // Reset to projects tab when modal opens
     }
   }, [showProjectsModal, refreshProjects]);
+
+  // Fetch trashed projects when switching to trash tab
+  useEffect(() => {
+    if (showProjectsModal && activeTab === "trash") {
+      fetchTrashedProjects();
+    }
+  }, [showProjectsModal, activeTab, fetchTrashedProjects]);
 
   const [isCreating, setIsCreating] = useState(false);
   const [saveCurrentSession, setSaveCurrentSession] = useState(false);
@@ -86,6 +106,8 @@ export function ProjectsModal() {
   const [error, setError] = useState<string | null>(null);
   const [showNewProjectMenu, setShowNewProjectMenu] = useState(false);
   const [deleteConfirmProject, setDeleteConfirmProject] = useState<ProjectWithOwner | null>(null);
+  const [permanentDeleteConfirmProject, setPermanentDeleteConfirmProject] = useState<ProjectWithOwner | null>(null);
+  const [emptyTrashConfirm, setEmptyTrashConfirm] = useState(false);
   const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [isRenamingLoading, setIsRenamingLoading] = useState(false);
@@ -102,6 +124,9 @@ export function ProjectsModal() {
     setShowNewProjectMenu(false);
     setRenamingProjectId(null);
     setRenameValue("");
+    setActiveTab("projects");
+    setPermanentDeleteConfirmProject(null);
+    setEmptyTrashConfirm(false);
   };
 
   const handleCreate = async () => {
@@ -235,6 +260,58 @@ export function ProjectsModal() {
     }
   };
 
+  // Trash handlers
+  const handleRestore = async (project: ProjectWithOwner) => {
+    setActionLoading(`restore-${project.id}`);
+    setError(null);
+
+    const { error } = await restoreProject(project.id);
+
+    if (error) {
+      setError(error.message);
+    }
+
+    setActionLoading(null);
+  };
+
+  const handlePermanentDeleteClick = (project: ProjectWithOwner) => {
+    setPermanentDeleteConfirmProject(project);
+  };
+
+  const handlePermanentDeleteConfirm = async () => {
+    if (!permanentDeleteConfirmProject) return;
+
+    setPermanentDeleteConfirmProject(null);
+    setActionLoading(`perm-delete-${permanentDeleteConfirmProject.id}`);
+    setError(null);
+
+    const { error } = await permanentlyDeleteProject(permanentDeleteConfirmProject.id);
+
+    if (error) {
+      setError(error.message);
+    }
+
+    setActionLoading(null);
+  };
+
+  const handleEmptyTrashClick = () => {
+    setEmptyTrashConfirm(true);
+  };
+
+  const handleEmptyTrashConfirm = async () => {
+    setEmptyTrashConfirm(false);
+    setActionLoading("empty-trash");
+    setError(null);
+
+    const { error } = await emptyTrash();
+
+    if (error) {
+      setError(error.message);
+    }
+
+    setActionLoading(null);
+  };
+
   const isOwner = (project: ProjectWithOwner) => project.owner_id === user?.id;
 
   const formatDate = (dateStr: string) => {
@@ -285,6 +362,39 @@ export function ProjectsModal() {
           </button>
         </div>
 
+        {/* Tab bar */}
+        <div className="flex border-b border-parchment">
+          <button
+            onClick={() => setActiveTab("projects")}
+            className={cn(
+              "flex-1 px-4 py-2.5 font-sans text-ui-base font-medium transition-colors",
+              activeTab === "projects"
+                ? "text-burgundy border-b-2 border-burgundy bg-cream/30"
+                : "text-slate hover:text-ink hover:bg-cream/20"
+            )}
+          >
+            <Folder className="h-4 w-4 inline mr-2" />
+            Projects
+          </button>
+          <button
+            onClick={() => setActiveTab("trash")}
+            className={cn(
+              "flex-1 px-4 py-2.5 font-sans text-ui-base font-medium transition-colors",
+              activeTab === "trash"
+                ? "text-burgundy border-b-2 border-burgundy bg-cream/30"
+                : "text-slate hover:text-ink hover:bg-cream/20"
+            )}
+          >
+            <Trash2 className="h-4 w-4 inline mr-2" />
+            Trash
+            {trashedProjects.length > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.5 text-ui-xs bg-burgundy/10 text-burgundy rounded-full">
+                {trashedProjects.length}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Error message */}
         {error && (
           <div className="mx-5 mt-4 px-3 py-2 bg-burgundy/10 border border-burgundy/20 rounded-lg">
@@ -294,8 +404,10 @@ export function ProjectsModal() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5">
-          {/* Create new project form */}
-          {isCreating ? (
+          {activeTab === "projects" ? (
+            <>
+              {/* Create new project form */}
+              {isCreating ? (
             <div className="mb-5 p-4 bg-gradient-to-b from-cream/80 to-cream/40 rounded-xl border border-parchment shadow-sm">
               <h3 className="font-serif text-ui-base text-ink mb-4 flex items-center gap-2">
                 <div className="p-1.5 bg-burgundy/10 rounded-lg">
@@ -642,26 +754,179 @@ export function ProjectsModal() {
               ))}
             </div>
           )}
+            </>
+          ) : (
+            /* Trash tab content */
+            <>
+              {/* Empty Trash button */}
+              {trashedProjects.length > 0 && (
+                <div className="mb-5">
+                  <button
+                    onClick={handleEmptyTrashClick}
+                    disabled={actionLoading === "empty-trash"}
+                    className={cn(
+                      "flex items-center justify-center gap-2 px-4 py-2.5",
+                      "font-sans text-ui-base font-medium",
+                      "bg-burgundy/10 text-burgundy rounded-lg",
+                      "hover:bg-burgundy/20 transition-colors",
+                      "disabled:opacity-50 disabled:cursor-not-allowed"
+                    )}
+                  >
+                    {actionLoading === "empty-trash" ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                    Empty Trash
+                  </button>
+                </div>
+              )}
+
+              {/* Trashed projects list */}
+              {isLoadingTrash ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-burgundy mb-2" />
+                  <p className="font-sans text-ui-base text-slate">Loading trash...</p>
+                </div>
+              ) : trashedProjects.length === 0 ? (
+                <div className="text-center py-8 px-4">
+                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-cream to-parchment/50 rounded-2xl mb-4 shadow-sm">
+                    <Trash2 className="h-7 w-7 text-slate/40" />
+                  </div>
+                  <h3 className="font-serif text-ui-lg text-ink mb-2">Trash is empty</h3>
+                  <p className="font-sans text-ui-xs text-slate max-w-[220px] mx-auto leading-relaxed">
+                    Deleted projects will appear here for recovery
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="font-sans text-ui-xs text-slate uppercase tracking-wide mb-2">
+                    Deleted Projects
+                  </p>
+                  {trashedProjects.map((project) => (
+                    <div
+                      key={project.id}
+                      className="group p-4 rounded-xl border border-parchment bg-ivory/50 hover:border-parchment-dark transition-all"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-serif text-ui-base text-ink/70 truncate" title={project.name}>
+                            {project.name}
+                          </h4>
+                          {project.description && (
+                            <p className="font-sans text-ui-xs text-slate/60 mb-2 line-clamp-2">
+                              {project.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={cn(
+                              "inline-flex items-center px-2 py-0.5 rounded-full text-ui-xs font-sans font-medium opacity-60",
+                              MODE_COLORS[project.mode as EntryMode] || "bg-slate/10 text-slate"
+                            )}>
+                              {MODE_LABELS[project.mode as EntryMode] || project.mode}
+                            </span>
+                            <span className="flex items-center gap-1 text-ui-xs text-slate/50 font-sans">
+                              <Clock className="h-3 w-3" />
+                              Deleted {formatDate(project.updated_at)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleRestore(project)}
+                            disabled={!!actionLoading}
+                            title="Restore project"
+                            className={cn(
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg",
+                              "font-sans text-ui-xs font-medium",
+                              "bg-emerald-500 text-white hover:bg-emerald-600",
+                              "transition-colors",
+                              "disabled:opacity-50 disabled:cursor-not-allowed"
+                            )}
+                          >
+                            {actionLoading === `restore-${project.id}` ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            )}
+                            Restore
+                          </button>
+                          <button
+                            onClick={() => handlePermanentDeleteClick(project)}
+                            disabled={!!actionLoading}
+                            title="Delete permanently"
+                            className={cn(
+                              "p-2 rounded-lg hover:bg-burgundy/10 transition-colors",
+                              "disabled:opacity-50 disabled:cursor-not-allowed"
+                            )}
+                          >
+                            {actionLoading === `perm-delete-${project.id}` ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-burgundy" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-burgundy" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Footer */}
         <div className="px-5 py-3 border-t border-parchment bg-cream/30">
           <p className="font-sans text-ui-xs text-slate/70 text-center flex items-center justify-center gap-1">
-            <Users className="h-3 w-3" />
-            Projects sync to the cloud for collaboration
+            {activeTab === "projects" ? (
+              <>
+                <Users className="h-3 w-3" />
+                Projects sync to the cloud for collaboration
+              </>
+            ) : (
+              <>
+                <AlertTriangle className="h-3 w-3" />
+                Restore projects or delete them permanently
+              </>
+            )}
           </p>
         </div>
       </div>
 
-      {/* Delete project confirmation dialog */}
+      {/* Move to trash confirmation dialog */}
       <ConfirmDialog
         isOpen={deleteConfirmProject !== null}
-        title={`Delete "${deleteConfirmProject?.name}"?`}
-        message="This cannot be undone."
+        title={`Move "${deleteConfirmProject?.name}" to trash?`}
+        message="You can restore it from the Trash tab."
         variant="danger"
-        confirmLabel="Delete"
+        confirmLabel="Move to Trash"
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteConfirmProject(null)}
+      />
+
+      {/* Permanent delete confirmation dialog */}
+      <ConfirmDialog
+        isOpen={permanentDeleteConfirmProject !== null}
+        title={`Permanently delete "${permanentDeleteConfirmProject?.name}"?`}
+        message="This cannot be undone. All files and annotations will be permanently removed."
+        variant="danger"
+        confirmLabel="Delete Forever"
+        onConfirm={handlePermanentDeleteConfirm}
+        onCancel={() => setPermanentDeleteConfirmProject(null)}
+      />
+
+      {/* Empty trash confirmation dialog */}
+      <ConfirmDialog
+        isOpen={emptyTrashConfirm}
+        title="Empty trash?"
+        message={`Permanently delete ${trashedProjects.length} project${trashedProjects.length !== 1 ? "s" : ""}? This cannot be undone.`}
+        variant="danger"
+        confirmLabel="Empty Trash"
+        onConfirm={handleEmptyTrashConfirm}
+        onCancel={() => setEmptyTrashConfirm(false)}
       />
     </div>
   );
