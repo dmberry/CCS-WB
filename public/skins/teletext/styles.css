@@ -5,7 +5,7 @@
 /* === TELETEXT FONT - Authentic Ceefax Bulletin === */
 @font-face {
   font-family: 'Ceefax Bulletin';
-  src: url('./assets/ceefax-bulletin-1.otf/ceefax-bulletin-1.otf') format('opentype');
+  src: url('./assets/CeefaxBulletin.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
 }
