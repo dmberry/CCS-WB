@@ -240,14 +240,23 @@ export function LibraryModal() {
                       <h4 className="font-serif text-ui-base text-ink truncate" title={displayName(project.name)}>
                         {displayName(project.name)}
                       </h4>
-                      {/* Owner info */}
+                      {/* Owner info - "Library" for approved, original owner for Early Access */}
                       <p className="font-sans text-ui-xs text-slate/60 mb-1 flex items-center gap-1">
-                        <User className="h-2.5 w-2.5" />
-                        <span>{project.owner?.display_name || "Unknown"}</span>
-                        {project.owner?.affiliation && (
-                          <span className="text-slate/40">
-                            ({project.owner.affiliation})
-                          </span>
+                        {project.accession_status === "approved" ? (
+                          <>
+                            <Library className="h-2.5 w-2.5" />
+                            <span>Library</span>
+                          </>
+                        ) : (
+                          <>
+                            <User className="h-2.5 w-2.5" />
+                            <span>{project.owner?.display_name || "Unknown"}</span>
+                            {project.owner?.affiliation && (
+                              <span className="text-slate/40">
+                                ({project.owner.affiliation})
+                              </span>
+                            )}
+                          </>
                         )}
                       </p>
                       {project.description && (
