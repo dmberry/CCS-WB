@@ -540,6 +540,55 @@ header .font-mono {
   color: #a0a0f0 !important;
 }
 
+/* === ANNOTATION WIDGETS - BIG C64 TEXT === */
+.cm-annotation-widget,
+.cm-annotation-editor,
+.cm-annotation-display {
+  font-family: 'PetMe64', 'Courier New', monospace !important;
+  font-size: 1.2rem !important;
+  background: #303080 !important;
+  border: 2px solid #a0a0f0 !important;
+  color: #a0a0f0 !important;
+}
+
+.cm-annotation-widget *,
+.cm-annotation-editor *,
+.cm-annotation-display * {
+  font-family: 'PetMe64', 'Courier New', monospace !important;
+  color: #a0a0f0 !important;
+}
+
+.cm-annotation-input {
+  font-size: 1.1rem !important;
+  background: #4040a0 !important;
+  border: 2px solid #a0a0f0 !important;
+  color: #a0a0f0 !important;
+}
+
+.cm-annotation-type-select {
+  font-size: 1.1rem !important;
+  background: #4040a0 !important;
+  border: 2px solid #a0a0f0 !important;
+  color: #a0a0f0 !important;
+}
+
+.cm-annotation-prefix,
+.cm-annotation-content {
+  font-size: 1.1rem !important;
+}
+
+.cm-annotation-btn {
+  font-family: 'PetMe64', 'Courier New', monospace !important;
+  font-size: 1rem !important;
+  background: #a0a0f0 !important;
+  color: #4040a0 !important;
+  border: none !important;
+}
+
+.cm-annotation-btn:hover {
+  background: #c0c0ff !important;
+}
+
 /* === FINAL CLEANUP === */
 .text-slate-muted,
 .text-slate {
