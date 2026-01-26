@@ -970,7 +970,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
     setCloudActionLoading("create");
     try {
-      const { project, error } = await createProject(
+      const { project, initialSession, error } = await createProject(
         newProjectName.trim(),
         undefined,
         session.mode
@@ -979,9 +979,12 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
       if (error) {
         console.error("Failed to create project:", error);
       } else if (project) {
-        // Optionally save current session to the new project
         if (populateWithSession) {
+          // Save current session to the new project (overwrites README template)
           await saveProject(project.id, session);
+        } else if (initialSession) {
+          // Use the initialSession returned by createProject (contains README)
+          importSession(initialSession as Session);
         }
         setCurrentProjectId(project.id);
         markLocalUpdate();
@@ -994,7 +997,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     } finally {
       setCloudActionLoading(null);
     }
-  }, [newProjectName, session, createProject, saveProject, setCurrentProjectId, markLocalUpdate, populateWithSession]);
+  }, [newProjectName, session, createProject, saveProject, setCurrentProjectId, markLocalUpdate, populateWithSession, importSession]);
 
   // Confirm save from modal
   const handleConfirmSave = useCallback(() => {
