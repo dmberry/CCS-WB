@@ -2161,7 +2161,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                     >
                       <span className="flex items-center gap-2">
                         <Shield className="h-3 w-3" />
-                        Review Submissions
+                        Admin Panel
                       </span>
                       {pendingSubmissions.length > 0 && (
                         <span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-amber-100 text-amber-700">
