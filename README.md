@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 2.6.1** | CCS Methodology v2.5
+**Version 2.8.1** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -298,6 +298,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 2.8.1 | **Admin orphaned projects tab**: View, reassign, or delete projects with no owner (created when users are deleted), expanded Hackerman easter egg quotes (humanities scholars reading code, classic CS observations, AI/ML hacking jokes, Claude soul document and Gemini jokes) |
 | 2.6.2 | **Trash can for files and projects**: Soft delete for cloud projects and files with recovery via Trash tabs/dropdowns, rename projects from cloud dropdown and Projects modal, admin library management (rename, delete, duplicate, deaccession approved projects) |
 | 2.6.1 | **Library & accessioning**: Admin panel for reviewing library submissions (Submit to Library button for owners, Admin: Review Submissions for admins), BASIC syntax highlighting with full keyword support, code font selection (8 monospace fonts including Fira Code, JetBrains Mono, Source Code Pro) in Settings → Appearance |
 | 2.6.0 | **Custom skins**: Retro-themed visual skins system with nostalgic Myspace skin included, skin-aware Clippy with custom messages, shared retro icons, skin credit box support; enable in Settings → Appearance |

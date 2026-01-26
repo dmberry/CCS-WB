@@ -33,6 +33,8 @@ import {
   Users,
   ShieldCheck,
   ShieldOff,
+  UserX,
+  UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -46,6 +48,15 @@ interface AdminUser {
   affiliation: string | null;
   is_admin: boolean;
   created_at: string;
+}
+
+interface OrphanedProject {
+  id: string;
+  name: string;
+  description: string | null;
+  mode: string;
+  created_at: string;
+  updated_at: string;
 }
 
 const MODE_LABELS: Record<EntryMode, string> = {
@@ -92,13 +103,17 @@ export function AdminModal() {
   const [error, setError] = useState<string | null>(null);
   const [rejectingProjectId, setRejectingProjectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "users">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "users" | "orphaned">("pending");
   const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deaccessionConfirmId, setDeaccessionConfirmId] = useState<string | null>(null);
   const [deleteUserConfirmId, setDeleteUserConfirmId] = useState<string | null>(null);
   const [deleteUserProjects, setDeleteUserProjects] = useState(false);
+  const [orphanedProjects, setOrphanedProjects] = useState<OrphanedProject[]>([]);
+  const [isLoadingOrphaned, setIsLoadingOrphaned] = useState(false);
+  const [reassignProjectId, setReassignProjectId] = useState<string | null>(null);
+  const [reassignToUserId, setReassignToUserId] = useState<string>("");
 
   // Fetch all users for admin management
   const fetchUsers = async () => {
@@ -122,6 +137,78 @@ export function AdminModal() {
       setUsers(data as AdminUser[]);
     }
     setIsLoadingUsers(false);
+  };
+
+  // Fetch orphaned projects (owner_id is null)
+  const fetchOrphanedProjects = async () => {
+    setIsLoadingOrphaned(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setIsLoadingOrphaned(false);
+      return;
+    }
+
+    const { data, error } = await (supabase as any)
+      .from("projects")
+      .select("id, name, description, mode, created_at, updated_at")
+      .is("owner_id", null)
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      console.error("Failed to fetch orphaned projects:", error);
+      setError(`Failed to load orphaned projects: ${error.message}`);
+    } else if (data) {
+      setOrphanedProjects(data as OrphanedProject[]);
+    }
+    setIsLoadingOrphaned(false);
+  };
+
+  // Reassign orphaned project to a user
+  const handleReassignProject = async (projectId: string, newOwnerId: string) => {
+    if (!newOwnerId) {
+      setError("Please select a user to assign the project to");
+      return;
+    }
+
+    setActionLoading(`reassign-${projectId}`);
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setActionLoading(null);
+      return;
+    }
+
+    const { error } = await (supabase as any)
+      .from("projects")
+      .update({ owner_id: newOwnerId })
+      .eq("id", projectId);
+
+    if (error) {
+      setError(`Failed to reassign project: ${error.message}`);
+    } else {
+      // Remove from orphaned list
+      setOrphanedProjects(prev => prev.filter(p => p.id !== projectId));
+      setReassignProjectId(null);
+      setReassignToUserId("");
+    }
+
+    setActionLoading(null);
+  };
+
+  // Delete orphaned project
+  const handleDeleteOrphanedProject = async (projectId: string) => {
+    setActionLoading(`delete-orphan-${projectId}`);
+    setError(null);
+
+    const { error } = await adminDeleteProject(projectId);
+
+    if (error) {
+      setError(error.message);
+    } else {
+      setOrphanedProjects(prev => prev.filter(p => p.id !== projectId));
+    }
+
+    setDeleteConfirmId(null);
+    setActionLoading(null);
   };
 
   // Toggle admin status for a user
@@ -223,6 +310,7 @@ export function AdminModal() {
       fetchPendingSubmissions();
       fetchLibraryProjects(); // Fetch library to check for duplicate names
       fetchUsers();
+      fetchOrphanedProjects();
       setError(null);
     }
   }, [showAdminModal, fetchPendingSubmissions, fetchLibraryProjects]);
@@ -251,6 +339,8 @@ export function AdminModal() {
     setDeaccessionConfirmId(null);
     setDeleteUserConfirmId(null);
     setDeleteUserProjects(false);
+    setReassignProjectId(null);
+    setReassignToUserId("");
   };
 
   const handlePreview = async (project: LibraryProject) => {
@@ -404,8 +494,11 @@ export function AdminModal() {
     project.owner?.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Filter library projects (strip $ prefix for search)
+  // Filter library projects - only show APPROVED projects in admin Library tab
+  // (libraryProjects includes both approved + submitted for the Library Modal)
   const filteredLibrary = libraryProjects.filter(project => {
+    // Only show approved projects in the admin Library tab
+    if (project.accession_status !== "approved") return false;
     const displayName = project.name.replace(/^\$+/, "");
     return displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -416,6 +509,12 @@ export function AdminModal() {
   const filteredUsers = users.filter(u =>
     u.display_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.affiliation?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Filter orphaned projects by search query
+  const filteredOrphaned = orphanedProjects.filter(project =>
+    project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    project.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Strip $ prefix for display
@@ -492,9 +591,9 @@ export function AdminModal() {
           >
             <Library className="h-3.5 w-3.5" />
             Library
-            {libraryProjects.length > 0 && (
+            {libraryProjects.filter(p => p.accession_status === "approved").length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 bg-white/30 rounded-full text-[10px]">
-                {libraryProjects.length}
+                {libraryProjects.filter(p => p.accession_status === "approved").length}
               </span>
             )}
           </button>
@@ -515,6 +614,23 @@ export function AdminModal() {
               </span>
             )}
           </button>
+          <button
+            onClick={() => setActiveTab("orphaned")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium transition-colors",
+              activeTab === "orphaned"
+                ? "bg-slate-500 text-white"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+            )}
+          >
+            <UserX className="h-3.5 w-3.5" />
+            Orphaned
+            {orphanedProjects.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 bg-white/30 rounded-full text-[10px]">
+                {orphanedProjects.length}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Search bar */}
@@ -525,7 +641,7 @@ export function AdminModal() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={activeTab === "pending" ? "Search submissions..." : activeTab === "approved" ? "Search library..." : "Search users..."}
+              placeholder={activeTab === "pending" ? "Search submissions..." : activeTab === "approved" ? "Search library..." : activeTab === "users" ? "Search users..." : "Search orphaned projects..."}
               className={cn(
                 "w-full pl-9 pr-3 py-2",
                 "font-sans text-ui-base text-ink placeholder:text-slate/50",
@@ -1187,6 +1303,184 @@ export function AdminModal() {
               )}
             </>
           )}
+
+          {/* Orphaned Projects Tab */}
+          {activeTab === "orphaned" && (
+            <>
+              {isLoadingOrphaned ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-slate-600 mb-2" />
+                  <p className="font-sans text-ui-base text-slate">Loading orphaned projects...</p>
+                </div>
+              ) : filteredOrphaned.length === 0 ? (
+                <div className="text-center py-8 px-4">
+                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl mb-4 shadow-sm">
+                    <UserX className="h-7 w-7 text-slate-600/40" />
+                  </div>
+                  <h3 className="font-serif text-ui-lg text-ink mb-2">
+                    {searchQuery ? "No matching projects" : "No orphaned projects"}
+                  </h3>
+                  <p className="font-sans text-ui-xs text-slate max-w-[220px] mx-auto leading-relaxed">
+                    {searchQuery
+                      ? "Try a different search term"
+                      : "Projects without owners will appear here when users are deleted"}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredOrphaned.map((project) => (
+                    <div
+                      key={project.id}
+                      className="group p-4 rounded-xl border border-parchment bg-ivory hover:border-slate-300 hover:shadow-sm transition-all"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-serif text-ui-base text-ink truncate" title={project.name}>
+                            {project.name}
+                          </h4>
+                          <p className="font-sans text-ui-xs text-slate/60 mb-1 flex items-center gap-1">
+                            <UserX className="h-2.5 w-2.5" />
+                            <span className="text-amber-600">No owner</span>
+                          </p>
+                          {project.description && (
+                            <p className="font-sans text-ui-xs text-slate mb-2 line-clamp-2">
+                              {project.description}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={cn(
+                              "inline-flex items-center px-2 py-0.5 rounded-full text-ui-xs font-sans font-medium",
+                              MODE_COLORS[project.mode as EntryMode] || "bg-slate/10 text-slate"
+                            )}>
+                              {MODE_LABELS[project.mode as EntryMode] || project.mode}
+                            </span>
+                            <span className="flex items-center gap-1 text-ui-xs text-slate/60 font-sans">
+                              <Clock className="h-3 w-3" />
+                              Updated {formatDate(project.updated_at)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-col gap-1.5">
+                          <button
+                            onClick={() => {
+                              setReassignProjectId(project.id);
+                              setReassignToUserId("");
+                            }}
+                            disabled={!!actionLoading}
+                            className={cn(
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg",
+                              "font-sans text-ui-xs font-medium",
+                              "bg-purple-500 text-white hover:bg-purple-600",
+                              "transition-colors",
+                              "disabled:opacity-50 disabled:cursor-not-allowed"
+                            )}
+                          >
+                            <UserPlus className="h-3.5 w-3.5" />
+                            Reassign
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmId(project.id)}
+                            disabled={!!actionLoading}
+                            className={cn(
+                              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg",
+                              "font-sans text-ui-xs font-medium",
+                              "bg-slate/10 text-slate hover:bg-burgundy/10 hover:text-burgundy",
+                              "transition-colors",
+                              "disabled:opacity-50 disabled:cursor-not-allowed"
+                            )}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Reassign dialog */}
+                      {reassignProjectId === project.id && (
+                        <div className="mt-3 pt-3 border-t border-purple-200 bg-purple-50 -mx-4 -mb-4 px-4 pb-4 rounded-b-xl">
+                          <label className="block font-sans text-ui-xs text-purple-800 mb-1.5">
+                            Assign to user:
+                          </label>
+                          <select
+                            value={reassignToUserId}
+                            onChange={(e) => setReassignToUserId(e.target.value)}
+                            className={cn(
+                              "w-full px-3 py-2 rounded-lg",
+                              "font-sans text-ui-xs text-ink",
+                              "bg-white border border-purple-200",
+                              "focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                            )}
+                          >
+                            <option value="">Select a user...</option>
+                            {users.map((u) => (
+                              <option key={u.id} value={u.id}>
+                                {u.display_name || "Unnamed"} {u.affiliation ? `(${u.affiliation})` : ""}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="flex justify-end gap-2 mt-2">
+                            <button
+                              onClick={() => {
+                                setReassignProjectId(null);
+                                setReassignToUserId("");
+                              }}
+                              disabled={!!actionLoading}
+                              className="px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium bg-white text-slate hover:bg-slate/10"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleReassignProject(project.id, reassignToUserId)}
+                              disabled={!!actionLoading || !reassignToUserId}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50"
+                            >
+                              {actionLoading === `reassign-${project.id}` ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <UserPlus className="h-3.5 w-3.5" />
+                              )}
+                              Assign
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Delete confirmation */}
+                      {deleteConfirmId === project.id && (
+                        <div className="mt-3 pt-3 border-t border-burgundy/20 bg-burgundy/5 -mx-4 -mb-4 px-4 pb-4 rounded-b-xl">
+                          <p className="font-sans text-ui-xs text-burgundy mb-2">
+                            Permanently delete this orphaned project? This cannot be undone.
+                          </p>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => setDeleteConfirmId(null)}
+                              className="px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium bg-slate/10 text-slate hover:bg-slate/20"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleDeleteOrphanedProject(project.id)}
+                              disabled={!!actionLoading}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium bg-burgundy text-white hover:bg-burgundy-dark disabled:opacity-50"
+                            >
+                              {actionLoading === `delete-orphan-${project.id}` ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         {/* Footer */}
@@ -1195,8 +1489,10 @@ export function AdminModal() {
             {activeTab === "pending"
               ? `${pendingSubmissions.length} submission${pendingSubmissions.length !== 1 ? "s" : ""} pending review`
               : activeTab === "approved"
-                ? `${libraryProjects.length} project${libraryProjects.length !== 1 ? "s" : ""} in library`
-                : `${users.length} user${users.length !== 1 ? "s" : ""} · ${users.filter(u => u.is_admin).length} admin${users.filter(u => u.is_admin).length !== 1 ? "s" : ""}`}
+                ? `${libraryProjects.filter(p => p.accession_status === "approved").length} project${libraryProjects.filter(p => p.accession_status === "approved").length !== 1 ? "s" : ""} in library`
+                : activeTab === "users"
+                  ? `${users.length} user${users.length !== 1 ? "s" : ""} · ${users.filter(u => u.is_admin).length} admin${users.filter(u => u.is_admin).length !== 1 ? "s" : ""}`
+                  : `${orphanedProjects.length} orphaned project${orphanedProjects.length !== 1 ? "s" : ""}`}
           </p>
         </div>
       </div>
