@@ -74,7 +74,7 @@ interface ProjectsContextValue {
   // Admin functions
   fetchPendingSubmissions: () => Promise<void>;
   approveProject: (projectId: string) => Promise<{ error: Error | null }>;
-  rejectProject: (projectId: string) => Promise<{ error: Error | null }>;
+  rejectProject: (projectId: string, reason?: string) => Promise<{ error: Error | null }>;
 }
 
 const ProjectsContext = createContext<ProjectsContextValue | null>(null);
@@ -1210,7 +1210,7 @@ _Add relevant references, documentation links, or related scholarship:_
   }, [supabase, user]);
 
   // Reject a submitted project (admin only)
-  const rejectProject = useCallback(async (projectId: string) => {
+  const rejectProject = useCallback(async (projectId: string, reason?: string) => {
     if (!supabase || !user) {
       return { error: new Error("Not authenticated") };
     }
@@ -1230,6 +1230,58 @@ _Add relevant references, documentation links, or related scholarship:_
 
       if (error) {
         return { error: new Error(error.message) };
+      }
+
+      // If a reason was provided, create LIBRARY_REJECT.md in the project
+      if (reason && reason.trim()) {
+        const rejectContent = `# Library Submission Rejected
+
+**Date:** ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+
+## Reason for Rejection
+
+${reason.trim()}
+
+---
+
+*You may address these concerns and resubmit your project for review.*
+`;
+
+        // Check if LIBRARY_REJECT.md already exists
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: existingFile } = await (supabase as any)
+          .from("code_files")
+          .select("id")
+          .eq("project_id", projectId)
+          .eq("name", "LIBRARY_REJECT.md")
+          .single();
+
+        if (existingFile) {
+          // Update existing file
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any)
+            .from("code_files")
+            .update({
+              content: rejectContent,
+              original_content: rejectContent,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", existingFile.id);
+        } else {
+          // Create new file
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any)
+            .from("code_files")
+            .insert({
+              id: crypto.randomUUID(),
+              project_id: projectId,
+              name: "LIBRARY_REJECT.md",
+              content: rejectContent,
+              original_content: rejectContent,
+              language: "markdown",
+              display_order: 999, // Put at end of file list
+            });
+        }
       }
 
       // Remove from pending list

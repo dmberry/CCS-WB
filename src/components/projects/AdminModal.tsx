@@ -63,6 +63,8 @@ export function AdminModal() {
   const [searchQuery, setSearchQuery] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rejectingProjectId, setRejectingProjectId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   // Fetch pending submissions and library projects when modal opens
   useEffect(() => {
@@ -89,6 +91,8 @@ export function AdminModal() {
     setShowAdminModal(false);
     setSearchQuery("");
     setError(null);
+    setRejectingProjectId(null);
+    setRejectReason("");
   };
 
   const handlePreview = async (project: LibraryProject) => {
@@ -134,14 +138,28 @@ export function AdminModal() {
     setActionLoading(null);
   };
 
-  const handleReject = async (project: LibraryProject) => {
+  const handleStartReject = (project: LibraryProject) => {
+    setRejectingProjectId(project.id);
+    setRejectReason("");
+    setError(null);
+  };
+
+  const handleCancelReject = () => {
+    setRejectingProjectId(null);
+    setRejectReason("");
+  };
+
+  const handleConfirmReject = async (project: LibraryProject) => {
     setActionLoading(`reject-${project.id}`);
     setError(null);
 
-    const { error } = await rejectProject(project.id);
+    const { error } = await rejectProject(project.id, rejectReason);
 
     if (error) {
       setError(error.message);
+    } else {
+      setRejectingProjectId(null);
+      setRejectReason("");
     }
 
     setActionLoading(null);
@@ -297,7 +315,7 @@ export function AdminModal() {
                     <div className="flex flex-col gap-1.5">
                       <button
                         onClick={() => handleApprove(project)}
-                        disabled={!!actionLoading}
+                        disabled={!!actionLoading || rejectingProjectId === project.id}
                         className={cn(
                           "flex items-center gap-1.5 px-3 py-1.5 rounded-lg",
                           "font-sans text-ui-xs font-medium",
@@ -314,8 +332,8 @@ export function AdminModal() {
                         Approve
                       </button>
                       <button
-                        onClick={() => handleReject(project)}
-                        disabled={!!actionLoading}
+                        onClick={() => handleStartReject(project)}
+                        disabled={!!actionLoading || rejectingProjectId === project.id}
                         className={cn(
                           "flex items-center gap-1.5 px-3 py-1.5 rounded-lg",
                           "font-sans text-ui-xs font-medium",
@@ -324,15 +342,65 @@ export function AdminModal() {
                           "disabled:opacity-50 disabled:cursor-not-allowed"
                         )}
                       >
-                        {actionLoading === `reject-${project.id}` ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <XCircle className="h-3.5 w-3.5" />
-                        )}
+                        <XCircle className="h-3.5 w-3.5" />
                         Reject
                       </button>
                     </div>
                   </div>
+
+                  {/* Rejection reason input */}
+                  {rejectingProjectId === project.id && (
+                    <div className="mt-3 pt-3 border-t border-parchment">
+                      <label className="block font-sans text-ui-xs text-slate mb-1.5">
+                        Reason for rejection (optional):
+                      </label>
+                      <textarea
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                        placeholder="Provide feedback for the submitter..."
+                        rows={3}
+                        className={cn(
+                          "w-full px-3 py-2 rounded-lg",
+                          "font-sans text-ui-xs text-ink placeholder:text-slate/50",
+                          "bg-white border border-parchment",
+                          "focus:outline-none focus:ring-2 focus:ring-burgundy/20 focus:border-burgundy",
+                          "resize-none"
+                        )}
+                      />
+                      <div className="flex justify-end gap-2 mt-2">
+                        <button
+                          onClick={handleCancelReject}
+                          disabled={!!actionLoading}
+                          className={cn(
+                            "px-3 py-1.5 rounded-lg",
+                            "font-sans text-ui-xs font-medium",
+                            "bg-slate/10 text-slate hover:bg-slate/20",
+                            "transition-colors"
+                          )}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleConfirmReject(project)}
+                          disabled={!!actionLoading}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg",
+                            "font-sans text-ui-xs font-medium",
+                            "bg-burgundy text-white hover:bg-burgundy-dark",
+                            "transition-colors",
+                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                          )}
+                        >
+                          {actionLoading === `reject-${project.id}` ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <XCircle className="h-3.5 w-3.5" />
+                          )}
+                          Confirm Reject
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

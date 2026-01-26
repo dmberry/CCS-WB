@@ -1819,7 +1819,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                                 </span>
                                 {isCurrentProject && (
                                   <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[8px] font-medium bg-burgundy text-white">
-                                    Current
+                                    ACTIVE
                                   </span>
                                 )}
                               </div>

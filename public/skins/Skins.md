@@ -9,7 +9,7 @@ Custom visual themes for the CCS Workbench. Enable skins in Settings > Appearanc
 - eliza: ELIZA Terminal
 - teletext: Teletext
 - vaporwave: Vaporwave
-- teams: Microsoft Teams
+- teams: Team Nightmares
 - hypercard: HyperCard
 - c64: Commodore 64
 - atari2600: Atari 2600
