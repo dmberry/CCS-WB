@@ -127,12 +127,13 @@ export function LibraryModal() {
     setActionLoading(null);
   };
 
-  // Filter projects by search query
-  const filteredProjects = libraryProjects.filter(project =>
-    project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    project.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    project.owner?.display_name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter projects by search query (search against display name without $ prefix)
+  const filteredProjects = libraryProjects.filter(project => {
+    const name = project.name.startsWith("$") ? project.name.slice(1) : project.name;
+    return name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.owner?.display_name?.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "Unknown";
@@ -142,6 +143,11 @@ export function LibraryModal() {
       day: "numeric",
       year: "numeric",
     });
+  };
+
+  // Strip $ namespace prefix from library project names for display
+  const displayName = (name: string) => {
+    return name.startsWith("$") ? name.slice(1) : name;
   };
 
   return (
@@ -231,8 +237,8 @@ export function LibraryModal() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-serif text-ui-base text-ink truncate" title={project.name}>
-                        {project.name}
+                      <h4 className="font-serif text-ui-base text-ink truncate" title={displayName(project.name)}>
+                        {displayName(project.name)}
                       </h4>
                       {/* Owner info */}
                       <p className="font-sans text-ui-xs text-slate/60 mb-1 flex items-center gap-1">
