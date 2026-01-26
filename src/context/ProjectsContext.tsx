@@ -241,8 +241,6 @@ ${description || "_Add a description of the project and its purpose here._"}
 
 ## Code Files
 
-_This section updates automatically when the project is saved._
-
 ## Analysis Notes
 
 _Record observations, questions, and insights from your critical code analysis:_
@@ -835,24 +833,42 @@ _Add relevant references, documentation links, or related scholarship:_
     setIsLoadingLibrary(true);
 
     try {
-      // Fetch approved public projects with owner info
+      // Fetch approved public projects (without FK join - FK doesn't exist)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data: projectsData, error: projectsError } = await (supabase as any)
         .from("projects")
-        .select(`
-          *,
-          owner:profiles!owner_id(id, display_name, initials, affiliation)
-        `)
+        .select("*")
         .eq("is_public", true)
         .eq("accession_status", "approved")
         .order("approved_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching library projects:", error);
+      if (projectsError) {
+        console.error("Error fetching library projects:", projectsError);
         return;
       }
 
-      setLibraryProjects(data || []);
+      const projects = projectsData || [];
+
+      // Fetch owner profiles separately
+      const ownerIds = [...new Set(projects.map((p: Project) => p.owner_id).filter(Boolean))];
+      let owners: Profile[] = [];
+      if (ownerIds.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: profilesData } = await (supabase as any)
+          .from("profiles")
+          .select("id, display_name, initials, affiliation")
+          .in("id", ownerIds);
+        owners = profilesData || [];
+      }
+
+      // Combine projects with owner info
+      const ownerMap = new Map(owners.map((o: Profile) => [o.id, o]));
+      const libraryProjectsWithOwners = projects.map((p: Project) => ({
+        ...p,
+        owner: ownerMap.get(p.owner_id) || undefined,
+      }));
+
+      setLibraryProjects(libraryProjectsWithOwners);
     } catch (error) {
       console.error("Error fetching library projects:", error);
     } finally {
@@ -1097,26 +1113,47 @@ _Add relevant references, documentation links, or related scholarship:_
     if (!supabase) return;
 
     setIsLoadingAdmin(true);
+    console.log("Fetching pending submissions...");
 
     try {
-      // Fetch submitted projects with owner info
+      // Fetch submitted projects (without FK join - FK doesn't exist)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data: projectsData, error: projectsError } = await (supabase as any)
         .from("projects")
-        .select(`
-          *,
-          owner:profiles!owner_id(id, display_name, initials, affiliation)
-        `)
+        .select("*")
         .eq("is_public", true)
         .eq("accession_status", "submitted")
         .order("submitted_at", { ascending: true });
 
-      if (error) {
-        console.error("Error fetching pending submissions:", error);
+      console.log("Pending submissions result:", { data: projectsData, error: projectsError, count: projectsData?.length });
+
+      if (projectsError) {
+        console.error("Error fetching pending submissions:", projectsError);
         return;
       }
 
-      setPendingSubmissions(data || []);
+      const projects = projectsData || [];
+
+      // Fetch owner profiles separately
+      const ownerIds = [...new Set(projects.map((p: Project) => p.owner_id).filter(Boolean))];
+      let owners: Profile[] = [];
+      if (ownerIds.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: profilesData } = await (supabase as any)
+          .from("profiles")
+          .select("id, display_name, initials, affiliation")
+          .in("id", ownerIds);
+        owners = profilesData || [];
+      }
+
+      // Combine projects with owner info
+      const ownerMap = new Map(owners.map((o: Profile) => [o.id, o]));
+      const submissionsWithOwners = projects.map((p: Project) => ({
+        ...p,
+        owner: ownerMap.get(p.owner_id) || undefined,
+      }));
+
+      setPendingSubmissions(submissionsWithOwners);
     } catch (error) {
       console.error("Error fetching pending submissions:", error);
     } finally {
