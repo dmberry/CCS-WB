@@ -114,7 +114,10 @@ export function AdminModal() {
       .order("is_admin", { ascending: false })
       .order("display_name", { ascending: true });
 
-    if (!error && data) {
+    if (error) {
+      console.error("Failed to fetch users:", error);
+      setError(`Failed to load users: ${error.message}`);
+    } else if (data) {
       setUsers(data as AdminUser[]);
     }
     setIsLoadingUsers(false);
