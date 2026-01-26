@@ -21,6 +21,7 @@ import {
   ArrowUpDown,
   ChevronUp,
   ChevronDown,
+  ChevronRight,
   Eye,
   EyeOff,
   Highlighter,
@@ -501,11 +502,9 @@ export function CodeEditorPanel({
   const [samplesDropdownPosition, setSamplesDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const samplesDropdownRef = useRef<HTMLDivElement>(null);
   const samplesButtonRef = useRef<HTMLButtonElement>(null);
-  // File trash state
-  const [showFileTrash, setShowFileTrash] = useState(false);
+  // File trash state - inline in file list
+  const [trashExpanded, setTrashExpanded] = useState(false);
   const [trashActionLoading, setTrashActionLoading] = useState<string | null>(null);
-  const trashDropdownRef = useRef<HTMLDivElement>(null);
-  const trashButtonRef = useRef<HTMLButtonElement>(null);
 
   // Handler for cursor position changes from CodeMirror (converts two args to object)
   const handleCursorPositionChange = useCallback((line: number, column: number) => {
@@ -530,10 +529,13 @@ export function CodeEditorPanel({
   }, [onLoadSampleProject]);
 
   // File trash handlers
-  const handleOpenFileTrash = useCallback(() => {
-    setShowFileTrash(true);
-    onLoadTrashedFiles?.();
-  }, [onLoadTrashedFiles]);
+  const handleToggleTrash = useCallback(() => {
+    const newExpanded = !trashExpanded;
+    setTrashExpanded(newExpanded);
+    if (newExpanded) {
+      onLoadTrashedFiles?.();
+    }
+  }, [trashExpanded, onLoadTrashedFiles]);
 
   const handleRestoreFile = useCallback(async (fileId: string) => {
     if (!onRestoreFile) return;
@@ -1174,26 +1176,6 @@ export function CodeEditorPanel({
     }
   }, [showSamplesDropdown]);
 
-  // Close file trash dropdown when clicking outside
-  useEffect(() => {
-    if (!showFileTrash) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (trashButtonRef.current?.contains(target)) return;
-      if (trashDropdownRef.current?.contains(target)) return;
-      setShowFileTrash(false);
-    };
-
-    const timer = setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside);
-    }, 10);
-
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showFileTrash]);
 
   // Close file menu dropdown when clicking outside
   useEffect(() => {
@@ -1355,25 +1337,6 @@ export function CodeEditorPanel({
                     </span>
                   )}
                 </button>
-                {/* File trash button - works in both cloud and local modes */}
-                {!readOnly && onLoadTrashedFiles && (
-                  <button
-                    ref={trashButtonRef}
-                    onClick={handleOpenFileTrash}
-                    className={cn(
-                      "relative p-1 transition-colors",
-                      showFileTrash ? "text-burgundy" : "text-slate-muted hover:text-burgundy"
-                    )}
-                    title="View trashed files"
-                  >
-                    <Trash2 className="h-3 w-3" strokeWidth={1.5} />
-                    {trashedFiles.length > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-burgundy rounded-full text-[6px] text-white flex items-center justify-center font-bold">
-                        {trashedFiles.length > 9 ? "+" : trashedFiles.length}
-                      </span>
-                    )}
-                  </button>
-                )}
               </div>
             </>
           )}
@@ -1614,6 +1577,78 @@ export function CodeEditorPanel({
               ))}
             </ul>
           )}
+
+          {/* Inline Trash Section - shown in file list for cloud projects */}
+          {!readOnly && isInProject && onLoadTrashedFiles && (
+            <div className="border-t border-parchment/50 mt-1">
+              <button
+                onClick={handleToggleTrash}
+                className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-cream/50 transition-colors"
+              >
+                <ChevronRight
+                  className={cn(
+                    "h-3 w-3 text-slate-muted transition-transform",
+                    trashExpanded && "rotate-90"
+                  )}
+                  strokeWidth={1.5}
+                />
+                <Trash2 className="h-3 w-3 text-slate-muted" strokeWidth={1.5} />
+                <span className="text-[10px] text-slate-muted">Trash</span>
+                {trashedFiles.length > 0 && (
+                  <span className="ml-auto px-1.5 py-0.5 text-[8px] bg-burgundy/10 text-burgundy rounded-full">
+                    {trashedFiles.length}
+                  </span>
+                )}
+              </button>
+              {trashExpanded && (
+                <div className="px-2 pb-2">
+                  {isLoadingFileTrash ? (
+                    <p className="text-[9px] text-slate-muted italic py-2 px-2">Loading...</p>
+                  ) : trashedFiles.length === 0 ? (
+                    <p className="text-[9px] text-slate-muted italic py-2 px-2">Trash is empty</p>
+                  ) : (
+                    <>
+                      <ul className="space-y-0.5">
+                        {trashedFiles.map((file) => (
+                          <li
+                            key={file.id}
+                            className="flex items-center gap-1.5 py-1 px-2 rounded hover:bg-cream/50 transition-colors group"
+                          >
+                            <span className="flex-1 text-[10px] font-mono text-slate-muted truncate">
+                              {file.name}
+                            </span>
+                            <button
+                              onClick={() => handleRestoreFile(file.id)}
+                              disabled={!!trashActionLoading}
+                              className="p-0.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                              title="Restore"
+                            >
+                              <RotateCcw className="h-3 w-3" strokeWidth={1.5} />
+                            </button>
+                            <button
+                              onClick={() => handlePermanentlyDeleteFile(file.id)}
+                              disabled={!!trashActionLoading}
+                              className="p-0.5 text-burgundy hover:bg-burgundy/10 rounded transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                              title="Delete permanently"
+                            >
+                              <X className="h-3 w-3" strokeWidth={1.5} />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      <button
+                        onClick={handleEmptyFileTrash}
+                        disabled={trashActionLoading === "empty"}
+                        className="w-full mt-2 py-1 text-[9px] text-burgundy hover:bg-burgundy/10 rounded transition-colors disabled:opacity-50"
+                      >
+                        {trashActionLoading === "empty" ? "Emptying..." : "Empty Trash"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           </div>
 
           {/* Annotation panel - slides up from bottom in Annotate mode */}
@@ -1712,78 +1747,6 @@ export function CodeEditorPanel({
                 )}
               </button>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* File trash dropdown - positioned relative to sidebar */}
-      {showFileTrash && isInProject && (
-        <div
-          ref={trashDropdownRef}
-          className="absolute top-10 left-2 z-50 bg-card border border-parchment rounded-lg shadow-lg min-w-[200px] max-w-[260px]"
-        >
-          <div className="px-3 py-2 border-b border-parchment flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-slate-muted uppercase tracking-wide flex items-center gap-1.5">
-              <Trash2 className="h-3 w-3" />
-              Trashed Files
-            </span>
-            {trashedFiles.length > 0 && (
-              <button
-                onClick={handleEmptyFileTrash}
-                disabled={trashActionLoading === "empty"}
-                className="text-[9px] text-burgundy hover:text-burgundy/80 disabled:opacity-50"
-                title="Empty trash"
-              >
-                Empty
-              </button>
-            )}
-          </div>
-          <div className="max-h-[250px] overflow-y-auto">
-            {isLoadingFileTrash ? (
-              <div className="px-3 py-4 text-center">
-                <span className="text-[10px] text-slate-muted">Loading...</span>
-              </div>
-            ) : trashedFiles.length === 0 ? (
-              <div className="px-3 py-4 text-center">
-                <span className="text-[10px] text-slate-muted italic">Trash is empty</span>
-              </div>
-            ) : (
-              <div className="py-1">
-                {trashedFiles.map((file) => (
-                  <div
-                    key={file.id}
-                    className="px-3 py-1.5 hover:bg-cream/50 transition-colors flex items-center justify-between gap-2"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[10px] font-mono text-ink/70 truncate block" title={file.name}>
-                        {file.name}
-                      </span>
-                      <span className="text-[8px] text-slate-muted">
-                        {new Date(file.deletedAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleRestoreFile(file.id)}
-                        disabled={!!trashActionLoading}
-                        className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-colors disabled:opacity-50"
-                        title="Restore"
-                      >
-                        <RotateCcw className="h-3 w-3" />
-                      </button>
-                      <button
-                        onClick={() => handlePermanentlyDeleteFile(file.id)}
-                        disabled={!!trashActionLoading}
-                        className="p-1 text-burgundy hover:bg-burgundy/10 rounded transition-colors disabled:opacity-50"
-                        title="Delete permanently"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       )}
