@@ -1577,13 +1577,14 @@ export function CodeEditorPanel({
               ))}
             </ul>
           )}
+          </div>
 
-          {/* Inline Trash Section - shown in file list for both cloud and local projects */}
+          {/* Trash Section - fixed at bottom of files pane, above annotation panel */}
           {!readOnly && onLoadTrashedFiles && (
-            <div className="border-t border-parchment/50 mt-1">
+            <div className="border-t border-parchment/50 flex-shrink-0">
               <button
                 onClick={handleToggleTrash}
-                className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-cream/50 transition-colors"
+                className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-cream/50 dark:hover:bg-slate-800/50 transition-colors"
               >
                 <ChevronRight
                   className={cn(
@@ -1595,13 +1596,13 @@ export function CodeEditorPanel({
                 <Trash2 className="h-3 w-3 text-slate-muted" strokeWidth={1.5} />
                 <span className="text-[10px] text-slate-muted">Trash</span>
                 {trashedFiles.length > 0 && (
-                  <span className="ml-auto px-1.5 py-0.5 text-[8px] bg-burgundy/10 text-burgundy rounded-full">
+                  <span className="ml-auto px-1.5 py-0.5 text-[8px] bg-burgundy/10 text-burgundy dark:bg-burgundy/20 dark:text-burgundy-light rounded-full">
                     {trashedFiles.length}
                   </span>
                 )}
               </button>
               {trashExpanded && (
-                <div className="px-2 pb-2">
+                <div className="px-2 pb-2 max-h-32 overflow-y-auto">
                   {isLoadingFileTrash ? (
                     <p className="text-[9px] text-slate-muted italic py-2 px-2">Loading...</p>
                   ) : trashedFiles.length === 0 ? (
@@ -1612,7 +1613,7 @@ export function CodeEditorPanel({
                         {trashedFiles.map((file) => (
                           <li
                             key={file.id}
-                            className="flex items-center gap-1.5 py-1 px-2 rounded hover:bg-cream/50 transition-colors group"
+                            className="flex items-center gap-1.5 py-1 px-2 rounded hover:bg-cream/50 dark:hover:bg-slate-800/50 transition-colors group"
                           >
                             <span className="flex-1 text-[10px] font-mono text-slate-muted truncate">
                               {file.name}
@@ -1620,7 +1621,7 @@ export function CodeEditorPanel({
                             <button
                               onClick={() => handleRestoreFile(file.id)}
                               disabled={!!trashActionLoading}
-                              className="p-0.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                              className="p-0.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
                               title="Restore"
                             >
                               <RotateCcw className="h-3 w-3" strokeWidth={1.5} />
@@ -1649,7 +1650,6 @@ export function CodeEditorPanel({
               )}
             </div>
           )}
-          </div>
 
           {/* Annotation panel - slides up from bottom in Annotate mode */}
           {editorMode === "annotate" && showAnnotationPanel && (() => {
