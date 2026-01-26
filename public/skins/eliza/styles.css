@@ -567,6 +567,87 @@ body {
   box-shadow: 0 0 30px rgba(0, 255, 0, 0.3) !important;
 }
 
+/* === FILE LIST SIDEBAR - Better contrast === */
+/* File list panel background */
+aside,
+[class*="FileList"],
+[class*="file-list"],
+nav[aria-label*="file"],
+.file-tree,
+[class*="sidebar"] {
+  background: #000800 !important;
+  border-right: 1px solid #004400 !important;
+}
+
+/* File names - bright green on dark background */
+aside button,
+aside a,
+[class*="FileList"] button,
+[class*="file-list"] button,
+.file-tree button,
+.file-tree a {
+  color: #00ff00 !important;
+  background: transparent !important;
+  text-shadow: 0 0 3px #00ff00 !important;
+}
+
+/* Selected/active file */
+aside button[data-state="active"],
+aside button.active,
+aside button[aria-selected="true"],
+[class*="FileList"] button[data-state="active"],
+[class*="file-list"] button.active {
+  background: #003300 !important;
+  border-left: 3px solid #00ff00 !important;
+}
+
+/* Hover state */
+aside button:hover,
+[class*="FileList"] button:hover,
+[class*="file-list"] button:hover {
+  background: #002200 !important;
+}
+
+/* === ANNOTATION TOOLBAR BUTTONS === */
+/* The OBS, Q, MET, PAT, CTX, CRIT buttons */
+[class*="annotation"] button,
+.annotation-toolbar button,
+button[class*="annotation-type"],
+[class*="AnnotationPanel"] button,
+[class*="annotation-panel"] button {
+  background: #003300 !important;
+  border: 1px solid #00ff00 !important;
+  color: #00ff00 !important;
+  font-family: 'VT323', monospace !important;
+  font-size: 14px !important;
+  text-shadow: 0 0 3px #00ff00 !important;
+}
+
+[class*="annotation"] button:hover,
+.annotation-toolbar button:hover {
+  background: #004400 !important;
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.5) !important;
+}
+
+/* Annotation panel container */
+[class*="AnnotationPanel"],
+[class*="annotation-panel"],
+.annotation-container,
+[class*="ANNOTATIONS"] {
+  background: #000a00 !important;
+  border: 1px solid #004400 !important;
+}
+
+/* Annotation panel header */
+[class*="AnnotationPanel"] h3,
+[class*="annotation-panel"] h3,
+.annotation-header {
+  color: #00ff00 !important;
+  background: #002200 !important;
+  border-bottom: 1px solid #004400 !important;
+  text-shadow: 0 0 3px #00ff00 !important;
+}
+
 /* === FINAL CLEANUP === */
 .text-slate-muted {
   background: transparent !important;
