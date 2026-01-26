@@ -2075,6 +2075,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                                 className={cn(
                                   "flex items-center justify-center gap-1 px-2 py-1.5 rounded-sm",
                                   "text-[11px] bg-burgundy/10 text-burgundy hover:bg-burgundy/20",
+                                  "dark:bg-burgundy/20 dark:text-burgundy-light dark:hover:bg-burgundy/30",
                                   "transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 )}
                               >
@@ -2164,7 +2165,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                         Admin Panel
                       </span>
                       {pendingSubmissions.length > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-amber-100 text-amber-700">
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-400">
                           {pendingSubmissions.length}
                         </span>
                       )}

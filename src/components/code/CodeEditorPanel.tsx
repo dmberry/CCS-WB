@@ -1578,8 +1578,8 @@ export function CodeEditorPanel({
             </ul>
           )}
 
-          {/* Inline Trash Section - shown in file list for cloud projects */}
-          {!readOnly && isInProject && onLoadTrashedFiles && (
+          {/* Inline Trash Section - shown in file list for both cloud and local projects */}
+          {!readOnly && onLoadTrashedFiles && (
             <div className="border-t border-parchment/50 mt-1">
               <button
                 onClick={handleToggleTrash}

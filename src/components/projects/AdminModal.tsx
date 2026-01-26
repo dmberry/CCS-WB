@@ -541,7 +541,7 @@ export function AdminModal() {
       {/* Modal */}
       <div className="relative bg-popover rounded-sm shadow-lg border border-parchment max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden modal-content">
         {/* Header */}
-        <div className="relative px-5 py-4 bg-gradient-to-r from-amber-50 to-amber-100 border-b border-parchment">
+        <div className="relative px-5 py-4 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-b border-parchment">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-amber-500/10 rounded-lg">
               <Shield className="h-5 w-5 text-amber-600" />
@@ -562,14 +562,14 @@ export function AdminModal() {
         </div>
 
         {/* Tabs */}
-        <div className="px-5 py-2 border-b border-parchment bg-cream/30 flex gap-2">
+        <div className="px-5 py-2 border-b border-parchment bg-cream/30 dark:bg-slate-800/30 flex gap-2">
           <button
             onClick={() => setActiveTab("pending")}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium transition-colors",
               activeTab === "pending"
                 ? "bg-amber-500 text-white"
-                : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                : "bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50"
             )}
           >
             <Clock className="h-3.5 w-3.5" />
@@ -586,7 +586,7 @@ export function AdminModal() {
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium transition-colors",
               activeTab === "approved"
                 ? "bg-emerald-500 text-white"
-                : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
             )}
           >
             <Library className="h-3.5 w-3.5" />
@@ -603,7 +603,7 @@ export function AdminModal() {
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium transition-colors",
               activeTab === "users"
                 ? "bg-purple-500 text-white"
-                : "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                : "bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50"
             )}
           >
             <Users className="h-3.5 w-3.5" />
@@ -620,7 +620,7 @@ export function AdminModal() {
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium transition-colors",
               activeTab === "orphaned"
                 ? "bg-slate-500 text-white"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700/50 dark:text-slate-300 dark:hover:bg-slate-700/70"
             )}
           >
             <UserX className="h-3.5 w-3.5" />
@@ -645,7 +645,7 @@ export function AdminModal() {
               className={cn(
                 "w-full pl-9 pr-3 py-2",
                 "font-sans text-ui-base text-ink placeholder:text-slate/50",
-                "bg-ivory border border-parchment rounded-lg",
+                "bg-ivory dark:bg-slate-800 border border-parchment rounded-lg",
                 "focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
               )}
             />
@@ -671,7 +671,7 @@ export function AdminModal() {
                 </div>
               ) : filteredPending.length === 0 ? (
                 <div className="text-center py-8 px-4">
-                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-2xl mb-4 shadow-sm">
+                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-900/30 dark:to-amber-800/30 rounded-2xl mb-4 shadow-sm">
                     <BookOpen className="h-7 w-7 text-amber-600/40" />
                   </div>
                   <h3 className="font-serif text-ui-lg text-ink mb-2">
@@ -688,7 +688,7 @@ export function AdminModal() {
                   {filteredPending.map((project) => (
                     <div
                       key={project.id}
-                      className="group p-4 rounded-xl border border-parchment bg-ivory hover:border-amber-300 hover:shadow-sm transition-all"
+                      className="group p-4 rounded-xl border border-parchment bg-ivory dark:bg-slate-800/50 hover:border-amber-300 hover:shadow-sm transition-all"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -713,7 +713,7 @@ export function AdminModal() {
                               <button
                                 onClick={() => handleSubmitRename(project.id)}
                                 disabled={actionLoading === `rename-${project.id}`}
-                                className="p-1 rounded hover:bg-emerald-100 transition-colors"
+                                className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
                                 title="Save"
                               >
                                 {actionLoading === `rename-${project.id}` ? (
@@ -813,7 +813,7 @@ export function AdminModal() {
                               onClick={() => handleStartRename(project)}
                               disabled={!!actionLoading || !!renamingProjectId}
                               title="Rename"
-                              className="p-1.5 rounded hover:bg-cream transition-colors disabled:opacity-50"
+                              className="p-1.5 rounded hover:bg-cream dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
                             >
                               <Pencil className="h-3.5 w-3.5 text-slate" />
                             </button>
@@ -821,7 +821,7 @@ export function AdminModal() {
                               onClick={() => handleDuplicate(project)}
                               disabled={!!actionLoading}
                               title="Duplicate to my projects"
-                              className="p-1.5 rounded hover:bg-cream transition-colors disabled:opacity-50"
+                              className="p-1.5 rounded hover:bg-cream dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
                             >
                               {actionLoading === `duplicate-${project.id}` ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin text-slate" />
@@ -940,7 +940,7 @@ export function AdminModal() {
                 </div>
               ) : filteredUsers.length === 0 ? (
                 <div className="text-center py-8 px-4">
-                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-2xl mb-4 shadow-sm">
+                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-900/30 dark:to-purple-800/30 rounded-2xl mb-4 shadow-sm">
                     <Users className="h-7 w-7 text-purple-600/40" />
                   </div>
                   <h3 className="font-serif text-ui-lg text-ink mb-2">
@@ -958,8 +958,8 @@ export function AdminModal() {
                       className={cn(
                         "group p-3 rounded-lg border transition-all flex items-center justify-between gap-3",
                         u.is_admin
-                          ? "border-purple-200 bg-purple-50/50"
-                          : "border-parchment bg-ivory hover:border-parchment-dark"
+                          ? "border-purple-200 bg-purple-50/50 dark:border-purple-700 dark:bg-purple-900/30"
+                          : "border-parchment bg-ivory dark:bg-slate-800/50 hover:border-parchment-dark"
                       )}
                     >
                       <div className="flex-1 min-w-0">
@@ -997,8 +997,8 @@ export function AdminModal() {
                             u.id === user?.id
                               ? "bg-slate/10 text-slate/50 cursor-not-allowed"
                               : u.is_admin
-                                ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
-                                : "bg-slate/10 text-slate hover:bg-purple-100 hover:text-purple-700"
+                                ? "bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50"
+                                : "bg-slate/10 text-slate hover:bg-purple-100 hover:text-purple-700 dark:hover:bg-purple-900/30 dark:hover:text-purple-400"
                           )}
                         >
                           {actionLoading === `admin-${u.id}` ? (
@@ -1038,8 +1038,8 @@ export function AdminModal() {
 
                       {/* Delete user confirmation */}
                       {deleteUserConfirmId === u.id && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-burgundy/5 rounded-lg z-10">
-                          <div className="bg-white rounded-lg shadow-lg border border-burgundy/20 p-3 max-w-[280px]">
+                        <div className="absolute inset-0 flex items-center justify-center bg-burgundy/5 dark:bg-burgundy/20 rounded-lg z-10">
+                          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-burgundy/20 p-3 max-w-[280px]">
                             <p className="font-sans text-ui-xs text-burgundy font-medium mb-2">
                               Delete {u.display_name || "this user"}?
                             </p>
@@ -1097,7 +1097,7 @@ export function AdminModal() {
                 </div>
               ) : filteredLibrary.length === 0 ? (
                 <div className="text-center py-8 px-4">
-                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-2xl mb-4 shadow-sm">
+                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-900/30 dark:to-emerald-800/30 rounded-2xl mb-4 shadow-sm">
                     <Library className="h-7 w-7 text-emerald-600/40" />
                   </div>
                   <h3 className="font-serif text-ui-lg text-ink mb-2">
@@ -1114,7 +1114,7 @@ export function AdminModal() {
                   {filteredLibrary.map((project) => (
                     <div
                       key={project.id}
-                      className="group p-4 rounded-xl border border-parchment bg-ivory hover:border-emerald-300 hover:shadow-sm transition-all"
+                      className="group p-4 rounded-xl border border-parchment bg-ivory dark:bg-slate-800/50 hover:border-emerald-300 hover:shadow-sm transition-all"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -1139,7 +1139,7 @@ export function AdminModal() {
                               <button
                                 onClick={() => handleSubmitRename(project.id)}
                                 disabled={actionLoading === `rename-${project.id}`}
-                                className="p-1 rounded hover:bg-emerald-100 transition-colors"
+                                className="p-1 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
                                 title="Save"
                               >
                                 {actionLoading === `rename-${project.id}` ? (
@@ -1198,7 +1198,7 @@ export function AdminModal() {
                             className={cn(
                               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg",
                               "font-sans text-ui-xs font-medium",
-                              "bg-amber-100 text-amber-700 hover:bg-amber-200",
+                              "bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50",
                               "transition-colors",
                               "disabled:opacity-50 disabled:cursor-not-allowed"
                             )}
@@ -1212,7 +1212,7 @@ export function AdminModal() {
                               onClick={() => handleStartRename(project)}
                               disabled={!!actionLoading || !!renamingProjectId}
                               title="Rename"
-                              className="p-1.5 rounded hover:bg-cream transition-colors disabled:opacity-50"
+                              className="p-1.5 rounded hover:bg-cream dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
                             >
                               <Pencil className="h-3.5 w-3.5 text-slate" />
                             </button>
@@ -1220,7 +1220,7 @@ export function AdminModal() {
                               onClick={() => handleDuplicate(project)}
                               disabled={!!actionLoading}
                               title="Duplicate to my projects"
-                              className="p-1.5 rounded hover:bg-cream transition-colors disabled:opacity-50"
+                              className="p-1.5 rounded hover:bg-cream dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
                             >
                               {actionLoading === `duplicate-${project.id}` ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin text-slate" />
@@ -1242,8 +1242,8 @@ export function AdminModal() {
 
                       {/* Deaccession confirmation */}
                       {deaccessionConfirmId === project.id && (
-                        <div className="mt-3 pt-3 border-t border-amber-200 bg-amber-50 -mx-4 -mb-4 px-4 pb-4 rounded-b-xl">
-                          <p className="font-sans text-ui-xs text-amber-800 mb-2">
+                        <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 -mx-4 -mb-4 px-4 pb-4 rounded-b-xl">
+                          <p className="font-sans text-ui-xs text-amber-800 dark:text-amber-300 mb-2">
                             Move this project back to pending submissions? It will be removed from the public library.
                           </p>
                           <div className="flex justify-end gap-2">
@@ -1314,7 +1314,7 @@ export function AdminModal() {
                 </div>
               ) : filteredOrphaned.length === 0 ? (
                 <div className="text-center py-8 px-4">
-                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-slate-50 to-slate-100/50 rounded-2xl mb-4 shadow-sm">
+                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-slate-50 to-slate-100/50 dark:from-slate-700/50 dark:to-slate-800/50 rounded-2xl mb-4 shadow-sm">
                     <UserX className="h-7 w-7 text-slate-600/40" />
                   </div>
                   <h3 className="font-serif text-ui-lg text-ink mb-2">
@@ -1331,7 +1331,7 @@ export function AdminModal() {
                   {filteredOrphaned.map((project) => (
                     <div
                       key={project.id}
-                      className="group p-4 rounded-xl border border-parchment bg-ivory hover:border-slate-300 hover:shadow-sm transition-all"
+                      className="group p-4 rounded-xl border border-parchment bg-ivory dark:bg-slate-800/50 hover:border-slate-300 hover:shadow-sm transition-all"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -1399,7 +1399,7 @@ export function AdminModal() {
 
                       {/* Reassign dialog */}
                       {reassignProjectId === project.id && (
-                        <div className="mt-3 pt-3 border-t border-purple-200 bg-purple-50 -mx-4 -mb-4 px-4 pb-4 rounded-b-xl">
+                        <div className="mt-3 pt-3 border-t border-purple-200 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/30 -mx-4 -mb-4 px-4 pb-4 rounded-b-xl">
                           <label className="block font-sans text-ui-xs text-purple-800 mb-1.5">
                             Assign to user:
                           </label>
@@ -1484,7 +1484,7 @@ export function AdminModal() {
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-parchment bg-amber-50/30">
+        <div className="px-5 py-3 border-t border-parchment bg-amber-50/30 dark:bg-amber-900/10">
           <p className="font-sans text-ui-xs text-slate/70 text-center">
             {activeTab === "pending"
               ? `${pendingSubmissions.length} submission${pendingSubmissions.length !== 1 ? "s" : ""} pending review`
