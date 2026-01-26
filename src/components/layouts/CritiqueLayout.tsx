@@ -56,6 +56,7 @@ import {
   MessageSquareText,
   Info,
   Library,
+  Pencil,
 } from "lucide-react";
 import { CodeEditorPanel, generateAnnotatedCode, parseAnnotatedMarkdown } from "@/components/code";
 import { ContextPreview } from "@/components/chat";
@@ -104,6 +105,9 @@ const MODE_COLORS: Record<string, string> = {
   interpret: "bg-emerald-100 text-emerald-700",
   create: "bg-blue-100 text-blue-700",
 };
+
+// Strip $ namespace prefix from project names for display (library projects use $ prefix internally)
+const displayProjectName = (name: string) => name.replace(/^\$+/, "");
 
 // Languages for code critique (broader than create mode)
 const CRITIQUE_LANGUAGES = [
@@ -192,6 +196,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     setShowAdminModal,
     pendingSubmissions,
     fetchPendingSubmissions,
+    renameProject,
   } = useProjects();
   const { markLocalUpdate } = useProjectSync();
   const aiEnabled = aiSettings.aiEnabled;
@@ -248,6 +253,12 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   // Project info dropdown state
   const [showProjectInfo, setShowProjectInfo] = useState(false);
   const projectInfoRef = useRef<HTMLDivElement>(null);
+
+  // Rename project state
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [isRenamingLoading, setIsRenamingLoading] = useState(false);
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   // Panel layout settings from session (per-project)
   // Use defaults as fallback for old sessions that don't have displaySettings
@@ -883,6 +894,43 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     }
   }, [currentProject, session.codeFiles, session.lineAnnotations, codeContents]);
 
+  // Start renaming project
+  const handleStartRename = useCallback(() => {
+    if (currentProject) {
+      setRenameValue(currentProject.name);
+      setIsRenaming(true);
+      // Focus the input after render
+      setTimeout(() => renameInputRef.current?.focus(), 0);
+    }
+  }, [currentProject]);
+
+  // Cancel rename
+  const handleCancelRename = useCallback(() => {
+    setIsRenaming(false);
+    setRenameValue("");
+  }, []);
+
+  // Submit rename
+  const handleSubmitRename = useCallback(async () => {
+    if (!currentProject || !renameValue.trim() || renameValue.trim() === currentProject.name) {
+      setIsRenaming(false);
+      return;
+    }
+
+    setIsRenamingLoading(true);
+    try {
+      const { error } = await renameProject(currentProject.id, renameValue.trim());
+      if (error) {
+        console.error("Failed to rename project:", error);
+      } else {
+        setIsRenaming(false);
+        setRenameValue("");
+      }
+    } finally {
+      setIsRenamingLoading(false);
+    }
+  }, [currentProject, renameValue, renameProject]);
+
   // Load a project from the cloud menu
   const handleLoadProject = useCallback(async (projectId: string) => {
     setCloudActionLoading(`load-${projectId}`);
@@ -1119,6 +1167,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
         setShowProjectInfo(false);
         setIsCreatingProject(false);
         setNewProjectName("");
+        setIsRenaming(false);
+        setRenameValue("");
       }
       // Close code input panel if clicking outside of it
       if (!target.closest('[data-code-input]')) {
@@ -1462,6 +1512,75 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                     )}
                     Download ZIP
                   </button>
+
+                  {/* Rename Project - owners only */}
+                  {user?.id === currentProject.owner_id && (
+                    isRenaming ? (
+                      <div className="flex flex-col gap-1.5">
+                        <input
+                          ref={renameInputRef}
+                          type="text"
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSubmitRename();
+                            if (e.key === "Escape") handleCancelRename();
+                          }}
+                          placeholder="Project name"
+                          className={cn(
+                            "w-full px-2 py-1.5 rounded",
+                            "text-[11px] text-ink",
+                            "bg-white border border-parchment",
+                            "focus:outline-none focus:ring-1 focus:ring-burgundy/30 focus:border-burgundy"
+                          )}
+                          disabled={isRenamingLoading}
+                        />
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={handleCancelRename}
+                            disabled={isRenamingLoading}
+                            className={cn(
+                              "flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded",
+                              "text-[10px] font-medium text-slate",
+                              "bg-slate/10 hover:bg-slate/20 transition-colors",
+                              "disabled:opacity-50"
+                            )}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleSubmitRename}
+                            disabled={isRenamingLoading || !renameValue.trim()}
+                            className={cn(
+                              "flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded",
+                              "text-[10px] font-medium text-white",
+                              "bg-burgundy hover:bg-burgundy-dark transition-colors",
+                              "disabled:opacity-50"
+                            )}
+                          >
+                            {isRenamingLoading ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Check className="h-3 w-3" />
+                            )}
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleStartRename}
+                        className={cn(
+                          "w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded",
+                          "text-[11px] font-medium text-slate",
+                          "bg-slate/10 hover:bg-slate/20 transition-colors"
+                        )}
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Rename
+                      </button>
+                    )
+                  )}
 
                   {/* Manage Members - owners only */}
                   {user?.id === currentProject.owner_id && (
@@ -1813,9 +1932,9 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                                     "text-[11px] truncate font-medium",
                                     isCurrentProject ? "text-burgundy" : "text-ink"
                                   )}
-                                  title={project.name}
+                                  title={displayProjectName(project.name)}
                                 >
-                                  {project.name}
+                                  {displayProjectName(project.name)}
                                 </span>
                                 {isCurrentProject && (
                                   <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[8px] font-medium bg-burgundy text-white">

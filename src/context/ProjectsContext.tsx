@@ -31,6 +31,7 @@ interface ProjectsContextValue {
   loadProject: (projectId: string) => Promise<{ session: Session | null; error: Error | null }>;
   saveProject: (projectId: string, session: Session) => Promise<{ error: Error | null }>;
   deleteProject: (projectId: string) => Promise<{ error: Error | null }>;
+  renameProject: (projectId: string, newName: string) => Promise<{ error: Error | null }>;
 
   // Project management
   refreshProjects: () => Promise<void>;
@@ -610,6 +611,42 @@ _Add relevant references, documentation links, or related scholarship:_
     }
   }, [supabase, user, currentProjectId]);
 
+  // Rename a project (only owner can rename)
+  const renameProject = useCallback(async (projectId: string, newName: string) => {
+    if (!supabase || !user) {
+      return { error: new Error("Not authenticated") };
+    }
+
+    // Strip leading $ characters (reserved for library namespace) and trim
+    const sanitizedName = newName.replace(/^\$+/, "").trim();
+
+    if (!sanitizedName) {
+      return { error: new Error("Project name cannot be empty") };
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("projects")
+        .update({ name: sanitizedName, updated_at: new Date().toISOString() })
+        .eq("id", projectId)
+        .eq("owner_id", user.id); // Only allow rename if user is the owner
+
+      if (error) {
+        return { error: new Error(error.message) };
+      }
+
+      // Update local state
+      setProjects(prev => prev.map(p =>
+        p.id === projectId ? { ...p, name: sanitizedName } : p
+      ));
+
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  }, [supabase, user]);
+
   // Get project members with profile info
   const getProjectMembers = useCallback(async (projectId: string) => {
     if (!supabase) {
@@ -958,12 +995,17 @@ _Add relevant references, documentation links, or related scholarship:_
       const newProjectId = crypto.randomUUID();
       const now = new Date().toISOString();
 
+      // Strip $ namespace prefix from library project name for the copy
+      const stripNamespacePrefix = (name: string) => name.replace(/^\$+/, "");
+      const baseName = stripNamespacePrefix(sourceProject.name);
+      const copyName = newName ? stripNamespacePrefix(newName) : `${baseName} (Copy)`;
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: newProject, error: createError } = await (supabase as any)
         .from("projects")
         .insert({
           id: newProjectId,
-          name: newName || `${sourceProject.name} (Copy)`,
+          name: copyName,
           description: sourceProject.description,
           owner_id: user.id,
           mode: sourceProject.mode,
@@ -1304,6 +1346,7 @@ ${reason.trim()}
         loadProject,
         saveProject,
         deleteProject,
+        renameProject,
         refreshProjects: fetchProjects,
         setCurrentProjectId,
         getProjectMembers,
