@@ -50,7 +50,10 @@ import {
   ANNOTATION_FONT_SIZE_MAX,
   ANNOTATION_INDENT_MIN,
   ANNOTATION_INDENT_MAX,
+  CODE_FONT_OPTIONS,
+  type CodeFontId,
 } from "@/types/app-settings";
+import { useAppSettings } from "@/context/AppSettingsContext";
 import { DEFAULT_ANNOTATION_DISPLAY_SETTINGS } from "@/types/session";
 import { CodeMirrorEditor } from "./CodeMirrorEditor";
 import type { InlineEditState, InlineEditCallbacks } from "./cm-annotations";
@@ -401,6 +404,9 @@ export function CodeEditorPanel({
     clearLineAnnotations: sessionClearLineAnnotations,
     updateAnnotationDisplaySettings,
   } = useSession();
+
+  // Get app settings for code font
+  const { settings: appSettings, setCodeFont } = useAppSettings();
 
   // Get annotation display settings from session (per-project)
   // Use defaults as fallback for old sessions that don't have displaySettings
@@ -2367,7 +2373,7 @@ export function CodeEditorPanel({
                         </div>
 
                         {/* Annotation left indent */}
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
                           <span className="font-sans text-[10px] text-slate">Left indent</span>
                           <div className="flex items-center gap-1">
                             <button
@@ -2398,6 +2404,23 @@ export function CodeEditorPanel({
                               <Plus className="h-2.5 w-2.5" />
                             </button>
                           </div>
+                        </div>
+
+                        {/* Code font */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-sans text-[10px] text-slate">Code font</span>
+                          <select
+                            value={appSettings.codeFont}
+                            onChange={(e) => setCodeFont(e.target.value as CodeFontId)}
+                            className="px-1.5 py-0.5 text-[10px] font-sans bg-card text-foreground border border-parchment rounded-sm focus:outline-none focus:ring-1 focus:ring-burgundy cursor-pointer min-w-[90px]"
+                            style={{ fontFamily: CODE_FONT_OPTIONS.find(f => f.id === appSettings.codeFont)?.family }}
+                          >
+                            {CODE_FONT_OPTIONS.map((font) => (
+                              <option key={font.id} value={font.id}>
+                                {font.name}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                       </>
                     )}

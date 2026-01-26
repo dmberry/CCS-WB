@@ -41,6 +41,93 @@ interface SkinsContextValue {
 
 const SkinsContext = createContext<SkinsContextValue | null>(null);
 
+/**
+ * Scope CSS selectors to .skin-active to ensure styles only apply when skin is active.
+ * This prevents skin styles from persisting after the skin is disabled.
+ */
+function scopeCssToSkinActive(css: string): string {
+  // Split CSS into blocks (rules and at-rules)
+  // This is a simplified CSS parser that handles common cases
+
+  // Remove CSS comments first
+  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  // Handle @keyframes, @font-face, and @import separately - they shouldn't be scoped
+  const atRulePattern = /@(keyframes|font-face|import|charset|namespace)[^{]*\{[^}]*(\{[^}]*\}[^}]*)*\}/gi;
+  const atRules: string[] = [];
+  const cssWithoutAtRules = withoutComments.replace(atRulePattern, (match) => {
+    atRules.push(match);
+    return `/*AT_RULE_PLACEHOLDER_${atRules.length - 1}*/`;
+  });
+
+  // Also extract simple @import and @charset rules (no braces)
+  const simpleAtRulePattern = /@(import|charset)[^;]*;/gi;
+  const simpleAtRules: string[] = [];
+  const cssWithoutSimpleAtRules = cssWithoutAtRules.replace(simpleAtRulePattern, (match) => {
+    simpleAtRules.push(match);
+    return `/*SIMPLE_AT_RULE_${simpleAtRules.length - 1}*/`;
+  });
+
+  // Now scope regular CSS rules by adding .skin-active prefix to selectors
+  // Match selector blocks: selectors { declarations }
+  const rulePattern = /([^{}]+)\{([^{}]*)\}/g;
+  const scopedCss = cssWithoutSimpleAtRules.replace(rulePattern, (match, selectors: string, declarations: string) => {
+    // Skip placeholders
+    if (selectors.includes('AT_RULE_PLACEHOLDER') || selectors.includes('SIMPLE_AT_RULE')) {
+      return match;
+    }
+
+    // Split selectors by comma and scope each one
+    const scopedSelectors = selectors
+      .split(',')
+      .map((selector: string) => {
+        selector = selector.trim();
+        if (!selector) return selector;
+
+        // Don't scope pseudo-element selectors that start with ::
+        // Don't scope :root - replace it with .skin-active
+        if (selector === ':root' || selector === ':root.skin-active') {
+          return ':root.skin-active';
+        }
+
+        // Don't double-scope if already has .skin-active
+        if (selector.includes('.skin-active')) {
+          return selector;
+        }
+
+        // Handle html and body specially - add .skin-active to them
+        if (selector === 'html' || selector === 'body') {
+          return `${selector}.skin-active`;
+        }
+        if (selector.startsWith('html ') || selector.startsWith('body ')) {
+          return selector.replace(/^(html|body)/, '$1.skin-active');
+        }
+
+        // Handle pseudo-elements and webkit selectors - scope the main element
+        if (selector.startsWith('::-webkit') || selector.startsWith('::')) {
+          return `.skin-active ${selector}`;
+        }
+
+        // Default: add .skin-active prefix
+        return `.skin-active ${selector}`;
+      })
+      .join(', ');
+
+    return `${scopedSelectors} {${declarations}}`;
+  });
+
+  // Restore at-rules
+  let finalCss = scopedCss;
+  simpleAtRules.forEach((rule, i) => {
+    finalCss = finalCss.replace(`/*SIMPLE_AT_RULE_${i}*/`, rule);
+  });
+  atRules.forEach((rule, i) => {
+    finalCss = finalCss.replace(`/*AT_RULE_PLACEHOLDER_${i}*/`, rule);
+  });
+
+  return finalCss;
+}
+
 // Parse the Skins.md manifest to get available skins
 function parseSkinsManifest(markdown: string): SkinManifestEntry[] {
   const skins: SkinManifestEntry[] = [];
@@ -258,12 +345,12 @@ export function SkinsProvider({ children }: { children: React.ReactNode }) {
     styleElement.textContent = cssText;
     document.head.appendChild(styleElement);
 
-    // Inject custom CSS if present
+    // Inject custom CSS if present, scoped to .skin-active
     if (customCSS) {
       const customStyleElement = document.createElement("style");
       customStyleElement.id = fontStyleId;
-      // Scope custom CSS to .skin-active where possible
-      customStyleElement.textContent = customCSS;
+      // Scope all selectors to .skin-active so styles are removed when skin is disabled
+      customStyleElement.textContent = scopeCssToSkinActive(customCSS);
       document.head.appendChild(customStyleElement);
     }
 
