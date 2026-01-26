@@ -828,15 +828,13 @@ export function SettingsModal({
                   >
                     <span
                       data-skin-protected="true"
-                      className={cn(
-                        "absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform",
-                        "!border-none",
-                        skinsEnabled ? "translate-x-4" : "translate-x-0.5"
-                      )}
+                      className="absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm"
                       style={{
                         background: 'white',
                         border: 'none',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                        transform: skinsEnabled ? 'translateX(16px)' : 'translateX(2px)',
+                        transition: 'transform 0.2s ease-in-out'
                       }}
                     />
                   </button>

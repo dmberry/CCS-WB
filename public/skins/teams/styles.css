@@ -2,74 +2,63 @@
 /* "You're on mute." - Everyone, 2020-forever */
 /* This could have been an email. */
 
-/* === TEAMS PURPLE GRADIENT === */
+/* === TEAMS COLOR PALETTE (from actual Teams UI) === */
+/* Background: #F3F2F1 (light grey) */
+/* Header: #ffffff (white) */
+/* Primary text: #323130 (near black) */
+/* Secondary text: #605E5C (grey) */
+/* Accent purple: #6264a7 */
+/* Red badge: #c4314b */
+/* Green presence: #92c353 */
+
 body {
-  background: linear-gradient(180deg, #f5f5f5 0%, #ebebeb 100%) !important;
+  background: #F3F2F1 !important;
 }
 
 .dark body {
-  background: linear-gradient(180deg, #1f1f1f 0%, #292929 100%) !important;
+  background: #1f1f1f !important;
 }
 
-/* === TOOLBAR / HEADER - Teams purple bar === */
+/* === TOOLBAR / HEADER - White like actual Teams === */
 header,
 header.bg-background {
-  background: linear-gradient(90deg, #464775 0%, #5b5fc7 50%, #464775 100%) !important;
-  border-bottom: none !important;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+  box-shadow: none !important;
 }
 
 header * {
-  color: #ffffff !important;
+  color: #323130 !important;
 }
 
 header svg {
-  color: #ffffff !important;
+  color: #605E5C !important;
 }
 
 header button {
-  background: rgba(255,255,255,0.1) !important;
+  background: transparent !important;
   border: none !important;
   border-radius: 4px !important;
 }
 
 header button:hover {
-  background: rgba(255,255,255,0.2) !important;
+  background: #F3F2F1 !important;
 }
 
 header h1 {
-  font-family: 'Segoe UI', sans-serif !important;
+  font-family: 'Segoe UI', -apple-system, sans-serif !important;
   font-size: 14px !important;
   font-weight: 600 !important;
+  color: #323130 !important;
 }
 
-/* === "SOMEONE IS TYPING" ANIMATION === */
+/* === ANIMATION KEYFRAMES === */
 @keyframes typing {
   0%, 100% { opacity: 0.3; }
   50% { opacity: 1; }
 }
 
-/* Add typing indicator to main area */
-main::before {
-  content: "Someone is typing...";
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #ffffff;
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 12px;
-  color: #616161;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  animation: typing 2s ease-in-out infinite;
-  z-index: 100;
-}
-
-.dark main::before {
-  background: #2d2d2d;
-  color: #d1d1d1;
-}
+/* "Someone is typing" indicator - disabled for cleaner look */
 
 /* === MAIN PAGE CARDS === */
 main .grid button.group,
@@ -87,7 +76,7 @@ main button[class*="shadow-editorial"] {
 }
 
 main .grid button.group * {
-  color: #242424 !important;
+  color: #323130 !important;
 }
 
 .dark main .grid button.group * {
@@ -95,13 +84,13 @@ main .grid button.group * {
 }
 
 main .grid button.group h3 {
-  color: #5b5fc7 !important;
+  color: #6264a7 !important;
   font-family: 'Segoe UI', sans-serif !important;
   font-weight: 600 !important;
 }
 
 main .grid button.group:hover {
-  border-color: #5b5fc7 !important;
+  border-color: #6264a7 !important;
   box-shadow: 0 4px 12px rgba(91,95,199,0.15) !important;
 }
 
@@ -120,35 +109,23 @@ main .grid button.group .bg-cream {
 
 main .grid button.group > div:first-child svg,
 main .grid button.group svg {
-  color: #5b5fc7 !important;
+  color: #6264a7 !important;
 }
 
 /* Load Project button */
 main button[class*="border-burgundy"] {
-  background: #5b5fc7 !important;
+  background: #6264a7 !important;
   border: none !important;
   border-radius: 4px !important;
   color: #ffffff !important;
 }
 
 main button[class*="border-burgundy"]:hover {
-  background: #464775 !important;
+  background: #464eb8 !important;
 }
 
 /* === NOTIFICATION BADGES === */
-/* Add fake notification badge to header buttons */
-header button:nth-child(2)::after {
-  content: "3";
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  background: #d13438;
-  color: white;
-  font-size: 10px;
-  padding: 2px 5px;
-  border-radius: 10px;
-  font-weight: bold;
-}
+/* Notification badge moved to presence indicator (profile picture) */
 
 /* === PANELS & CARDS === */
 .bg-popover,
@@ -169,7 +146,7 @@ header button:nth-child(2)::after {
 /* === BUTTONS === */
 button[class*="bg-burgundy"],
 .btn-editorial {
-  background: #5b5fc7 !important;
+  background: #6264a7 !important;
   border: none !important;
   border-radius: 4px !important;
   color: #ffffff !important;
@@ -179,12 +156,12 @@ button[class*="bg-burgundy"],
 
 button[class*="bg-burgundy"]:hover,
 .btn-editorial:hover {
-  background: #464775 !important;
+  background: #464eb8 !important;
 }
 
 /* === LINKS === */
 a, [class*="text-burgundy"] {
-  color: #5b5fc7 !important;
+  color: #6264a7 !important;
   text-decoration: none;
 }
 
@@ -220,7 +197,7 @@ input, textarea, select {
   background: #ffffff !important;
   border: 1px solid #c7c7c7 !important;
   border-radius: 4px !important;
-  color: #242424 !important;
+  color: #323130 !important;
   font-family: 'Segoe UI', sans-serif !important;
 }
 
@@ -231,7 +208,7 @@ input, textarea, select {
 }
 
 input:focus, textarea:focus, select:focus {
-  border-color: #5b5fc7 !important;
+  border-color: #6264a7 !important;
   box-shadow: 0 0 0 2px rgba(91,95,199,0.2) !important;
   outline: none !important;
 }
@@ -239,8 +216,8 @@ input:focus, textarea:focus, select:focus {
 /* === CODE EDITOR === */
 .cm-editor,
 pre, code {
-  background: #f5f5f5 !important;
-  color: #242424 !important;
+  background: #F3F2F1 !important;
+  color: #323130 !important;
   border: 1px solid #e0e0e0 !important;
   border-radius: 4px !important;
   font-family: 'Cascadia Code', 'Consolas', monospace !important;
@@ -271,7 +248,7 @@ pre, code {
 
 .skin-credit-header {
   display: block !important;
-  background: #5b5fc7;
+  background: #6264a7;
   color: #ffffff !important;
   font-family: 'Segoe UI', sans-serif;
   font-size: 12px;
@@ -297,7 +274,7 @@ pre, code {
   width: 48px;
   height: 48px;
   margin: 0 auto 10px;
-  background: linear-gradient(135deg, #5b5fc7 0%, #464775 100%);
+  background: linear-gradient(135deg, #6264a7 0%, #464eb8 100%);
   border-radius: 50%;
   border: none;
   box-shadow: none;
@@ -316,7 +293,7 @@ pre, code {
 
 .skin-credit-name {
   display: block !important;
-  color: #242424 !important;
+  color: #323130 !important;
   font-family: 'Segoe UI', sans-serif;
   font-size: 13px;
   font-weight: 600;
@@ -332,7 +309,7 @@ pre, code {
   display: block !important;
   font-family: 'Segoe UI', sans-serif;
   font-size: 11px;
-  color: #616161 !important;
+  color: #605E5C !important;
   text-align: center;
 }
 
@@ -373,7 +350,7 @@ header .absolute.w-80 {
   border: 1px solid #e0e0e0 !important;
   border-radius: 8px !important;
   box-shadow: 0 4px 16px rgba(0,0,0,0.15) !important;
-  color: #242424 !important;
+  color: #323130 !important;
 }
 
 .dark header .absolute.w-80 {
@@ -384,14 +361,14 @@ header .absolute.w-80 {
 
 header .absolute.w-80 h3,
 header .absolute.w-80 h4 {
-  color: #5b5fc7 !important;
+  color: #6264a7 !important;
   font-family: 'Segoe UI', sans-serif;
 }
 
 header .absolute.w-80 p,
 header .absolute.w-80 span,
 header .absolute.w-80 div {
-  color: #242424 !important;
+  color: #323130 !important;
 }
 
 .dark header .absolute.w-80 p,
@@ -401,7 +378,7 @@ header .absolute.w-80 div {
 }
 
 header .absolute.w-80 strong {
-  color: #5b5fc7 !important;
+  color: #6264a7 !important;
 }
 
 header .absolute.w-80 button {
@@ -411,7 +388,7 @@ header .absolute.w-80 button {
 }
 
 header .absolute.w-80 button svg {
-  color: #616161 !important;
+  color: #605E5C !important;
   opacity: 1 !important;
   width: auto !important;
   height: auto !important;
@@ -424,132 +401,32 @@ header .absolute.w-80 button svg {
 /* === FILENAME INPUT === */
 header input,
 header input[type="text"] {
-  background: rgba(255,255,255,0.1) !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(255,255,255,0.2) !important;
+  background: #F3F2F1 !important;
+  color: #323130 !important;
+  border: 1px solid #e0e0e0 !important;
   border-radius: 4px !important;
 }
 
 header button[title="Click to rename"] {
-  background: rgba(255,255,255,0.1) !important;
-  border: 1px solid rgba(255,255,255,0.2) !important;
+  background: #F3F2F1 !important;
+  border: 1px solid #e0e0e0 !important;
   border-radius: 4px !important;
 }
 
 header button span.font-mono,
 header span.font-mono,
 header .font-mono {
-  color: #ffffff !important;
+  color: #323130 !important;
 }
 
-/* === PRESENCE INDICATOR (The one that watches you) === */
-/* "Your manager can see when you're away" */
-
-/* Presence dot container - appears in top right corner */
-body::before {
-  content: "";
-  position: fixed;
-  top: 12px;
-  right: 80px;
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, #5b5fc7 0%, #464775 100%);
-  border-radius: 50%;
-  z-index: 10001;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-
-/* Profile initial inside presence circle */
-body::after {
-  content: "YU";
-  position: fixed;
-  top: 12px;
-  right: 80px;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-family: 'Segoe UI', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  z-index: 10002;
-  border-radius: 50%;
-}
-
-/* The green "Available" presence dot */
-header::after {
-  content: "";
-  position: fixed;
-  top: 36px;
-  right: 80px;
-  width: 12px;
-  height: 12px;
-  background: #92c353;
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-  z-index: 10003;
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
-  /* Subtle pulse to remind you it's watching */
-  animation: presencePulse 3s ease-in-out infinite;
-}
-
-@keyframes presencePulse {
-  0%, 100% {
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
-  }
-  50% {
-    box-shadow: 0 0 0 1px rgba(0,0,0,0.1), 0 0 8px rgba(146, 195, 83, 0.5);
-  }
-}
-
-/* Checkmark inside the presence dot (Available indicator) */
-header::before {
-  content: "✓";
-  position: fixed;
-  top: 36px;
-  right: 80px;
-  width: 12px;
-  height: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 7px;
-  font-weight: bold;
-  z-index: 10004;
-}
-
-/* Status tooltip on hover */
-header:hover::before {
-  content: "Available • Set status message";
-  position: fixed;
-  top: 52px;
-  right: 40px;
-  width: auto;
-  height: auto;
-  padding: 8px 12px;
-  background: #ffffff;
-  color: #242424;
-  font-size: 12px;
-  font-family: 'Segoe UI', sans-serif;
-  border-radius: 4px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-  white-space: nowrap;
-  z-index: 10005;
-}
-
-.dark header:hover::before {
-  background: #2d2d2d;
-  color: #ffffff;
-}
+/* === PRESENCE INDICATOR - Disabled for cleaner look === */
+/* The fake profile circle was causing layout issues */
 
 /* === FINAL CLEANUP === */
 .text-slate-muted,
 .text-slate {
   background: transparent !important;
-  color: #616161 !important;
+  color: #605E5C !important;
   border: none !important;
   padding: 0 !important;
 }
@@ -560,9 +437,9 @@ header:hover::before {
 }
 
 /* === TOOLBAR ICON FIX === */
-/* Keep default Lucide icons - don't replace them */
+/* Keep default Lucide icons - grey in header, purple in main */
 header svg {
-  color: #ffffff !important;
+  color: #605E5C !important;
   opacity: 1 !important;
   width: auto !important;
   height: auto !important;
@@ -570,5 +447,5 @@ header svg {
 }
 
 main svg {
-  color: #5b5fc7 !important;
+  color: #6264a7 !important;
 }

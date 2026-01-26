@@ -2,9 +2,13 @@
 /* Authentic 1970s-2012 UK Teletext aesthetic */
 /* P100 CEEFAX 147 Mon 28 Jul 16:40/15 */
 
-/* === TELETEXT FONT === */
-/* Using a heavier monospace that renders more blocky */
-@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+/* === TELETEXT FONT - Authentic Ceefax Bulletin === */
+@font-face {
+  font-family: 'Ceefax Bulletin';
+  src: url('./assets/ceefax-bulletin-1.otf/ceefax-bulletin-1.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
 
 /* Base sizing - teletext was designed for low-res TV */
 html {
@@ -12,7 +16,7 @@ html {
 }
 
 * {
-  font-family: 'Share Tech Mono', 'Lucida Console', 'Courier New', monospace !important;
+  font-family: 'Ceefax Bulletin', 'Share Tech Mono', 'Lucida Console', 'Courier New', monospace !important;
   font-weight: 400 !important;
 }
 
@@ -130,7 +134,7 @@ body::after {
   height: 28px;
   line-height: 28px;
   font-size: 16px;
-  font-family: 'Share Tech Mono', monospace !important;
+  font-family: 'Ceefax Bulletin', 'Share Tech Mono', monospace !important;
   color: #ffffff;
   background: linear-gradient(to right,
     #ff0000 0%, #ff0000 25%,
@@ -322,7 +326,7 @@ pre, code {
   width: 220px;
   background: #000000 !important;
   border: 3px solid #ffff00 !important;
-  font-family: 'Share Tech Mono', monospace !important;
+  font-family: 'Ceefax Bulletin', 'Share Tech Mono', monospace !important;
 }
 
 .skin-credit-header {
@@ -450,13 +454,57 @@ header .absolute.w-80 button svg {
 }
 
 /* === MAIN PAGE & MODE CARD ICONS === */
-/* Keep default Lucide icons, style with teletext colors */
+/* Replace Lucide icons with blocky teletext text */
 main svg {
   color: #ffff00 !important;
 }
 
-main .grid button.group svg {
+/* Hide SVG icons in mode cards */
+main .grid button.group svg.lucide-code,
+main .grid button.group svg.lucide-archive,
+main .grid button.group svg.lucide-book-open,
+main .grid button.group svg.lucide-sparkles,
+main .grid button.group > div:first-child svg {
+  display: none !important;
+}
+
+/* Icon containers become teletext block displays */
+main .grid button.group > div:first-child {
+  background: #000066 !important;
+  border: 2px solid #ffff00 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 22px !important;
+  font-weight: bold !important;
   color: #ffff00 !important;
+  letter-spacing: 0 !important;
+  font-family: 'Ceefax Bulletin', monospace !important;
+}
+
+/* Blocky teletext-style labels for each mode */
+/* CR for Critique - with block graphics frame */
+main .grid button.group:nth-child(1) > div:first-child::after {
+  content: "█CR█" !important;
+  color: #ff0000 !important;
+}
+
+/* AR for Archaeology */
+main .grid button.group:nth-child(2) > div:first-child::after {
+  content: "█AR█" !important;
+  color: #00ff00 !important;
+}
+
+/* IN for Interpret */
+main .grid button.group:nth-child(3) > div:first-child::after {
+  content: "█IN█" !important;
+  color: #00ffff !important;
+}
+
+/* CW for Create/Write */
+main .grid button.group:nth-child(4) > div:first-child::after {
+  content: "█CW█" !important;
+  color: #ff00ff !important;
 }
 
 /* === FILENAME INPUT === */

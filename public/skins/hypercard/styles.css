@@ -198,9 +198,19 @@ a, [class*="text-burgundy"] {
   text-decoration: underline;
 }
 
+/* Links containing code should not have underlines */
+a code, a pre {
+  text-decoration: none !important;
+}
+
 a:hover {
   background: #000000;
   color: #ffffff !important;
+}
+
+/* Don't underline code content even if wrapped in links */
+a:has(code), a:has(pre) {
+  text-decoration: none !important;
 }
 
 /* === SCROLLBARS - Classic Mac style === */
@@ -550,6 +560,35 @@ header button span.font-mono,
 header span.font-mono,
 header .font-mono {
   color: #000000 !important;
+}
+
+/* === CODE AND ANNOTATION - NO UNDERLINES === */
+/* Ensure code and annotation text is never underlined */
+code, pre,
+.cm-editor,
+.cm-editor *,
+.cm-content,
+.cm-line,
+.cm-scroller,
+.cm-scroller *,
+a code, a pre,
+.annotation-preview,
+.annotation-preview *,
+.annotation-content,
+.annotation-content *,
+[class*="annotation"],
+[class*="annotation"] *,
+/* Target the code pane specifically */
+[class*="CodePane"],
+[class*="CodePane"] *,
+[class*="code-pane"],
+[class*="code-pane"] *,
+/* Any text inside main content areas */
+main pre,
+main pre *,
+main code,
+main code * {
+  text-decoration: none !important;
 }
 
 /* === FINAL CLEANUP === */

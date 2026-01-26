@@ -11,41 +11,15 @@ body {
   position: relative;
 }
 
-/* Scanline overlay */
+/* Scanline overlay - DISABLED for authentic terminal look */
+/* Real terminals didn't have visible scanlines on-screen */
 body::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(0, 0, 0, 0.15),
-    rgba(0, 0, 0, 0.15) 1px,
-    transparent 1px,
-    transparent 2px
-  );
-  z-index: 9999;
+  display: none;
 }
 
-/* CRT screen curvature and vignette */
+/* CRT vignette - DISABLED for authentic terminal look */
 body::after {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  background: radial-gradient(
-    ellipse at center,
-    transparent 0%,
-    transparent 60%,
-    rgba(0, 0, 0, 0.4) 100%
-  );
-  z-index: 9998;
+  display: none;
 }
 
 /* === PHOSPHOR GLOW TEXT === */
@@ -97,14 +71,12 @@ h1, h2, h3, h4, .font-display, p, span, label, div {
   text-shadow: 0 0 2px #00aa00 !important;
 }
 
-/* === TOOLBAR / HEADER === */
+/* === TOOLBAR / HEADER - Solid black for readability === */
 header,
 header.bg-background {
-  background: #001a00 !important;
+  background: #000000 !important;
   border-bottom: 1px solid #00ff00 !important;
-  box-shadow:
-    0 0 10px rgba(0, 255, 0, 0.3),
-    inset 0 -1px 0 rgba(0, 255, 0, 0.2) !important;
+  box-shadow: none !important;
 }
 
 header *,
@@ -288,11 +260,24 @@ pre, code {
   background: #000a00 !important;
   color: #00ff00 !important;
   border: 1px solid #003300 !important;
+  font-size: 20px !important;
+  line-height: 1.5 !important;
+  text-decoration: none !important;
 }
 
 /* Line numbers in green */
 .cm-lineNumbers {
   color: #006600 !important;
+  font-size: 18px !important;
+}
+
+/* Code should never be underlined */
+code, pre,
+a code, a pre,
+.annotation-preview code,
+.annotation-content code,
+[class*="annotation"] code {
+  text-decoration: none !important;
 }
 
 /* === ELIZA CREDIT BOX === */
@@ -419,78 +404,11 @@ hr::before {
   text-shadow: 0 0 3px #00ff00;
 }
 
-/* === CUSTOM TOOLBAR ICONS === */
-header button[title="New project"] svg,
-header button[title*="new local session"] svg,
-header button[title="Save session"] svg,
-header button[title="Load session"] svg,
-header button[title*="load local session"] svg,
-header button[title="Export session log"] svg,
-header button[title="Sign in to collaborate"] svg,
-header button[title*="Connected to"] svg,
-header button[title*="Not connected to cloud"] svg,
-header button[title="Interface guide"] svg,
-header button[title="Settings"] svg {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
-}
-
-header button[title="New project"],
-header button[title*="new local session"],
-header button[title="Save session"],
-header button[title="Load session"],
-header button[title*="load local session"],
-header button[title="Export session log"],
-header button[title="Sign in to collaborate"],
-header button[title*="Connected to"],
-header button[title*="Not connected to cloud"],
-header button[title="Interface guide"],
-header button[title="Settings"] {
-  min-width: 32px !important;
-  min-height: 32px !important;
-  background-size: 24px 24px !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-}
-
-header button[title="New project"],
-header button[title*="new local session"] {
-  background-image: url('/assets/icons/toolbar/new.svg') !important;
-}
-
-header button[title="Save session"] {
-  background-image: url('/assets/icons/toolbar/save.svg') !important;
-}
-
-header button[title="Load session"],
-header button[title*="load local session"] {
-  background-image: url('/assets/icons/toolbar/open.svg') !important;
-}
-
-header button[title="Export session log"] {
-  background-image: url('/assets/icons/toolbar/download.svg') !important;
-}
-
-header button[title="Sign in to collaborate"] {
-  background-image: url('/assets/icons/toolbar/cloud-off.svg') !important;
-}
-
-header button[title*="Not connected to cloud"] {
-  background-image: url('/assets/icons/toolbar/cloud.svg') !important;
-}
-
-header button[title*="Connected to"] {
-  background-image: url('/assets/icons/toolbar/cloud-cog.svg') !important;
-}
-
-header button[title="Interface guide"] {
-  background-image: url('/assets/icons/toolbar/help.svg') !important;
-}
-
-header button[title="Settings"] {
-  background-image: url('/assets/icons/toolbar/settings.svg') !important;
+/* === TOOLBAR - Keep default Lucide icons, they work well on terminal === */
+/* The green SVG icons are appropriate for this aesthetic */
+header button svg {
+  color: #00ff00 !important;
+  filter: drop-shadow(0 0 2px #00ff00) !important;
 }
 
 /* === INTERFACE GUIDE POPUP === */
@@ -532,79 +450,53 @@ header .absolute.w-80 button svg {
   position: static !important;
 }
 
-/* === MAIN PAGE ICONS === */
-main header button[title="Help & Getting Started"] svg,
-main header button[title="Settings"] svg {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
+/* === MAIN PAGE ICONS - Use default Lucide icons with green styling === */
+main header button svg,
+main button svg {
+  color: #00ff00 !important;
+  filter: drop-shadow(0 0 2px #00ff00) !important;
 }
 
-main header button[title="Help & Getting Started"],
-main header button[title="Settings"] {
-  min-width: 28px !important;
-  min-height: 28px !important;
-  background-size: 20px 20px !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-}
-
-main header button[title="Help & Getting Started"] {
-  background-image: url('/assets/icons/toolbar/help.svg') !important;
-}
-
-main header button[title="Settings"] {
-  background-image: url('/assets/icons/toolbar/settings.svg') !important;
-}
-
-/* Load Project button icon */
-main button:has(.lucide-folder-open) svg.lucide-folder-open {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
-}
-
-main button:has(.lucide-folder-open) {
-  padding-left: 28px !important;
-  background-image: url('/assets/icons/toolbar/open.svg') !important;
-  background-size: 16px 16px !important;
-  background-repeat: no-repeat !important;
-  background-position: 8px center !important;
-}
-
-/* === ENTRY MODE CARD ICONS === */
+/* === ENTRY MODE CARD ICONS - Replace with text for authentic terminal look === */
 main .grid button.group svg.lucide-code,
 main .grid button.group svg.lucide-archive,
 main .grid button.group svg.lucide-book-open,
 main .grid button.group svg.lucide-sparkles {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
+  display: none !important;
 }
 
+/* Icon containers become text boxes */
 main .grid button.group > div:first-child {
-  background-size: 28px 28px !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
+  background: transparent !important;
+  border: 1px solid #00ff00 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 24px !important;
+  font-weight: bold !important;
+  color: #00ff00 !important;
+  text-shadow: 0 0 5px #00ff00 !important;
+  letter-spacing: 2px !important;
 }
 
-main .grid button.group:nth-child(1) > div:first-child {
-  background-image: url('/assets/icons/modes/code.svg') !important;
+/* CR for Critique */
+main .grid button.group:nth-child(1) > div:first-child::after {
+  content: "CR" !important;
 }
 
-main .grid button.group:nth-child(2) > div:first-child {
-  background-image: url('/assets/icons/modes/archive.svg') !important;
+/* AR for Archaeology */
+main .grid button.group:nth-child(2) > div:first-child::after {
+  content: "AR" !important;
 }
 
-main .grid button.group:nth-child(3) > div:first-child {
-  background-image: url('/assets/icons/modes/book.svg') !important;
+/* IN for Interpret */
+main .grid button.group:nth-child(3) > div:first-child::after {
+  content: "IN" !important;
 }
 
-main .grid button.group:nth-child(4) > div:first-child {
-  background-image: url('/assets/icons/modes/sparkles.svg') !important;
+/* CW for Create/Write */
+main .grid button.group:nth-child(4) > div:first-child::after {
+  content: "CW" !important;
 }
 
 /* === FILENAME INPUT === */

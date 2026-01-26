@@ -372,11 +372,20 @@ footer .text-xs,
   font-size: 10px;
 }
 
+/* === HIDE WEBRING BOX (not used in MySpace skin) === */
+.skin-webring-box {
+  display: none !important;
+}
+
 /* === TOP 2 FRIENDS BOX === */
 /* Classic "My Friend Space" widget with Tom and Mark side by side */
 
 .skin-credit-box {
   display: block !important;
+  position: fixed !important;
+  bottom: 20px !important;
+  right: 20px !important;
+  z-index: 1000 !important;
   width: 220px;
   background: white;
   border: 1px solid hsl(210 40% 75%);
@@ -409,19 +418,22 @@ footer .text-xs,
   color: hsl(216 100% 90%);
 }
 
-/* Content area - flex container for side-by-side friends */
+/* Content area - CSS Grid for proper 2-column layout */
 .skin-credit-content {
-  display: flex !important;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 4px 12px;
   padding: 10px;
   text-align: center;
+  justify-items: center;
 }
 
-/* Tom's avatar - the iconic photo */
+/* Tom's avatar - the iconic photo - TOP LEFT */
 .skin-credit-avatar {
   display: block !important;
+  grid-column: 1;
+  grid-row: 1;
   width: 70px;
   height: 70px;
   margin: 0;
@@ -431,53 +443,56 @@ footer .text-xs,
   background-position: center top;
   border: 2px solid hsl(30 100% 50%);
   box-shadow: 0 0 0 2px white, 0 0 0 3px hsl(30 100% 50%);
-  flex-shrink: 0;
 }
 
-/* Tom's name as a link - appears below Tom's avatar */
+/* Tom's name - BELOW TOM'S PHOTO */
 .skin-credit-name {
   display: block !important;
+  grid-column: 1;
+  grid-row: 2;
   color: hsl(216 100% 35%) !important;
   font-size: 10px;
   font-weight: bold;
   text-decoration: underline;
   width: 70px;
   text-align: center;
-  margin-top: 4px;
-  flex-shrink: 0;
 }
 
 .skin-credit-name:hover {
   color: hsl(30 100% 45%) !important;
 }
 
-/* Friends count - hidden, we use the space for layout */
+/* Friends count - hidden */
 .skin-credit-text {
   display: none !important;
 }
 
-/* View All link at bottom */
+/* View All link at bottom - spans both columns */
 .skin-credit-content::after {
   content: "View All of My Friends";
   display: block;
+  grid-column: 1 / -1;
+  grid-row: 3;
   width: 100%;
-  margin-top: 4px;
+  margin-top: 8px;
   font-size: 9px;
   color: hsl(216 100% 35%);
   text-decoration: underline;
 }
 
-/* === MARK MARINO - Second Friend (side by side) === */
+/* === MARK MARINO - Second Friend - RIGHT COLUMN === */
 
-/* Mark's avatar - using ::before on the link */
+/* Mark's container - TOP RIGHT */
 .skin-credit-link {
   display: block !important;
+  grid-column: 2;
+  grid-row: 1 / 3; /* Span both rows for photo + name */
   width: 70px;
-  flex-shrink: 0;
   text-align: center;
-  order: -1; /* Place Mark's container before View All link */
+  font-size: 0; /* Hide the "Sign My Guestbook!" text */
 }
 
+/* Mark's photo */
 .skin-credit-link::before {
   content: "";
   display: block;
@@ -492,6 +507,7 @@ footer .text-xs,
   box-shadow: 0 0 0 2px white, 0 0 0 3px hsl(30 100% 50%);
 }
 
+/* Mark's name - below Mark's photo */
 .skin-credit-link::after {
   content: "Mark Marino";
   display: block;
