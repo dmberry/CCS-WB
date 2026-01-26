@@ -307,7 +307,11 @@ export function SkinsProvider({ children }: { children: React.ReactNode }) {
     root.classList.remove("skin-active");
 
     // Remove all skin style elements
-    const styleIds = ["ccs-skin-styles", "ccs-skin-fonts"];
+    const styleIds = [
+      "ccs-skin-styles",
+      "ccs-skin-fonts",
+      "ccs-app-settings-override", // Also remove the settings override since skin is disabled
+    ];
     styleIds.forEach(id => {
       const el = document.getElementById(id);
       if (el) el.remove();
@@ -317,15 +321,34 @@ export function SkinsProvider({ children }: { children: React.ReactNode }) {
     document.querySelectorAll('style[data-skin-style]').forEach(el => el.remove());
     document.querySelectorAll('link[data-skin-font]').forEach(el => el.remove());
 
-    // Force reset of common CSS properties
+    // Force reset of common CSS properties on root
     root.style.removeProperty('font-size');
+    root.style.removeProperty('--font-display');
+    root.style.removeProperty('--font-body');
+    root.style.removeProperty('--font-mono');
     root.style.fontSize = '';
+
+    // Reset body styles
     document.body.style.removeProperty('background');
     document.body.style.removeProperty('background-color');
     document.body.style.removeProperty('font-family');
+    document.body.style.removeProperty('color');
 
-    // Trigger a reflow
+    // Remove any inline styles on common elements that skins might have set
+    const header = document.querySelector('header');
+    if (header) {
+      (header as HTMLElement).style.cssText = '';
+    }
+    const main = document.querySelector('main');
+    if (main) {
+      (main as HTMLElement).style.cssText = '';
+    }
+
+    // Trigger a reflow to ensure styles are recalculated
     void root.offsetHeight;
+
+    // Dispatch a custom event that AppSettingsContext can listen for
+    window.dispatchEvent(new CustomEvent('skin-disabled'));
   }, []);
 
   // Setters that update state

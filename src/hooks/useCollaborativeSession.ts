@@ -576,12 +576,16 @@ export function useCollaborativeSession() {
     async (codeId: string) => {
       console.log("removeCode: Deleting file", codeId, "isInProject:", isInProject);
 
+      // Get file info before removing (for trash display)
+      const file = sessionContext.session.codeFiles.find(f => f.id === codeId);
+      const content = sessionContext.session.codeContents[codeId];
+
       // Remove from tracking first
       syncedFilesRef.current.delete(codeId);
       pendingNewFilesRef.current.delete(codeId);
 
       if (isInProject) {
-        // Delete from database
+        // Delete from database (soft delete - sets deleted_at)
         console.log("removeCode: Calling deleteCodeFile for", codeId);
         const result = await deleteCodeFile(codeId);
         if (result.error) {
@@ -589,6 +593,31 @@ export function useCollaborativeSession() {
           // Still remove locally, but the file may reappear on refresh
         } else {
           console.log("removeCode: Successfully deleted from cloud");
+          // Add to trash state immediately so it shows in trash UI
+          if (file) {
+            const trashedFile: TrashedCodeFile = {
+              id: codeId,
+              name: file.name,
+              language: file.language || "plaintext",
+              deletedAt: new Date().toISOString(),
+            };
+            setTrashedFiles(prev => [trashedFile, ...prev]);
+            console.log("removeCode: Added to trash state");
+          }
+        }
+      } else {
+        // Local file (not in project) - add to trash with content for restoration
+        if (file) {
+          const trashedFile: TrashedCodeFile = {
+            id: codeId,
+            name: file.name,
+            language: file.language || "plaintext",
+            deletedAt: new Date().toISOString(),
+            content: content || "",
+            isLocal: true,
+          };
+          setTrashedFiles(prev => [trashedFile, ...prev]);
+          console.log("removeCode: Added local file to trash state with content");
         }
       }
 
@@ -638,6 +667,27 @@ export function useCollaborativeSession() {
   // Restore a file from trash
   const restoreFileFromTrash = useCallback(
     async (fileId: string) => {
+      // Find the trashed file
+      const trashedFile = trashedFiles.find(f => f.id === fileId);
+
+      // Handle local files (not in project)
+      if (trashedFile?.isLocal) {
+        // Restore locally by re-adding the file
+        const content = trashedFile.content || "";
+        const newId = sessionContext.addCode({
+          name: trashedFile.name,
+          language: trashedFile.language,
+          size: content.length,
+        });
+        // Set the content
+        sessionContext.setCodeContent(newId, content);
+        // Remove from trash state
+        setTrashedFiles(prev => prev.filter(f => f.id !== fileId));
+        console.log("restoreFileFromTrash: Restored local file", trashedFile.name);
+        return { error: null };
+      }
+
+      // Handle project files
       if (!isInProject) {
         return { error: new Error("Not in a project") };
       }
@@ -655,12 +705,23 @@ export function useCollaborativeSession() {
       }
       return result;
     },
-    [isInProject, restoreFile, fetchCodeFiles, handleFileAddedOrUpdated]
+    [isInProject, restoreFile, fetchCodeFiles, handleFileAddedOrUpdated, trashedFiles, sessionContext]
   );
 
   // Permanently delete a file from trash
   const permanentlyDeleteFileFromTrash = useCallback(
     async (fileId: string) => {
+      // Find the trashed file
+      const trashedFile = trashedFiles.find(f => f.id === fileId);
+
+      // Handle local files - just remove from trash state
+      if (trashedFile?.isLocal) {
+        setTrashedFiles(prev => prev.filter(f => f.id !== fileId));
+        console.log("permanentlyDeleteFileFromTrash: Permanently deleted local file", trashedFile.name);
+        return { error: null };
+      }
+
+      // Handle project files
       if (!isInProject) {
         return { error: new Error("Not in a project") };
       }
@@ -670,20 +731,35 @@ export function useCollaborativeSession() {
       }
       return result;
     },
-    [isInProject, permanentlyDeleteFile]
+    [isInProject, permanentlyDeleteFile, trashedFiles]
   );
 
   // Empty all files from trash
   const emptyAllFileTrash = useCallback(async () => {
+    // Check if we have any local files in trash
+    const localFiles = trashedFiles.filter(f => f.isLocal);
+    const projectFiles = trashedFiles.filter(f => !f.isLocal);
+
+    // If not in project, just clear local files
     if (!isInProject) {
-      return { error: new Error("Not in a project") };
+      if (localFiles.length > 0) {
+        setTrashedFiles([]);
+        console.log("emptyAllFileTrash: Cleared local trash files");
+        return { error: null };
+      }
+      return { error: new Error("Not in a project and no local files in trash") };
     }
+
+    // In project - empty project trash and also clear local files
     const result = await emptyFileTrash();
     if (!result.error) {
       setTrashedFiles([]);
+    } else {
+      // Even if project trash fails, clear local files
+      setTrashedFiles(projectFiles);
     }
     return result;
-  }, [isInProject, emptyFileTrash]);
+  }, [isInProject, emptyFileTrash, trashedFiles]);
 
   // Refresh from cloud - fetches latest annotations and files and replaces local state
   const refreshFromCloud = useCallback(async () => {

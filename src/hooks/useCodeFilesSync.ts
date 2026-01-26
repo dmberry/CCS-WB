@@ -42,6 +42,9 @@ export interface TrashedCodeFile {
   name: string;
   language: string;
   deletedAt: string;
+  // For local files only - stores content for restoration
+  content?: string;
+  isLocal?: boolean;
 }
 
 interface PendingDeletion {

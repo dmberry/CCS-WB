@@ -68,6 +68,7 @@ export function LibraryModal() {
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
   const [readmeContent, setReadmeContent] = useState<string | null>(null);
   const [loadingReadme, setLoadingReadme] = useState(false);
+  const [activeTab, setActiveTab] = useState<"library" | "early-access">("library");
 
   // Fetch library projects when modal opens
   useEffect(() => {
@@ -111,9 +112,9 @@ export function LibraryModal() {
 
     const { data, error } = await (supabase as any)
       .from("code_files")
-      .select("content, name")
+      .select("content, filename")
       .eq("project_id", project.id)
-      .ilike("name", "%readme%")
+      .ilike("filename", "%readme%")
       .limit(1)
       .maybeSingle();
 
@@ -124,9 +125,9 @@ export function LibraryModal() {
       // Try to list all files to debug
       const { data: files } = await (supabase as any)
         .from("code_files")
-        .select("name")
+        .select("filename")
         .eq("project_id", project.id);
-      console.log("Files in project:", files?.map((f: { name: string }) => f.name));
+      console.log("Files in project:", files?.map((f: { filename: string }) => f.filename));
       setReadmeContent("No README.md file found in this project.");
     } else {
       setReadmeContent((data as { content: string }).content || "README.md is empty.");
@@ -240,6 +241,44 @@ export function LibraryModal() {
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="px-5 py-2 border-b border-parchment bg-cream/30 flex gap-2">
+          <button
+            onClick={() => setActiveTab("library")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium transition-colors",
+              activeTab === "library"
+                ? "bg-burgundy text-white"
+                : "bg-burgundy/10 text-burgundy hover:bg-burgundy/20"
+            )}
+          >
+            <Library className="h-3.5 w-3.5" />
+            Library
+            {approvedProjects.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 bg-white/30 rounded-full text-[10px]">
+                {approvedProjects.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("early-access")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium transition-colors",
+              activeTab === "early-access"
+                ? "bg-amber-500 text-white"
+                : "bg-amber-100 text-amber-700 hover:bg-amber-200"
+            )}
+          >
+            <Clock className="h-3.5 w-3.5" />
+            Early Access
+            {earlyAccessProjects.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 bg-white/30 rounded-full text-[10px]">
+                {earlyAccessProjects.length}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Search bar */}
         <div className="px-5 py-3 border-b border-parchment">
           <div className="relative">
@@ -248,7 +287,7 @@ export function LibraryModal() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search projects..."
+              placeholder={activeTab === "library" ? "Search library..." : "Search early access..."}
               className={cn(
                 "w-full pl-9 pr-3 py-2",
                 "font-sans text-ui-base text-ink placeholder:text-slate/50",
@@ -273,34 +312,25 @@ export function LibraryModal() {
               <Loader2 className="h-6 w-6 animate-spin text-burgundy mb-2" />
               <p className="font-sans text-ui-base text-slate">Loading library...</p>
             </div>
-          ) : filteredProjects.length === 0 ? (
-            <div className="text-center py-8 px-4">
-              <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-cream to-parchment/50 rounded-2xl mb-4 shadow-sm">
-                <BookOpen className="h-7 w-7 text-burgundy/40" />
+          ) : activeTab === "library" ? (
+            /* Library Tab */
+            approvedProjects.length === 0 ? (
+              <div className="text-center py-8 px-4">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-cream to-parchment/50 rounded-2xl mb-4 shadow-sm">
+                  <BookOpen className="h-7 w-7 text-burgundy/40" />
+                </div>
+                <h3 className="font-serif text-ui-lg text-ink mb-2">
+                  {searchQuery ? "No matching projects" : "No projects in library"}
+                </h3>
+                <p className="font-sans text-ui-xs text-slate max-w-[220px] mx-auto leading-relaxed">
+                  {searchQuery
+                    ? "Try a different search term"
+                    : "Approved public projects will appear here"}
+                </p>
               </div>
-              <h3 className="font-serif text-ui-lg text-ink mb-2">
-                {searchQuery ? "No matching projects" : "No projects in library"}
-              </h3>
-              <p className="font-sans text-ui-xs text-slate max-w-[220px] mx-auto leading-relaxed">
-                {searchQuery
-                  ? "Try a different search term"
-                  : "Approved public projects will appear here"}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Approved Library Projects */}
-              {approvedProjects.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Library className="h-4 w-4 text-burgundy" />
-                    <h3 className="font-serif text-ui-base text-ink">Library</h3>
-                    <span className="text-ui-xs text-slate/60 font-sans">
-                      ({approvedProjects.length})
-                    </span>
-                  </div>
-                  <div className="space-y-3">
-                    {approvedProjects.map((project) => (
+            ) : (
+              <div className="space-y-3">
+                {approvedProjects.map((project) => (
                 <div
                   key={project.id}
                   className="group p-4 rounded-xl border border-parchment bg-ivory hover:border-parchment-dark hover:shadow-sm transition-all"
@@ -441,30 +471,32 @@ export function LibraryModal() {
                     </div>
                   )}
                 </div>
-                    ))}
-                  </div>
+                ))}
+              </div>
+            )
+          ) : (
+            /* Early Access Tab */
+            earlyAccessProjects.length === 0 ? (
+              <div className="text-center py-8 px-4">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-amber-50 to-amber-100/50 rounded-2xl mb-4 shadow-sm">
+                  <Clock className="h-7 w-7 text-amber-500/40" />
                 </div>
-              )}
-
-              {/* Early Access Projects */}
-              {earlyAccessProjects.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Clock className="h-4 w-4 text-amber-500" />
-                    <h3 className="font-serif text-ui-base text-ink">Early Access</h3>
-                    <span className="text-ui-xs text-slate/60 font-sans">
-                      ({earlyAccessProjects.length})
-                    </span>
-                    <span className="text-ui-xs text-amber-600 font-sans italic">
-                      Pending approval
-                    </span>
-                  </div>
-                  <div className="space-y-3">
-                    {earlyAccessProjects.map((project) => (
-                      <div
-                        key={project.id}
-                        className="group p-4 rounded-xl border border-amber-200 bg-amber-50/50 hover:border-amber-300 hover:shadow-sm transition-all dark:border-amber-500/30 dark:bg-amber-500/10"
-                      >
+                <h3 className="font-serif text-ui-lg text-ink mb-2">
+                  {searchQuery ? "No matching projects" : "No early access projects"}
+                </h3>
+                <p className="font-sans text-ui-xs text-slate max-w-[220px] mx-auto leading-relaxed">
+                  {searchQuery
+                    ? "Try a different search term"
+                    : "Projects pending approval will appear here"}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {earlyAccessProjects.map((project) => (
+                  <div
+                    key={project.id}
+                    className="group p-4 rounded-xl border border-amber-200 bg-amber-50/50 hover:border-amber-300 hover:shadow-sm transition-all dark:border-amber-500/30 dark:bg-amber-500/10"
+                  >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <h4 className="font-serif text-ui-base text-ink truncate" title={displayName(project.name)}>
@@ -567,36 +599,36 @@ export function LibraryModal() {
                           </div>
                         </div>
 
-                        {/* Expandable README section */}
-                        {expandedProjectId === project.id && (
-                          <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-500/30">
-                            {loadingReadme ? (
-                              <div className="flex items-center gap-2 text-slate/60">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <span className="font-sans text-ui-xs">Loading README...</span>
-                              </div>
-                            ) : (
-                              <div className="bg-cream/50 rounded-lg p-3 max-h-48 overflow-y-auto">
-                                <pre className="font-mono text-ui-xs text-ink whitespace-pre-wrap break-words">
-                                  {readmeContent}
-                                </pre>
-                              </div>
-                            )}
+                    {/* Expandable README section */}
+                    {expandedProjectId === project.id && (
+                      <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-500/30">
+                        {loadingReadme ? (
+                          <div className="flex items-center gap-2 text-slate/60">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="font-sans text-ui-xs">Loading README...</span>
+                          </div>
+                        ) : (
+                          <div className="bg-cream/50 rounded-lg p-3 max-h-48 overflow-y-auto">
+                            <pre className="font-mono text-ui-xs text-ink whitespace-pre-wrap break-words">
+                              {readmeContent}
+                            </pre>
                           </div>
                         )}
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            )
           )}
         </div>
 
         {/* Footer */}
         <div className="px-5 py-3 border-t border-parchment bg-cream/30">
           <p className="font-sans text-ui-xs text-slate/70 text-center">
-            {filteredProjects.length} project{filteredProjects.length !== 1 ? "s" : ""} available
+            {activeTab === "library"
+              ? `${approvedProjects.length} project${approvedProjects.length !== 1 ? "s" : ""} in library`
+              : `${earlyAccessProjects.length} project${earlyAccessProjects.length !== 1 ? "s" : ""} pending approval`}
           </p>
         </div>
       </div>

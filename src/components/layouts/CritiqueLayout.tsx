@@ -1693,11 +1693,11 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             title="Click to rename"
           >
             {projectName ? (
-              <span className="font-mono text-xs text-ink">
+              <span className="font-mono text-[10px] text-ink">
                 {projectName.replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase()}-{MODE_CODES[session.mode] || "XX"}.ccs
               </span>
             ) : (
-              <span className="font-mono text-xs text-slate-muted italic">
+              <span className="font-mono text-[10px] text-slate-muted italic">
                 untitled-{MODE_CODES[session.mode] || "XX"}.ccs
               </span>
             )}

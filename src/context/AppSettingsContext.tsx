@@ -451,6 +451,99 @@ export function AppSettingsProvider({
     root.style.setProperty("--ring", isDark ? colourDef.hsl.dark : colourDef.hsl.light);
   }, [settings.accentColour, effectiveTheme]);
 
+  // Inject override styles when a skin is active (so app settings take priority over skin CSS)
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const OVERRIDE_STYLE_ID = "ccs-app-settings-override";
+    const root = document.documentElement;
+    const skinActive = root.classList.contains("skin-active");
+
+    // Remove existing override styles
+    const existingStyle = document.getElementById(OVERRIDE_STYLE_ID);
+    if (existingStyle) existingStyle.remove();
+
+    // Only inject overrides when skin is active
+    if (!skinActive) return;
+
+    // Get code font family
+    const fontOption = CODE_FONT_OPTIONS.find(f => f.id === settings.codeFont);
+    const codeFontFamily = fontOption?.family || CODE_FONT_OPTIONS[0].family;
+
+    // Build override CSS with !important to override skin styles
+    const overrideCSS = `
+      /* App Settings Override - Takes priority over skin styles */
+      :root.skin-active {
+        --ui-font-size: ${settings.uiFontSize}px !important;
+        --annotation-font-size: ${settings.annotationFontSize}px !important;
+        --annotation-indent: ${settings.annotationIndent}px !important;
+        --files-pane-font-size: ${settings.filesPaneFontSize}px !important;
+        --code-font-family: ${codeFontFamily} !important;
+      }
+
+      /* Override skin font sizes directly on elements */
+      .skin-active .cm-editor,
+      .skin-active .cm-content,
+      .skin-active pre,
+      .skin-active code {
+        font-family: ${codeFontFamily} !important;
+      }
+
+      /* Annotation display settings */
+      .skin-active [class*="annotation"] {
+        font-size: var(--annotation-font-size) !important;
+      }
+
+      /* Files pane font size */
+      .skin-active [class*="files-pane"],
+      .skin-active [class*="file-list"] {
+        font-size: var(--files-pane-font-size) !important;
+      }
+    `;
+
+    const styleElement = document.createElement("style");
+    styleElement.id = OVERRIDE_STYLE_ID;
+    styleElement.textContent = overrideCSS;
+    // Append to end of head to ensure it loads after skin styles
+    document.head.appendChild(styleElement);
+
+    return () => {
+      const style = document.getElementById(OVERRIDE_STYLE_ID);
+      if (style) style.remove();
+    };
+  }, [settings.uiFontSize, settings.annotationFontSize, settings.annotationIndent, settings.filesPaneFontSize, settings.codeFont]);
+
+  // Watch for skin-active class changes and re-apply override
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const root = document.documentElement;
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.attributeName === "class") {
+          // Trigger re-render when skin-active changes
+          const skinActive = root.classList.contains("skin-active");
+          const OVERRIDE_STYLE_ID = "ccs-app-settings-override";
+          const existingStyle = document.getElementById(OVERRIDE_STYLE_ID);
+
+          if (!skinActive && existingStyle) {
+            // Skin was disabled, remove override styles
+            existingStyle.remove();
+          } else if (skinActive && !existingStyle) {
+            // Skin was enabled, the other useEffect will add the styles
+            // Force a small state update to trigger the effect
+            // We'll just re-set a CSS variable to trigger a repaint
+            root.style.setProperty("--ui-font-size", `${settings.uiFontSize}px`);
+          }
+        }
+      }
+    });
+
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+
+    return () => observer.disconnect();
+  }, [settings.uiFontSize]);
+
   // Clear all settings
   const clearSettings = useCallback(() => {
     setSettings(DEFAULT_APP_SETTINGS);

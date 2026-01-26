@@ -68,8 +68,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const cached = localStorage.getItem(PROFILE_CACHE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
-        // Only use cache if it's for the same user and not too old (1 hour)
-        if (parsed.id === userId && Date.now() - parsed._cachedAt < 3600000) {
+        // Only use cache if it's for the same user and not too old (5 minutes)
+        // Shorter TTL ensures profile changes (like is_admin) propagate faster
+        if (parsed.id === userId && Date.now() - parsed._cachedAt < 300000) {
           return parsed;
         }
       }
@@ -147,13 +148,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log("Creating profile for user:", user.id);
 
     // Generate initials from email or name
+    // If user has Google/OAuth metadata with initials, prefer those
+    const providedInitials = user.user_metadata?.initials;
     const displayName = user.user_metadata?.full_name || user.email?.split("@")[0] || "User";
-    const initials = displayName
-      .split(" ")
-      .map((n: string) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 3);
+
+    let initials: string;
+    if (providedInitials) {
+      // Use provider-supplied initials
+      initials = providedInitials.toUpperCase().slice(0, 3);
+    } else {
+      const nameParts = displayName.split(" ").filter((n: string) => n.length > 0);
+      if (nameParts.length === 1) {
+        // Single name (likely email prefix) - use first 3 characters
+        initials = nameParts[0].slice(0, 3).toUpperCase();
+      } else {
+        // Multiple names - use first letter of each (up to 3)
+        initials = nameParts
+          .map((n: string) => n[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 3);
+      }
+    }
 
     const newProfile: ProfileInsert = {
       id: user.id,

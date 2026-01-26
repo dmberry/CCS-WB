@@ -97,6 +97,8 @@ export function AdminModal() {
   const [renameValue, setRenameValue] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deaccessionConfirmId, setDeaccessionConfirmId] = useState<string | null>(null);
+  const [deleteUserConfirmId, setDeleteUserConfirmId] = useState<string | null>(null);
+  const [deleteUserProjects, setDeleteUserProjects] = useState(false);
 
   // Fetch all users for admin management
   const fetchUsers = async () => {
@@ -154,6 +156,67 @@ export function AdminModal() {
     setActionLoading(null);
   };
 
+  // Delete a user (admin function)
+  const handleDeleteUser = async (userId: string, deleteProjects: boolean) => {
+    // Prevent self-deletion
+    if (userId === user?.id) {
+      setError("Cannot delete your own account");
+      return;
+    }
+
+    setActionLoading(`deleteuser-${userId}`);
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setActionLoading(null);
+      return;
+    }
+
+    try {
+      if (deleteProjects) {
+        // First delete all user's projects (cascade will handle code_files, annotations, etc.)
+        const { error: projectsError } = await (supabase as any)
+          .from("projects")
+          .delete()
+          .eq("owner_id", userId);
+
+        if (projectsError) {
+          console.error("Failed to delete user projects:", projectsError);
+          // Continue anyway - we'll still try to delete the profile
+        }
+      } else {
+        // Transfer ownership of projects to anonymous (or null them out)
+        // Set owner_id to null so projects become orphaned but not deleted
+        const { error: transferError } = await (supabase as any)
+          .from("projects")
+          .update({ owner_id: null })
+          .eq("owner_id", userId);
+
+        if (transferError) {
+          console.error("Failed to transfer user projects:", transferError);
+        }
+      }
+
+      // Delete the user's profile
+      const { error: profileError } = await (supabase as any)
+        .from("profiles")
+        .delete()
+        .eq("id", userId);
+
+      if (profileError) {
+        setError(`Failed to delete user: ${profileError.message}`);
+      } else {
+        // Remove from local state
+        setUsers(prev => prev.filter(u => u.id !== userId));
+        setDeleteUserConfirmId(null);
+        setDeleteUserProjects(false);
+      }
+    } catch (e) {
+      setError(`Unexpected error: ${e}`);
+    }
+
+    setActionLoading(null);
+  };
+
   // Fetch pending submissions and library projects when modal opens
   useEffect(() => {
     if (showAdminModal) {
@@ -186,6 +249,8 @@ export function AdminModal() {
     setRenameValue("");
     setDeleteConfirmId(null);
     setDeaccessionConfirmId(null);
+    setDeleteUserConfirmId(null);
+    setDeleteUserProjects(false);
   };
 
   const handlePreview = async (project: LibraryProject) => {
@@ -802,36 +867,103 @@ export function AdminModal() {
                         </p>
                       </div>
 
-                      {/* Admin toggle button */}
-                      <button
-                        onClick={() => handleToggleAdmin(u.id, u.is_admin)}
-                        disabled={!!actionLoading || u.id === user?.id}
-                        title={u.id === user?.id ? "Cannot modify your own admin status" : u.is_admin ? "Remove admin" : "Make admin"}
-                        className={cn(
-                          "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg",
-                          "font-sans text-ui-xs font-medium transition-colors",
-                          "disabled:opacity-50 disabled:cursor-not-allowed",
-                          u.id === user?.id
-                            ? "bg-slate/10 text-slate/50 cursor-not-allowed"
-                            : u.is_admin
-                              ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
-                              : "bg-slate/10 text-slate hover:bg-purple-100 hover:text-purple-700"
-                        )}
-                      >
-                        {actionLoading === `admin-${u.id}` ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : u.is_admin ? (
-                          <>
-                            <ShieldOff className="h-3.5 w-3.5" />
-                            Remove
-                          </>
-                        ) : (
-                          <>
-                            <ShieldCheck className="h-3.5 w-3.5" />
-                            Make Admin
-                          </>
-                        )}
-                      </button>
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-1.5">
+                        {/* Admin toggle button */}
+                        <button
+                          onClick={() => handleToggleAdmin(u.id, u.is_admin)}
+                          disabled={!!actionLoading || u.id === user?.id}
+                          title={u.id === user?.id ? "Cannot modify your own admin status" : u.is_admin ? "Remove admin" : "Make admin"}
+                          className={cn(
+                            "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg",
+                            "font-sans text-ui-xs font-medium transition-colors",
+                            "disabled:opacity-50 disabled:cursor-not-allowed",
+                            u.id === user?.id
+                              ? "bg-slate/10 text-slate/50 cursor-not-allowed"
+                              : u.is_admin
+                                ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                                : "bg-slate/10 text-slate hover:bg-purple-100 hover:text-purple-700"
+                          )}
+                        >
+                          {actionLoading === `admin-${u.id}` ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : u.is_admin ? (
+                            <>
+                              <ShieldOff className="h-3.5 w-3.5" />
+                              Remove
+                            </>
+                          ) : (
+                            <>
+                              <ShieldCheck className="h-3.5 w-3.5" />
+                              Make Admin
+                            </>
+                          )}
+                        </button>
+
+                        {/* Delete user button */}
+                        <button
+                          onClick={() => {
+                            setDeleteUserConfirmId(u.id);
+                            setDeleteUserProjects(false);
+                          }}
+                          disabled={!!actionLoading || u.id === user?.id}
+                          title={u.id === user?.id ? "Cannot delete your own account" : "Delete user"}
+                          className={cn(
+                            "p-1.5 rounded-lg transition-colors",
+                            "disabled:opacity-50 disabled:cursor-not-allowed",
+                            u.id === user?.id
+                              ? "text-slate/30 cursor-not-allowed"
+                              : "text-burgundy/50 hover:bg-burgundy/10 hover:text-burgundy"
+                          )}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Delete user confirmation */}
+                      {deleteUserConfirmId === u.id && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-burgundy/5 rounded-lg z-10">
+                          <div className="bg-white rounded-lg shadow-lg border border-burgundy/20 p-3 max-w-[280px]">
+                            <p className="font-sans text-ui-xs text-burgundy font-medium mb-2">
+                              Delete {u.display_name || "this user"}?
+                            </p>
+                            <label className="flex items-center gap-2 mb-3">
+                              <input
+                                type="checkbox"
+                                checked={deleteUserProjects}
+                                onChange={(e) => setDeleteUserProjects(e.target.checked)}
+                                className="rounded border-parchment text-burgundy focus:ring-burgundy"
+                              />
+                              <span className="font-sans text-ui-xs text-slate">
+                                Also delete their projects
+                              </span>
+                            </label>
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  setDeleteUserConfirmId(null);
+                                  setDeleteUserProjects(false);
+                                }}
+                                className="px-2.5 py-1 rounded font-sans text-ui-xs bg-slate/10 text-slate hover:bg-slate/20"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(u.id, deleteUserProjects)}
+                                disabled={!!actionLoading}
+                                className="flex items-center gap-1 px-2.5 py-1 rounded font-sans text-ui-xs font-medium bg-burgundy text-white hover:bg-burgundy-dark disabled:opacity-50"
+                              >
+                                {actionLoading === `deleteuser-${u.id}` ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3 w-3" />
+                                )}
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
