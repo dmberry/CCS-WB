@@ -813,30 +813,13 @@ export function SettingsModal({
                   <button
                     onClick={() => setSkinsEnabled(!skinsEnabled)}
                     data-skin-protected="true"
-                    className={cn(
-                      "relative w-8 h-4 rounded-full transition-colors flex-shrink-0",
-                      "appearance-none border-none p-0 cursor-pointer",
-                      "!bg-none !shadow-none !text-inherit",
-                      skinsEnabled ? "!bg-burgundy" : "!bg-parchment-dark"
-                    )}
-                    style={{
-                      background: skinsEnabled ? 'var(--color-burgundy, #722F37)' : 'var(--color-parchment-dark, #d4c4a8)',
-                      border: 'none',
-                      boxShadow: 'none',
-                      minWidth: '32px',
-                      minHeight: '16px'
-                    }}
+                    data-toggle-state={skinsEnabled ? "on" : "off"}
+                    className="skin-toggle-button relative w-8 h-4 rounded-full transition-colors flex-shrink-0 appearance-none border-none p-0 cursor-pointer"
                   >
                     <span
                       data-skin-protected="true"
-                      className="absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm"
-                      style={{
-                        background: 'white',
-                        border: 'none',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                        transform: skinsEnabled ? 'translateX(16px)' : 'translateX(2px)',
-                        transition: 'transform 0.2s ease-in-out'
-                      }}
+                      data-toggle-state={skinsEnabled ? "on" : "off"}
+                      className="skin-toggle-thumb absolute top-0.5 w-3 h-3 rounded-full"
                     />
                   </button>
                 </div>

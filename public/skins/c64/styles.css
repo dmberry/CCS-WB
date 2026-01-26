@@ -33,11 +33,19 @@ body {
 }
 
 /* === BLUE BACKGROUND WITH BORDER === */
-body {
+html, body, #__next {
   background: #4040a0 !important;
+  min-height: 100vh;
+}
+
+body {
   border: 20px solid #a0a0f0 !important;
   box-sizing: border-box;
-  min-height: 100vh;
+}
+
+/* Ensure main content area has C64 background */
+main {
+  background: #4040a0 !important;
 }
 
 /* === TEXT STYLING === */
@@ -106,6 +114,27 @@ main::before {
   font-size: 1.1rem;
   padding: 20px;
   margin-bottom: 20px;
+  background: #4040a0;
+}
+
+/* Main page content area */
+main > div {
+  background: transparent !important;
+}
+
+/* Welcome text on home page */
+main .text-center p.font-sans,
+main .text-center p[class*="uppercase"] {
+  color: #a0a0f0 !important;
+  letter-spacing: 0.2em;
+}
+
+main .text-center h2 {
+  color: #a0a0f0 !important;
+}
+
+main .text-center p.font-body {
+  color: #8080d0 !important;
 }
 
 /* Headers - C64 big text */

@@ -649,13 +649,9 @@ html:not(.skin-active) .font-display {
    SKIN PROTECTION
    Prevent skin CSS from breaking core UI elements
    ============================================ */
-[data-skin-protected="true"] {
-  /* Reset all skin overrides for protected elements */
-  all: revert !important;
-}
 
-/* Toggle switch protection - must come after all: revert */
-button[data-skin-protected="true"] {
+/* Skin toggle button - must override all skin styles */
+.skin-toggle-button {
   position: relative !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -673,7 +669,18 @@ button[data-skin-protected="true"] {
   min-height: 16px !important;
 }
 
-span[data-skin-protected="true"] {
+/* Toggle OFF state - grey background */
+.skin-toggle-button[data-toggle-state="off"] {
+  background-color: #d4c4a8 !important;
+}
+
+/* Toggle ON state - burgundy background */
+.skin-toggle-button[data-toggle-state="on"] {
+  background-color: #722F37 !important;
+}
+
+/* Toggle thumb */
+.skin-toggle-thumb {
   position: absolute !important;
   top: 2px !important;
   width: 12px !important;
@@ -682,5 +689,14 @@ span[data-skin-protected="true"] {
   background: white !important;
   border: none !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
-  transition: transform 0.2s !important;
+  transition: transform 0.2s ease-in-out !important;
+}
+
+/* Thumb position based on toggle state */
+.skin-toggle-thumb[data-toggle-state="off"] {
+  transform: translateX(2px) !important;
+}
+
+.skin-toggle-thumb[data-toggle-state="on"] {
+  transform: translateX(16px) !important;
 }

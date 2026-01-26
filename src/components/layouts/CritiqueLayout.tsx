@@ -249,6 +249,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
 
   // Local file trash (for when not in cloud mode)
+  // Persisted to localStorage so it survives page refreshes and project switches
   interface LocalTrashedFile {
     id: string;
     name: string;
@@ -256,7 +257,30 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     content: string;
     deletedAt: string;
   }
-  const [localTrashedFiles, setLocalTrashedFiles] = useState<LocalTrashedFile[]>([]);
+  const LOCAL_TRASH_STORAGE_KEY = "ccs-wb-local-trash";
+  const [localTrashedFiles, setLocalTrashedFiles] = useState<LocalTrashedFile[]>(() => {
+    // Load from localStorage on initial mount
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(LOCAL_TRASH_STORAGE_KEY);
+        if (stored) {
+          return JSON.parse(stored);
+        }
+      } catch (e) {
+        console.error("Failed to load local trash from localStorage:", e);
+      }
+    }
+    return [];
+  });
+
+  // Persist local trash to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_TRASH_STORAGE_KEY, JSON.stringify(localTrashedFiles));
+    } catch (e) {
+      console.error("Failed to save local trash to localStorage:", e);
+    }
+  }, [localTrashedFiles]);
 
   // Message interaction state
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
