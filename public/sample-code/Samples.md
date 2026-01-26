@@ -8,11 +8,11 @@ The CCS Workbench reads this file at runtime to populate the sample projects lis
 Each sample project is defined on a single line with the following format:
 
 ```
-- filename.ccs: Display Name | mode | Description | era | annotation_count
+- folder/filename.ccs: Display Name | mode | Description | era | annotation_count
 ```
 
 **Fields:**
-- `filename.ccs` - The project file (must end in .ccs)
+- `folder/filename.ccs` - Path to the project file (must end in .ccs)
 - `Display Name` - How the project appears in the dropdown
 - `mode` - One of: critique, archaeology, interpret, create
 - `Description` - Brief description shown in the dropdown
@@ -27,8 +27,9 @@ Each sample project is defined on a single line with the following format:
 
 1. Create a complete project in the CCS Workbench
 2. Save it as a .ccs file using File > Save
-3. Place the .ccs file in this `public/sample-code/` folder
-4. Add an entry to this file following the format above
-5. Rebuild or restart the application
+3. Create a subfolder in `public/sample-code/` (e.g., `myproject/`)
+4. Place the .ccs file in the subfolder
+5. Add an entry to this file following the format above
+6. Rebuild or restart the application
 
 The project will appear in the "Load Sample" dropdown in the code files panel.
