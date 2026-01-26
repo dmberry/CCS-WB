@@ -43,7 +43,6 @@ interface AdminUser {
   id: string;
   display_name: string | null;
   initials: string | null;
-  email: string | null;
   affiliation: string | null;
   is_admin: boolean;
   created_at: string;
@@ -110,7 +109,7 @@ export function AdminModal() {
 
     const { data, error } = await (supabase as any)
       .from("profiles")
-      .select("id, display_name, initials, email, affiliation, is_admin, created_at")
+      .select("id, display_name, initials, affiliation, is_admin, created_at")
       .order("is_admin", { ascending: false })
       .order("display_name", { ascending: true });
 
@@ -351,7 +350,6 @@ export function AdminModal() {
   // Filter users by search query
   const filteredUsers = users.filter(u =>
     u.display_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.affiliation?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 

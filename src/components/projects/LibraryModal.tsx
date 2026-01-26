@@ -111,12 +111,22 @@ export function LibraryModal() {
 
     const { data, error } = await (supabase as any)
       .from("code_files")
-      .select("content")
+      .select("content, name")
       .eq("project_id", project.id)
-      .ilike("name", "readme.md")
-      .single();
+      .ilike("name", "%readme%")
+      .limit(1)
+      .maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      console.error("Error fetching README:", error);
+      setReadmeContent(`Error loading README: ${error.message}`);
+    } else if (!data) {
+      // Try to list all files to debug
+      const { data: files } = await (supabase as any)
+        .from("code_files")
+        .select("name")
+        .eq("project_id", project.id);
+      console.log("Files in project:", files?.map((f: { name: string }) => f.name));
       setReadmeContent("No README.md file found in this project.");
     } else {
       setReadmeContent((data as { content: string }).content || "README.md is empty.");
