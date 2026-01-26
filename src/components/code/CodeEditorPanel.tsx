@@ -84,6 +84,8 @@ interface CodeEditorPanelProps {
   newRemoteAnnotationIds?: Set<string>;
   // Whether we're in a cloud project (for showing cloud icon on files)
   isInProject?: boolean;
+  // Whether the panel is in read-only mode (e.g., viewing library project)
+  readOnly?: boolean;
 }
 
 // Historical punch card languages that typically used 80-column format
@@ -374,6 +376,7 @@ export function CodeEditorPanel({
   onClearLineAnnotations,
   newRemoteAnnotationIds,
   isInProject = false,
+  readOnly = false,
 }: CodeEditorPanelProps) {
   const {
     session,
@@ -817,6 +820,8 @@ export function CodeEditorPanel({
   }, [editingAnnotationId, editingLine, editingEndLine, selectedFileId, lines, updateLineAnnotation, addLineAnnotation, takeAnnotationSnapshot]);
 
   const handleLineClick = useCallback((startLine: number, endLine?: number) => {
+    // Don't allow adding annotations in read-only mode
+    if (readOnly) return;
     // Stop discovery animation when user interacts
     setShowDiscoveryAnimation(false);
     // Ensure annotations are visible when adding a new one
@@ -826,9 +831,11 @@ export function CodeEditorPanel({
     setEditingEndLine(endLine ?? null); // null for single-line, number for block
     setAnnotationContent("");
     setAnnotationType("observation");
-  }, []);
+  }, [readOnly]);
 
   const handleStartEditAnnotation = useCallback((annotationId: string) => {
+    // Don't allow editing annotations in read-only mode
+    if (readOnly) return;
     const annotation = fileAnnotations.find(a => a.id === annotationId);
     if (annotation) {
       setEditingAnnotationId(annotation.id);
@@ -837,7 +844,7 @@ export function CodeEditorPanel({
       // Clear new annotation state to avoid conflicts
       setEditingLine(null);
     }
-  }, [fileAnnotations]);
+  }, [fileAnnotations, readOnly]);
 
   // Get file extension from language
   const getExtensionForLanguage = useCallback((language?: string): string => {
@@ -1018,10 +1025,12 @@ export function CodeEditorPanel({
 
   // Handle delete annotation from CodeMirror widget
   const handleDeleteAnnotation = useCallback((annotationId: string) => {
+    // Don't allow deleting annotations in read-only mode
+    if (readOnly) return;
     // Take snapshot before deleting (for undo)
     takeAnnotationSnapshot();
     removeLineAnnotation(annotationId);
-  }, [removeLineAnnotation, takeAnnotationSnapshot]);
+  }, [removeLineAnnotation, takeAnnotationSnapshot, readOnly]);
 
   // Handle clicking on an annotation type pill to highlight annotations of that type
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -1213,8 +1222,8 @@ export function CodeEditorPanel({
           {!sidebarCollapsed && (
             <>
               <div className="flex items-center gap-0.5 pl-1 overflow-hidden flex-1 min-w-0">
-                {/* New file button - leftmost */}
-                {onAddNewFile && (
+                {/* New file button - leftmost (hidden in read-only mode) */}
+                {onAddNewFile && !readOnly && (
                   <button
                     onClick={onAddNewFile}
                     className="p-1 text-slate-muted hover:text-burgundy transition-colors"
@@ -1223,8 +1232,8 @@ export function CodeEditorPanel({
                     <FilePlus className="h-3.5 w-3.5" strokeWidth={1.5} />
                   </button>
                 )}
-                {/* Load code button */}
-                {onLoadCode && (
+                {/* Load code button (hidden in read-only mode) */}
+                {onLoadCode && !readOnly && (
                   <button
                     onClick={onLoadCode}
                     className="p-1 text-slate-muted hover:text-burgundy transition-colors"
@@ -1340,7 +1349,8 @@ export function CodeEditorPanel({
                           : "hover:bg-cream text-ink"
                       )}
                     >
-                      {/* Menu button on left */}
+                      {/* Menu button on left (hidden in read-only mode) */}
+                      {!readOnly && (
                       <div className="relative flex-shrink-0">
                         <button
                           onClick={(e) => {
@@ -1448,6 +1458,7 @@ export function CodeEditorPanel({
                           </div>
                         )}
                       </div>
+                      )}
                       {/* Filename button */}
                       <button
                         onClick={() => setSelectedFileId(file.id)}

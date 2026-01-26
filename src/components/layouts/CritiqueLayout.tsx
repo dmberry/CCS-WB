@@ -2153,6 +2153,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             onClearLineAnnotations={clearLineAnnotations}
             newRemoteAnnotationIds={newRemoteAnnotationIds}
             isInProject={isInProject}
+            readOnly={!!viewingLibraryProjectId}
           />
         </div>
 

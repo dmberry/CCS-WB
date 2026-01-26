@@ -1162,16 +1162,33 @@ _Add relevant references, documentation links, or related scholarship:_
   }, [supabase]);
 
   // Approve a submitted project (admin only)
+  // - Adds $ prefix to name (library namespace)
+  // - Sets owner_id to null (public/community ownership)
   const approveProject = useCallback(async (projectId: string) => {
     if (!supabase || !user) {
       return { error: new Error("Not authenticated") };
     }
 
     try {
+      // Get current project to check name
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: project } = await (supabase as any)
+        .from("projects")
+        .select("name")
+        .eq("id", projectId)
+        .single();
+
+      // Add $ prefix if not already present (library namespace)
+      const libraryName = project?.name?.startsWith("$")
+        ? project.name
+        : `$${project?.name || "Untitled"}`;
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any)
         .from("projects")
         .update({
+          name: libraryName,
+          owner_id: null, // Transfer to public/community ownership
           accession_status: "approved" as AccessionStatus,
           approved_at: new Date().toISOString(),
           approved_by: user.id,

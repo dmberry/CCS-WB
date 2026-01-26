@@ -24,6 +24,7 @@ import {
   User,
   Search,
   FileCode,
+  AlertTriangle,
 } from "lucide-react";
 import type { LibraryProject } from "@/lib/supabase/types";
 import type { EntryMode } from "@/types/session";
@@ -50,6 +51,8 @@ export function AdminModal() {
     showAdminModal,
     setShowAdminModal,
     fetchPendingSubmissions,
+    fetchLibraryProjects,
+    libraryProjects,
     approveProject,
     rejectProject,
     loadProject,
@@ -60,13 +63,24 @@ export function AdminModal() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch pending submissions when modal opens
+  // Fetch pending submissions and library projects when modal opens
   useEffect(() => {
     if (showAdminModal) {
       fetchPendingSubmissions();
+      fetchLibraryProjects(); // Fetch library to check for duplicate names
       setError(null);
     }
-  }, [showAdminModal, fetchPendingSubmissions]);
+  }, [showAdminModal, fetchPendingSubmissions, fetchLibraryProjects]);
+
+  // Check if a submission name matches an existing library project
+  const getMatchingLibraryProject = (name: string) => {
+    // Strip $ prefix from library project names for comparison
+    const normalizedName = name.toLowerCase().trim();
+    return libraryProjects.find(lp => {
+      const libraryName = lp.name.startsWith("$") ? lp.name.slice(1) : lp.name;
+      return libraryName.toLowerCase().trim() === normalizedName;
+    });
+  };
 
   if (!showAdminModal) return null;
 
@@ -260,6 +274,16 @@ export function AdminModal() {
                           <Clock className="h-3 w-3" />
                           Submitted {formatDate(project.submitted_at)}
                         </span>
+                        {/* Warning if this matches an existing library project */}
+                        {getMatchingLibraryProject(project.name) && (
+                          <span
+                            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-ui-xs font-sans font-medium bg-amber-100 text-amber-700"
+                            title={`Matches existing library project: ${getMatchingLibraryProject(project.name)?.name}`}
+                          >
+                            <AlertTriangle className="h-3 w-3" />
+                            Update?
+                          </span>
+                        )}
                       </div>
                     </div>
 
