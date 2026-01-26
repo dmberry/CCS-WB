@@ -797,8 +797,8 @@ export function AdminModal() {
                           )}
                         </div>
                         <p className="font-sans text-ui-xs text-slate/60 truncate">
-                          {u.email || "No email"}
-                          {u.affiliation && ` · ${u.affiliation}`}
+                          {u.affiliation || "No affiliation"}
+                          {u.created_at && ` · Joined ${new Date(u.created_at).toLocaleDateString()}`}
                         </p>
                       </div>
 
