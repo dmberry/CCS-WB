@@ -616,6 +616,19 @@ html:not(.skin-active) .font-display {
 }
 
 /* ============================================
+   CODEMIRROR EDITOR PROTECTION
+   Prevent skin CSS from adding underlines to code
+   ============================================ */
+.cm-editor,
+.cm-editor *,
+.cm-content,
+.cm-content *,
+.cm-line,
+.cm-line * {
+  text-decoration: none !important;
+}
+
+/* ============================================
    ANNOTATION CODE STYLING
    Prevent code from being underlined in annotations
    ============================================ */
@@ -624,7 +637,11 @@ html:not(.skin-active) .font-display {
 .annotation-content code,
 .annotation-content pre,
 [class*="annotation"] code,
-[class*="annotation"] pre {
+[class*="annotation"] pre,
+.cm-annotation-widget,
+.cm-annotation-widget *,
+.cm-annotation-content,
+.cm-annotation-content * {
   text-decoration: none !important;
 }
 

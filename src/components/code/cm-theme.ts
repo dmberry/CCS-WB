@@ -20,7 +20,7 @@ const ccsLightTheme = EditorView.theme(
       overflow: "auto",
     },
     ".cm-content": {
-      fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
+      fontFamily: "var(--code-font-family, ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace)",
       caretColor: "hsl(var(--burgundy))",
       padding: "4px 0",
     },
@@ -290,7 +290,7 @@ const ccsDarkTheme = EditorView.theme(
       overflow: "auto",
     },
     ".cm-content": {
-      fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
+      fontFamily: "var(--code-font-family, ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace)",
       caretColor: "hsl(var(--burgundy))",
       padding: "4px 0",
     },
