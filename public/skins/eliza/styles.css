@@ -53,6 +53,36 @@ body::after {
   font-family: 'VT323', 'Courier New', 'Lucida Console', monospace !important;
 }
 
+/* Base font size increase - VT323 renders small so we need to boost it */
+html {
+  font-size: 18px !important;
+}
+
+body {
+  font-size: 18px !important;
+}
+
+/* Ensure all text elements have reasonable minimum sizes */
+p, span, label, div, li, td, th, a {
+  font-size: 1rem !important;
+  min-height: auto;
+}
+
+/* Headers */
+h1 { font-size: 1.5rem !important; }
+h2 { font-size: 1.35rem !important; }
+h3 { font-size: 1.2rem !important; }
+h4 { font-size: 1.1rem !important; }
+
+/* Small text classes should still be readable */
+.text-xs, .text-ui-xs, [class*="text-[10px]"], [class*="text-[11px]"], [class*="text-[12px]"] {
+  font-size: 0.85rem !important;
+}
+
+.text-sm, .text-ui-sm {
+  font-size: 0.9rem !important;
+}
+
 h1, h2, h3, h4, .font-display, p, span, label, div {
   color: #00ff00 !important;
   text-shadow:
@@ -101,7 +131,7 @@ header button:hover {
 
 /* Header title - terminal prompt style */
 header h1 {
-  font-size: 16px !important;
+  font-size: 20px !important;
   letter-spacing: 1px;
   text-transform: uppercase !important;
 }
@@ -279,8 +309,8 @@ pre, code {
   display: block !important;
   background: #003300;
   color: #00ff00 !important;
-  font-size: 14px;
-  padding: 6px 10px;
+  font-size: 18px;
+  padding: 8px 12px;
   text-transform: uppercase;
   letter-spacing: 2px;
   border-bottom: 1px solid #00ff00;
@@ -306,7 +336,7 @@ pre, code {
   background: transparent;
   border: none;
   box-shadow: none;
-  font-size: 12px;
+  font-size: 14px;
   color: #00ff00 !important;
   text-align: left;
 }
@@ -314,7 +344,7 @@ pre, code {
 .skin-credit-avatar::before {
   content: "MIT AI LAB\\AMAC-LISP>ELIZA\\A\\ARUN DOCTOR\\A\\A*HELLO.\\A*I AM ELIZA.\\A*PLEASE TELL ME\\A*YOUR PROBLEM.";
   white-space: pre;
-  font-size: 11px;
+  font-size: 14px;
   line-height: 1.4;
   color: #00ff00;
   text-shadow: 0 0 3px #00ff00;
@@ -323,7 +353,7 @@ pre, code {
 .skin-credit-name {
   display: block !important;
   color: #00aa00 !important;
-  font-size: 11px;
+  font-size: 14px;
   margin-bottom: 8px;
 }
 
@@ -336,12 +366,12 @@ pre, code {
   font-size: 0;
 }
 .skin-credit-name::before {
-  font-size: 11px;
+  font-size: 14px;
 }
 
 .skin-credit-text {
   display: block !important;
-  font-size: 11px;
+  font-size: 14px;
   color: #00ff00 !important;
 }
 
@@ -354,7 +384,7 @@ pre, code {
   content: "COMM. OF THE ACM, VOL. 9";
   display: block;
   margin-top: 8px;
-  font-size: 10px;
+  font-size: 13px;
   color: #006600;
 }
 
@@ -384,7 +414,7 @@ hr::before {
   display: block;
   color: #00ff00;
   text-align: center;
-  font-size: 10px;
+  font-size: 14px;
   margin-bottom: -8px;
   text-shadow: 0 0 3px #00ff00;
 }
@@ -604,7 +634,8 @@ header .font-mono {
   text-transform: uppercase;
 }
 
-/* === SUBTLE CRT FLICKER === */
+/* === CRT FLICKER (DISABLED) === */
+/* Flicker animation disabled for accessibility
 @keyframes flicker {
   0% { opacity: 0.97; }
   5% { opacity: 1; }
@@ -619,6 +650,7 @@ header .font-mono {
 body {
   animation: flicker 0.15s infinite;
 }
+*/
 
 /* === MODALS === */
 [class*="shadow-editorial"],

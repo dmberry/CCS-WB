@@ -25,9 +25,13 @@ import {
   Search,
   FileCode,
   CheckCircle,
+  Info,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import type { LibraryProject } from "@/lib/supabase/types";
 import type { EntryMode } from "@/types/session";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 const MODE_LABELS: Record<EntryMode, string> = {
   critique: "Critique",
@@ -61,6 +65,9 @@ export function LibraryModal() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedProjectId, setCopiedProjectId] = useState<string | null>(null);
+  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
+  const [readmeContent, setReadmeContent] = useState<string | null>(null);
+  const [loadingReadme, setLoadingReadme] = useState(false);
 
   // Fetch library projects when modal opens
   useEffect(() => {
@@ -78,6 +85,44 @@ export function LibraryModal() {
     setSearchQuery("");
     setError(null);
     setCopiedProjectId(null);
+    setExpandedProjectId(null);
+    setReadmeContent(null);
+  };
+
+  const handleToggleInfo = async (project: LibraryProject) => {
+    // If already expanded, collapse it
+    if (expandedProjectId === project.id) {
+      setExpandedProjectId(null);
+      setReadmeContent(null);
+      return;
+    }
+
+    setExpandedProjectId(project.id);
+    setLoadingReadme(true);
+    setReadmeContent(null);
+
+    // Fetch README.md from the project's code_files
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setReadmeContent("Unable to load README.");
+      setLoadingReadme(false);
+      return;
+    }
+
+    const { data, error } = await (supabase as any)
+      .from("code_files")
+      .select("content")
+      .eq("project_id", project.id)
+      .ilike("name", "readme.md")
+      .single();
+
+    if (error || !data) {
+      setReadmeContent("No README.md file found in this project.");
+    } else {
+      setReadmeContent((data as { content: string }).content || "README.md is empty.");
+    }
+
+    setLoadingReadme(false);
   };
 
   const handlePreview = async (project: LibraryProject) => {
@@ -134,6 +179,10 @@ export function LibraryModal() {
       project.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       project.owner?.display_name?.toLowerCase().includes(searchQuery.toLowerCase());
   });
+
+  // Separate approved library projects from Early Access (submitted) projects
+  const approvedProjects = filteredProjects.filter(p => p.accession_status === "approved");
+  const earlyAccessProjects = filteredProjects.filter(p => p.accession_status === "submitted");
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "Unknown";
@@ -229,8 +278,19 @@ export function LibraryModal() {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredProjects.map((project) => (
+            <div className="space-y-4">
+              {/* Approved Library Projects */}
+              {approvedProjects.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Library className="h-4 w-4 text-burgundy" />
+                    <h3 className="font-serif text-ui-base text-ink">Library</h3>
+                    <span className="text-ui-xs text-slate/60 font-sans">
+                      ({approvedProjects.length})
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    {approvedProjects.map((project) => (
                 <div
                   key={project.id}
                   className="group p-4 rounded-xl border border-parchment bg-ivory hover:border-parchment-dark hover:shadow-sm transition-all"
@@ -273,7 +333,7 @@ export function LibraryModal() {
                         </span>
                         {/* Early Access badge for submitted (not yet approved) projects */}
                         {project.accession_status === "submitted" && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-ui-xs font-sans font-medium bg-amber-100 text-amber-700 border border-amber-200">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-ui-xs font-sans font-medium bg-amber-500 text-white">
                             Early Access
                           </span>
                         )}
@@ -283,6 +343,23 @@ export function LibraryModal() {
                             ? formatDate(project.submitted_at)
                             : formatDate(project.approved_at)}
                         </span>
+                        {/* More info toggle */}
+                        <button
+                          onClick={() => handleToggleInfo(project)}
+                          className={cn(
+                            "flex items-center gap-1 text-ui-xs font-sans",
+                            "text-burgundy/70 hover:text-burgundy",
+                            "transition-colors"
+                          )}
+                        >
+                          <Info className="h-3 w-3" />
+                          <span>More info</span>
+                          {expandedProjectId === project.id ? (
+                            <ChevronUp className="h-3 w-3" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3" />
+                          )}
+                        </button>
                       </div>
                     </div>
 
@@ -329,14 +406,179 @@ export function LibraryModal() {
                         ) : (
                           <>
                             <Copy className="h-3.5 w-3.5" />
-                            Copy
+                            <span>Copy <span className="text-[10px] opacity-80">to my projects</span></span>
                           </>
                         )}
                       </button>
                     </div>
                   </div>
+
+                  {/* Expandable README section */}
+                  {expandedProjectId === project.id && (
+                    <div className="mt-3 pt-3 border-t border-parchment">
+                      {loadingReadme ? (
+                        <div className="flex items-center gap-2 text-slate/60">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="font-sans text-ui-xs">Loading README...</span>
+                        </div>
+                      ) : (
+                        <div className="bg-cream/50 rounded-lg p-3 max-h-48 overflow-y-auto">
+                          <pre className="font-mono text-ui-xs text-ink whitespace-pre-wrap break-words">
+                            {readmeContent}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ))}
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Early Access Projects */}
+              {earlyAccessProjects.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="h-4 w-4 text-amber-500" />
+                    <h3 className="font-serif text-ui-base text-ink">Early Access</h3>
+                    <span className="text-ui-xs text-slate/60 font-sans">
+                      ({earlyAccessProjects.length})
+                    </span>
+                    <span className="text-ui-xs text-amber-600 font-sans italic">
+                      Pending approval
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    {earlyAccessProjects.map((project) => (
+                      <div
+                        key={project.id}
+                        className="group p-4 rounded-xl border border-amber-200 bg-amber-50/50 hover:border-amber-300 hover:shadow-sm transition-all dark:border-amber-500/30 dark:bg-amber-500/10"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-serif text-ui-base text-ink truncate" title={displayName(project.name)}>
+                              {displayName(project.name)}
+                            </h4>
+                            <p className="font-sans text-ui-xs text-slate/60 mb-1 flex items-center gap-1">
+                              <User className="h-2.5 w-2.5" />
+                              <span>{project.owner?.display_name || "Unknown"}</span>
+                              {project.owner?.affiliation && (
+                                <span className="text-slate/40">
+                                  ({project.owner.affiliation})
+                                </span>
+                              )}
+                            </p>
+                            {project.description && (
+                              <p className="font-sans text-ui-xs text-slate mb-2 line-clamp-2">
+                                {project.description}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={cn(
+                                "inline-flex items-center px-2 py-0.5 rounded-full text-ui-xs font-sans font-medium",
+                                MODE_COLORS[project.mode as EntryMode] || "bg-slate/10 text-slate"
+                              )}>
+                                {MODE_LABELS[project.mode as EntryMode] || project.mode}
+                              </span>
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-ui-xs font-sans font-medium bg-amber-500 text-white">
+                                Early Access
+                              </span>
+                              <span className="flex items-center gap-1 text-ui-xs text-slate/60 font-sans">
+                                <Clock className="h-3 w-3" />
+                                {formatDate(project.submitted_at)}
+                              </span>
+                              <button
+                                onClick={() => handleToggleInfo(project)}
+                                className={cn(
+                                  "flex items-center gap-1 text-ui-xs font-sans",
+                                  "text-burgundy/70 hover:text-burgundy",
+                                  "transition-colors"
+                                )}
+                              >
+                                <Info className="h-3 w-3" />
+                                <span>More info</span>
+                                {expandedProjectId === project.id ? (
+                                  <ChevronUp className="h-3 w-3" />
+                                ) : (
+                                  <ChevronDown className="h-3 w-3" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex flex-col gap-1.5">
+                            <button
+                              onClick={() => handlePreview(project)}
+                              disabled={!!actionLoading}
+                              className={cn(
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg",
+                                "font-sans text-ui-xs font-medium",
+                                "bg-slate/10 text-slate hover:bg-slate/20",
+                                "transition-colors",
+                                "disabled:opacity-50 disabled:cursor-not-allowed"
+                              )}
+                            >
+                              {actionLoading === `preview-${project.id}` ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Eye className="h-3.5 w-3.5" />
+                              )}
+                              Preview
+                            </button>
+                            <button
+                              onClick={() => handleCopy(project)}
+                              disabled={!!actionLoading || copiedProjectId === project.id}
+                              className={cn(
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg",
+                                "font-sans text-ui-xs font-medium",
+                                "transition-colors",
+                                "disabled:opacity-50 disabled:cursor-not-allowed",
+                                copiedProjectId === project.id
+                                  ? "bg-emerald-500 text-white"
+                                  : "bg-burgundy text-ivory hover:bg-burgundy-dark"
+                              )}
+                            >
+                              {actionLoading === `copy-${project.id}` ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : copiedProjectId === project.id ? (
+                                <>
+                                  <CheckCircle className="h-3.5 w-3.5" />
+                                  Copied!
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-3.5 w-3.5" />
+                                  <span>Copy <span className="text-[10px] opacity-80">to my projects</span></span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Expandable README section */}
+                        {expandedProjectId === project.id && (
+                          <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-500/30">
+                            {loadingReadme ? (
+                              <div className="flex items-center gap-2 text-slate/60">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span className="font-sans text-ui-xs">Loading README...</span>
+                              </div>
+                            ) : (
+                              <div className="bg-cream/50 rounded-lg p-3 max-h-48 overflow-y-auto">
+                                <pre className="font-mono text-ui-xs text-ink whitespace-pre-wrap break-words">
+                                  {readmeContent}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -194,13 +194,16 @@ export function SkinsProvider({ children }: { children: React.ReactNode }) {
       existingFontStyle.remove();
     }
 
-    // Clear any inline CSS variables from previous skins
+    // Also remove any other skin-injected styles (some skins may inject multiple)
+    document.querySelectorAll('style[data-skin-style]').forEach(el => el.remove());
+
+    // Remove any injected @font-face or @import style elements from skins
+    document.querySelectorAll('link[data-skin-font]').forEach(el => el.remove());
+
     const root = document.documentElement;
-    // We'll let the regular theme system restore these when skin is disabled
 
     if (!activeSkin || !skinsEnabled) {
-      // Remove skin class
-      root.classList.remove("skin-active");
+      cleanupSkinStyles();
       return;
     }
 
@@ -298,14 +301,44 @@ export function SkinsProvider({ children }: { children: React.ReactNode }) {
         : null
       : null;
 
+  // Helper function to fully clean up skin styles
+  const cleanupSkinStyles = useCallback(() => {
+    const root = document.documentElement;
+    root.classList.remove("skin-active");
+
+    // Remove all skin style elements
+    const styleIds = ["ccs-skin-styles", "ccs-skin-fonts"];
+    styleIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
+
+    // Remove any other skin-related styles
+    document.querySelectorAll('style[data-skin-style]').forEach(el => el.remove());
+    document.querySelectorAll('link[data-skin-font]').forEach(el => el.remove());
+
+    // Force reset of common CSS properties
+    root.style.removeProperty('font-size');
+    root.style.fontSize = '';
+    document.body.style.removeProperty('background');
+    document.body.style.removeProperty('background-color');
+    document.body.style.removeProperty('font-family');
+
+    // Trigger a reflow
+    void root.offsetHeight;
+  }, []);
+
   // Setters that update state
   const setSkinsEnabled = useCallback((enabled: boolean) => {
     setSkinsEnabledState(enabled);
     if (!enabled) {
-      // Clear skin class when disabling
-      document.documentElement.classList.remove("skin-active");
+      // Immediately clean up when disabling
+      cleanupSkinStyles();
+
+      // Also schedule a delayed cleanup to catch any race conditions
+      setTimeout(cleanupSkinStyles, 100);
     }
-  }, []);
+  }, [cleanupSkinStyles]);
 
   const setActiveSkinId = useCallback((id: string | null) => {
     setActiveSkinIdState(id);

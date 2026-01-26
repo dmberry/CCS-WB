@@ -255,11 +255,110 @@ input::placeholder {
   color: #888888 !important;
 }
 
-/* === CODE EDITOR - Must override * rule for monospace === */
-.cm-editor,
+/* === CODE EDITOR - HyperCard Script Editor Window === */
+/* The classic script editor look with proper window chrome */
+
+/* Script editor container - outer window */
+.cm-editor {
+  background: #ffffff !important;
+  border: 2px solid #000000 !important;
+  border-radius: 0 !important;
+  box-shadow: 4px 4px 0 #000000 !important;
+  font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace !important;
+  position: relative !important;
+  margin-top: 24px !important;
+}
+
+/* Script window title bar - Classic Mac style */
+.cm-editor::before {
+  content: "Script Editor";
+  position: absolute;
+  top: -24px;
+  left: -2px;
+  right: -2px;
+  height: 22px;
+  border: 2px solid #000000;
+  border-bottom: 1px solid #000000;
+  font-family: 'Geneva', 'Chicago', 'Charcoal', sans-serif !important;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 18px;
+  text-align: center;
+  color: #000000;
+  /* Classic Mac horizontal stripes pattern */
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      #ffffff 0px,
+      #ffffff 2px,
+      #000000 2px,
+      #000000 3px
+    );
+}
+
+/* Close box in top-left */
+.cm-editor::after {
+  content: "";
+  position: absolute;
+  top: -20px;
+  left: 4px;
+  width: 12px;
+  height: 12px;
+  background: #ffffff;
+  border: 1px solid #000000;
+  z-index: 10;
+}
+
 .cm-editor *,
-pre, code,
 pre *, code * {
+  color: #000000 !important;
+  font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace !important;
+}
+
+/* Code content area */
+.cm-content,
+.cm-scroller {
+  background: #ffffff !important;
+  border: none !important;
+}
+
+/* Line numbers - HyperCard style */
+.cm-gutters {
+  background: #ffffff !important;
+  border-right: 1px solid #000000 !important;
+}
+
+.cm-lineNumbers .cm-gutterElement {
+  color: #000000 !important;
+  font-family: 'Monaco', 'Menlo', 'Consolas', 'Courier New', monospace !important;
+}
+
+/* Active line highlight */
+.cm-activeLine {
+  background: #eeeeee !important;
+}
+
+.cm-activeLineGutter {
+  background: #eeeeee !important;
+}
+
+/* Selection styling */
+.cm-selectionBackground {
+  background: #000000 !important;
+}
+
+.cm-content ::selection {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* Cursor */
+.cm-cursor {
+  border-left-color: #000000 !important;
+}
+
+/* Pre and code blocks */
+pre, code {
   background: #ffffff !important;
   color: #000000 !important;
   border: 1px solid #000000 !important;
@@ -375,78 +474,13 @@ hr {
   background: #000000 !important;
 }
 
-/* === TOOLBAR ICONS === */
-header button[title="New project"] svg,
-header button[title*="new local session"] svg,
-header button[title="Save session"] svg,
-header button[title="Load session"] svg,
-header button[title*="load local session"] svg,
-header button[title="Export session log"] svg,
-header button[title="Sign in to collaborate"] svg,
-header button[title*="Connected to"] svg,
-header button[title*="Not connected to cloud"] svg,
-header button[title="Interface guide"] svg,
-header button[title="Settings"] svg {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
-}
-
-header button[title="New project"],
-header button[title*="new local session"],
-header button[title="Save session"],
-header button[title="Load session"],
-header button[title*="load local session"],
-header button[title="Export session log"],
-header button[title="Sign in to collaborate"],
-header button[title*="Connected to"],
-header button[title*="Not connected to cloud"],
-header button[title="Interface guide"],
-header button[title="Settings"] {
-  min-width: 32px !important;
-  min-height: 32px !important;
-  background-size: 24px 24px !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-}
-
-header button[title="New project"],
-header button[title*="new local session"] {
-  background-image: url('/assets/icons/toolbar/new.svg') !important;
-}
-
-header button[title="Save session"] {
-  background-image: url('/assets/icons/toolbar/save.svg') !important;
-}
-
-header button[title="Load session"],
-header button[title*="load local session"] {
-  background-image: url('/assets/icons/toolbar/open.svg') !important;
-}
-
-header button[title="Export session log"] {
-  background-image: url('/assets/icons/toolbar/download.svg') !important;
-}
-
-header button[title="Sign in to collaborate"] {
-  background-image: url('/assets/icons/toolbar/cloud-off.svg') !important;
-}
-
-header button[title*="Not connected to cloud"] {
-  background-image: url('/assets/icons/toolbar/cloud.svg') !important;
-}
-
-header button[title*="Connected to"] {
-  background-image: url('/assets/icons/toolbar/cloud-cog.svg') !important;
-}
-
-header button[title="Interface guide"] {
-  background-image: url('/assets/icons/toolbar/help.svg') !important;
-}
-
-header button[title="Settings"] {
-  background-image: url('/assets/icons/toolbar/settings.svg') !important;
+/* === TOOLBAR ICONS - Keep default Lucide icons, style them black === */
+header svg {
+  color: #000000 !important;
+  opacity: 1 !important;
+  width: auto !important;
+  height: auto !important;
+  position: static !important;
 }
 
 /* === INTERFACE GUIDE POPUP === */
@@ -489,79 +523,14 @@ header .absolute.w-80 button svg {
   position: static !important;
 }
 
-/* === MAIN PAGE ICONS === */
-main header button[title="Help & Getting Started"] svg,
-main header button[title="Settings"] svg {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
+/* === MAIN PAGE & MODE CARD ICONS === */
+/* Keep default Lucide icons, style them black */
+main svg {
+  color: #000000 !important;
 }
 
-main header button[title="Help & Getting Started"],
-main header button[title="Settings"] {
-  min-width: 28px !important;
-  min-height: 28px !important;
-  background-size: 20px 20px !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-}
-
-main header button[title="Help & Getting Started"] {
-  background-image: url('/assets/icons/toolbar/help.svg') !important;
-}
-
-main header button[title="Settings"] {
-  background-image: url('/assets/icons/toolbar/settings.svg') !important;
-}
-
-/* Load Project button icon */
-main button:has(.lucide-folder-open) svg.lucide-folder-open {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
-}
-
-main button:has(.lucide-folder-open) {
-  padding-left: 28px !important;
-  background-image: url('/assets/icons/toolbar/open.svg') !important;
-  background-size: 16px 16px !important;
-  background-repeat: no-repeat !important;
-  background-position: 8px center !important;
-}
-
-/* === ENTRY MODE CARD ICONS === */
-main .grid button.group svg.lucide-code,
-main .grid button.group svg.lucide-archive,
-main .grid button.group svg.lucide-book-open,
-main .grid button.group svg.lucide-sparkles {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
-}
-
-main .grid button.group > div:first-child {
-  background-size: 28px 28px !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-}
-
-main .grid button.group:nth-child(1) > div:first-child {
-  background-image: url('/assets/icons/modes/code.svg') !important;
-}
-
-main .grid button.group:nth-child(2) > div:first-child {
-  background-image: url('/assets/icons/modes/archive.svg') !important;
-}
-
-main .grid button.group:nth-child(3) > div:first-child {
-  background-image: url('/assets/icons/modes/book.svg') !important;
-}
-
-main .grid button.group:nth-child(4) > div:first-child {
-  background-image: url('/assets/icons/modes/sparkles.svg') !important;
+main .grid button.group svg {
+  color: #000000 !important;
 }
 
 /* === FILENAME INPUT === */

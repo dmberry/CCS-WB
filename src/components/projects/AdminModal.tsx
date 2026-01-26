@@ -30,9 +30,24 @@ import {
   Copy,
   ArchiveX,
   Library,
+  Users,
+  ShieldCheck,
+  ShieldOff,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import type { LibraryProject } from "@/lib/supabase/types";
 import type { EntryMode } from "@/types/session";
+
+interface AdminUser {
+  id: string;
+  display_name: string | null;
+  initials: string | null;
+  email: string | null;
+  affiliation: string | null;
+  is_admin: boolean;
+  created_at: string;
+}
 
 const MODE_LABELS: Record<EntryMode, string> = {
   critique: "Critique",
@@ -69,23 +84,80 @@ export function AdminModal() {
     setViewingLibraryProjectId,
   } = useProjects();
   const { importSession, resetSession } = useSession();
+  const { user } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [rejectingProjectId, setRejectingProjectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "approved" | "users">("pending");
   const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deaccessionConfirmId, setDeaccessionConfirmId] = useState<string | null>(null);
+
+  // Fetch all users for admin management
+  const fetchUsers = async () => {
+    setIsLoadingUsers(true);
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setIsLoadingUsers(false);
+      return;
+    }
+
+    const { data, error } = await (supabase as any)
+      .from("profiles")
+      .select("id, display_name, initials, email, affiliation, is_admin, created_at")
+      .order("is_admin", { ascending: false })
+      .order("display_name", { ascending: true });
+
+    if (!error && data) {
+      setUsers(data as AdminUser[]);
+    }
+    setIsLoadingUsers(false);
+  };
+
+  // Toggle admin status for a user
+  const handleToggleAdmin = async (userId: string, currentStatus: boolean) => {
+    // Prevent self-removal
+    if (userId === user?.id) {
+      setError("Cannot remove your own admin status");
+      return;
+    }
+
+    setActionLoading(`admin-${userId}`);
+    const supabase = getSupabaseClient();
+    if (!supabase) {
+      setActionLoading(null);
+      return;
+    }
+
+    const { error } = await (supabase as any)
+      .from("profiles")
+      .update({ is_admin: !currentStatus })
+      .eq("id", userId);
+
+    if (error) {
+      setError(error.message);
+    } else {
+      // Update local state
+      setUsers(prev => prev.map(u =>
+        u.id === userId ? { ...u, is_admin: !currentStatus } : u
+      ));
+    }
+
+    setActionLoading(null);
+  };
 
   // Fetch pending submissions and library projects when modal opens
   useEffect(() => {
     if (showAdminModal) {
       fetchPendingSubmissions();
       fetchLibraryProjects(); // Fetch library to check for duplicate names
+      fetchUsers();
       setError(null);
     }
   }, [showAdminModal, fetchPendingSubmissions, fetchLibraryProjects]);
@@ -273,6 +345,13 @@ export function AdminModal() {
       project.owner?.display_name?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
+  // Filter users by search query
+  const filteredUsers = users.filter(u =>
+    u.display_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.affiliation?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Strip $ prefix for display
   const displayName = (name: string) => name.replace(/^\$+/, "");
 
@@ -353,6 +432,23 @@ export function AdminModal() {
               </span>
             )}
           </button>
+          <button
+            onClick={() => setActiveTab("users")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium transition-colors",
+              activeTab === "users"
+                ? "bg-purple-500 text-white"
+                : "bg-purple-100 text-purple-700 hover:bg-purple-200"
+            )}
+          >
+            <Users className="h-3.5 w-3.5" />
+            Users
+            {users.filter(u => u.is_admin).length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 bg-white/30 rounded-full text-[10px]">
+                {users.filter(u => u.is_admin).length}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Search bar */}
@@ -363,7 +459,7 @@ export function AdminModal() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={activeTab === "pending" ? "Search submissions..." : "Search library..."}
+              placeholder={activeTab === "pending" ? "Search submissions..." : activeTab === "approved" ? "Search library..." : "Search users..."}
               className={cn(
                 "w-full pl-9 pr-3 py-2",
                 "font-sans text-ui-base text-ink placeholder:text-slate/50",
@@ -652,6 +748,96 @@ export function AdminModal() {
             </>
           )}
 
+          {/* Users Tab */}
+          {activeTab === "users" && (
+            <>
+              {isLoadingUsers ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-purple-600 mb-2" />
+                  <p className="font-sans text-ui-base text-slate">Loading users...</p>
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="text-center py-8 px-4">
+                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-2xl mb-4 shadow-sm">
+                    <Users className="h-7 w-7 text-purple-600/40" />
+                  </div>
+                  <h3 className="font-serif text-ui-lg text-ink mb-2">
+                    {searchQuery ? "No matching users" : "No users found"}
+                  </h3>
+                  <p className="font-sans text-ui-xs text-slate max-w-[220px] mx-auto leading-relaxed">
+                    {searchQuery ? "Try a different search term" : "Users will appear here"}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredUsers.map((u) => (
+                    <div
+                      key={u.id}
+                      className={cn(
+                        "group p-3 rounded-lg border transition-all flex items-center justify-between gap-3",
+                        u.is_admin
+                          ? "border-purple-200 bg-purple-50/50"
+                          : "border-parchment bg-ivory hover:border-parchment-dark"
+                      )}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-serif text-ui-base text-ink truncate">
+                            {u.display_name || "Unnamed User"}
+                          </span>
+                          {u.is_admin && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-sans font-medium bg-purple-500 text-white">
+                              <ShieldCheck className="h-2.5 w-2.5" />
+                              Admin
+                            </span>
+                          )}
+                          {u.id === user?.id && (
+                            <span className="text-[10px] font-sans text-slate/50">(you)</span>
+                          )}
+                        </div>
+                        <p className="font-sans text-ui-xs text-slate/60 truncate">
+                          {u.email || "No email"}
+                          {u.affiliation && ` · ${u.affiliation}`}
+                        </p>
+                      </div>
+
+                      {/* Admin toggle button */}
+                      <button
+                        onClick={() => handleToggleAdmin(u.id, u.is_admin)}
+                        disabled={!!actionLoading || u.id === user?.id}
+                        title={u.id === user?.id ? "Cannot modify your own admin status" : u.is_admin ? "Remove admin" : "Make admin"}
+                        className={cn(
+                          "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg",
+                          "font-sans text-ui-xs font-medium transition-colors",
+                          "disabled:opacity-50 disabled:cursor-not-allowed",
+                          u.id === user?.id
+                            ? "bg-slate/10 text-slate/50 cursor-not-allowed"
+                            : u.is_admin
+                              ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                              : "bg-slate/10 text-slate hover:bg-purple-100 hover:text-purple-700"
+                        )}
+                      >
+                        {actionLoading === `admin-${u.id}` ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : u.is_admin ? (
+                          <>
+                            <ShieldOff className="h-3.5 w-3.5" />
+                            Remove
+                          </>
+                        ) : (
+                          <>
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            Make Admin
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
           {/* Library Tab */}
           {activeTab === "approved" && (
             <>
@@ -875,7 +1061,9 @@ export function AdminModal() {
           <p className="font-sans text-ui-xs text-slate/70 text-center">
             {activeTab === "pending"
               ? `${pendingSubmissions.length} submission${pendingSubmissions.length !== 1 ? "s" : ""} pending review`
-              : `${libraryProjects.length} project${libraryProjects.length !== 1 ? "s" : ""} in library`}
+              : activeTab === "approved"
+                ? `${libraryProjects.length} project${libraryProjects.length !== 1 ? "s" : ""} in library`
+                : `${users.length} user${users.length !== 1 ? "s" : ""} · ${users.filter(u => u.is_admin).length} admin${users.filter(u => u.is_admin).length !== 1 ? "s" : ""}`}
           </p>
         </div>
       </div>

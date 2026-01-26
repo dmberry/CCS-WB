@@ -509,6 +509,37 @@
 }
 
 /* ============================================
+   SKIN RESET - Safety net to restore defaults
+   When skins are disabled, ensure core styles are restored
+   ============================================ */
+html:not(.skin-active) {
+  font-size: 16px;
+}
+
+html:not(.skin-active) body {
+  background: hsl(var(--background));
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+html:not(.skin-active) * {
+  font-family: inherit;
+}
+
+html:not(.skin-active) code,
+html:not(.skin-active) pre,
+html:not(.skin-active) .font-mono {
+  font-family: var(--code-font-family);
+}
+
+html:not(.skin-active) h1,
+html:not(.skin-active) h2,
+html:not(.skin-active) h3,
+html:not(.skin-active) h4,
+html:not(.skin-active) .font-display {
+  font-family: var(--font-display), Georgia, 'Times New Roman', serif;
+}
+
+/* ============================================
    SKIN CREDIT BOX
    Hidden by default - skins can show and style
    ============================================ */
@@ -544,4 +575,95 @@
 
 .skin-credit-text {
   display: none;
+}
+
+.skin-credit-link {
+  display: none;
+}
+
+/* Skin webring box - hidden by default */
+.skin-webring-box {
+  display: none;
+  position: fixed;
+  bottom: 12px;
+  left: 12px;
+  z-index: 9998;
+  pointer-events: auto;
+}
+
+.skin-webring-logo {
+  display: none;
+}
+
+.skin-webring-tagline {
+  display: none;
+}
+
+.skin-webring-content {
+  display: none;
+}
+
+.skin-webring-graphic {
+  display: none;
+}
+
+.skin-webring-nav {
+  display: none;
+}
+
+.skin-webring-title {
+  display: none;
+}
+
+/* ============================================
+   ANNOTATION CODE STYLING
+   Prevent code from being underlined in annotations
+   ============================================ */
+.annotation-preview code,
+.annotation-preview pre,
+.annotation-content code,
+.annotation-content pre,
+[class*="annotation"] code,
+[class*="annotation"] pre {
+  text-decoration: none !important;
+}
+
+/* ============================================
+   SKIN PROTECTION
+   Prevent skin CSS from breaking core UI elements
+   ============================================ */
+[data-skin-protected="true"] {
+  /* Reset all skin overrides for protected elements */
+  all: revert !important;
+}
+
+/* Toggle switch protection - must come after all: revert */
+button[data-skin-protected="true"] {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  width: 32px !important;
+  height: 16px !important;
+  border-radius: 9999px !important;
+  border: none !important;
+  padding: 0 !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s !important;
+  box-shadow: none !important;
+  background-image: none !important;
+  font-size: inherit !important;
+  min-width: 32px !important;
+  min-height: 16px !important;
+}
+
+span[data-skin-protected="true"] {
+  position: absolute !important;
+  top: 2px !important;
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 9999px !important;
+  background: white !important;
+  border: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  transition: transform 0.2s !important;
 }

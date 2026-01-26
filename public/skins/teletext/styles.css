@@ -1,115 +1,161 @@
-/* Teletext / CEEFAX - P.888 BBC Text Service */
-/* Classic 1970s-2000s information service aesthetic */
-/* Press REVEAL to see hidden annotations */
+/* Teletext / CEEFAX - BBC Text Service */
+/* Authentic 1970s-2012 UK Teletext aesthetic */
+/* P100 CEEFAX 147 Mon 28 Jul 16:40/15 */
 
-/* === TELETEXT FONT (blocky pixel style via CSS) === */
-@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+/* === TELETEXT FONT === */
+/* Using a heavier monospace that renders more blocky */
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
-* {
-  font-family: 'VT323', 'Courier New', monospace !important;
+/* Base sizing - teletext was designed for low-res TV */
+html {
+  font-size: 20px !important;
 }
 
-/* === BLACK BACKGROUND === */
+* {
+  font-family: 'Share Tech Mono', 'Lucida Console', 'Courier New', monospace !important;
+  font-weight: 400 !important;
+}
+
+/* === PURE BLACK BACKGROUND - MANDATORY === */
 body {
   background: #000000 !important;
 }
 
-/* === BLOCKY TEXT STYLING === */
-h1, h2, h3, .font-display {
+/* Hide any background images or gradients */
+body::before {
+  display: none !important;
+}
+
+/* === TELETEXT COLOR PALETTE (8 colors only) === */
+/* Black: #000000, Red: #ff0000, Green: #00ff00, Yellow: #ffff00 */
+/* Blue: #0000ff, Magenta: #ff00ff, Cyan: #00ffff, White: #ffffff */
+
+/* === ALL TEXT STYLING === */
+h1, h2, h3, h4, .font-display {
   color: #ffff00 !important;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  font-size: 1.2em !important;
-  font-weight: normal !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  font-weight: 400 !important;
+  text-shadow: none !important;
 }
 
-/* Double-height simulation for main headers */
+/* Double-height for main titles */
 h1 {
-  font-size: 1.8em !important;
-  line-height: 1.2;
-  text-shadow: 0 2px 0 #ffff00;
+  font-size: 2rem !important;
+  line-height: 1 !important;
+  transform: scaleY(1.3);
+  transform-origin: top;
 }
 
-/* Cyan for secondary headers */
-h2, h3 {
+h2 {
   color: #00ffff !important;
+  font-size: 1.5rem !important;
 }
 
-p, span, label, div {
+h3, h4 {
+  color: #00ff00 !important;
+  font-size: 1.2rem !important;
+}
+
+p, span, label, div, li {
   color: #ffffff !important;
+  font-size: 1rem !important;
 }
 
-/* === PAGE NUMBER HEADER === */
+/* Dim text */
+.text-slate, .text-slate-muted, .text-muted-foreground, .opacity-60, .opacity-50 {
+  color: #00ffff !important;
+  opacity: 1 !important;
+}
+
+/* === PAGE HEADER BAR === */
 header,
-header.bg-background {
+header.bg-background,
+header[class*="bg-"] {
   background: #000000 !important;
-  border-bottom: none !important;
-  position: relative;
+  border-bottom: 2px solid #ffff00 !important;
+  box-shadow: none !important;
 }
 
-header::before {
-  content: "P.888 ◀▶ CCS WORKBENCH                                  HOLD";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  background: #0000ff;
-  color: #ffffff;
-  padding: 2px 10px;
-  font-size: 14px;
-  letter-spacing: 1px;
+/* Remove any nested backgrounds in header */
+header > *,
+header div,
+header nav,
+header [class*="bg-"] {
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 header * {
   color: #00ffff !important;
 }
 
+header h1,
+header [class*="font-display"],
+header [class*="font-serif"] {
+  color: #ffff00 !important;
+  font-size: 1.1rem !important;
+  transform: none !important;
+}
+
 header svg {
-  color: #00ffff !important;
+  color: #ffff00 !important;
+  /* Make sure SVGs are visible */
+  opacity: 1 !important;
+  width: auto !important;
+  height: auto !important;
+  position: static !important;
 }
 
 header button {
   background: transparent !important;
-  border: 2px solid #ffff00 !important;
+  border: none !important;
 }
 
 header button:hover {
-  background: #ffff00 !important;
-  color: #000000 !important;
+  background: #0000ff !important;
 }
 
 header button:hover svg {
-  color: #000000 !important;
+  color: #ffffff !important;
 }
 
-header h1 {
-  color: #00ffff !important;
-  font-size: 16px !important;
-}
-
-/* === FASTEXT NAVIGATION BAR (Red/Green/Yellow/Cyan) === */
+/* === FASTEXT BAR AT BOTTOM === */
 body::after {
-  content: "";
+  content: "  INDEX    NEWS     SPORT    WEATHER ";
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 24px;
+  height: 28px;
+  line-height: 28px;
+  font-size: 16px;
+  font-family: 'Share Tech Mono', monospace !important;
+  color: #ffffff;
   background: linear-gradient(to right,
     #ff0000 0%, #ff0000 25%,
     #00ff00 25%, #00ff00 50%,
     #ffff00 50%, #ffff00 75%,
     #00ffff 75%, #00ffff 100%
   );
-  z-index: 9999;
+  z-index: 10000;
+  text-align: center;
+  letter-spacing: 0.5em;
 }
 
-/* === MAIN PAGE CARDS === */
+/* === MAIN PAGE - MODE CARDS === */
+main {
+  background: #000000 !important;
+  margin-bottom: 35px;
+  padding-bottom: 20px;
+}
+
 main .grid button.group,
 main button[class*="shadow-editorial"] {
-  background: #0000aa !important;
-  border: 2px solid #ffff00 !important;
+  background: #0000ff !important;
+  border: 3px solid #ffff00 !important;
   box-shadow: none !important;
+  border-radius: 0 !important;
 }
 
 main .grid button.group * {
@@ -117,21 +163,28 @@ main .grid button.group * {
 }
 
 main .grid button.group h3 {
+  color: #ffff00 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  font-size: 1.1rem !important;
+  transform: none !important;
+}
+
+main .grid button.group p {
   color: #00ffff !important;
-  text-transform: uppercase;
-  letter-spacing: 1px;
 }
 
 main .grid button.group:hover {
-  background: #0000dd !important;
+  background: #0000aa !important;
   border-color: #00ffff !important;
 }
 
-/* Icon containers */
+/* Mode card icon containers - teletext blue boxes */
 main .grid button.group > div:first-child,
 main .grid button.group .bg-cream {
   background: #000066 !important;
   border: 2px solid #00ffff !important;
+  border-radius: 0 !important;
 }
 
 main .grid button.group > div:first-child svg,
@@ -139,55 +192,82 @@ main .grid button.group svg {
   color: #ffff00 !important;
 }
 
-/* Load Project button */
+/* Load Project button - green */
 main button[class*="border-burgundy"] {
-  background: #006600 !important;
-  border: 2px solid #00ff00 !important;
-  color: #00ff00 !important;
+  background: #00aa00 !important;
+  border: 3px solid #00ff00 !important;
+  color: #000000 !important;
+  border-radius: 0 !important;
 }
 
 main button[class*="border-burgundy"]:hover {
-  background: #00aa00 !important;
+  background: #00ff00 !important;
+}
+
+main button[class*="border-burgundy"] * {
   color: #000000 !important;
 }
 
-/* === PANELS & CARDS === */
+/* === PANELS & POPUPS === */
 .bg-popover,
 .bg-cream,
-.bg-card {
-  background: #000066 !important;
-  border: 2px solid #ffff00 !important;
+.bg-card,
+.bg-ivory,
+[class*="bg-cream"],
+[class*="bg-ivory"] {
+  background: #0000aa !important;
+  border: 3px solid #ffff00 !important;
+  border-radius: 0 !important;
+}
+
+/* Modals */
+[class*="shadow-editorial"],
+.modal-content {
+  background: #000000 !important;
+  border: 3px solid #ffff00 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
 }
 
 /* === BUTTONS === */
 button[class*="bg-burgundy"],
 .btn-editorial {
-  background: #00aaaa !important;
-  border: 2px solid #00ffff !important;
-  color: #000000 !important;
-  text-transform: uppercase;
+  background: #ff0000 !important;
+  border: 2px solid #ffff00 !important;
+  color: #ffffff !important;
+  text-transform: uppercase !important;
+  border-radius: 0 !important;
 }
 
 button[class*="bg-burgundy"]:hover,
 .btn-editorial:hover {
-  background: #00ffff !important;
+  background: #ff00ff !important;
+}
+
+/* Secondary buttons */
+button[class*="bg-slate"],
+button[class*="bg-parchment"] {
+  background: #0000ff !important;
+  border: 2px solid #00ffff !important;
+  color: #ffffff !important;
+  border-radius: 0 !important;
 }
 
 /* === LINKS === */
 a, [class*="text-burgundy"] {
   color: #00ffff !important;
-  text-decoration: none;
+  text-decoration: none !important;
 }
 
 a:hover {
   color: #ffff00 !important;
-  background: #0000aa;
+  background: #0000ff !important;
 }
 
 /* === SCROLLBARS === */
 ::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
 }
 
 ::-webkit-scrollbar-track {
@@ -208,15 +288,18 @@ input, textarea, select {
   background: #000066 !important;
   border: 2px solid #00ffff !important;
   color: #ffffff !important;
+  border-radius: 0 !important;
+  font-size: 1rem !important;
 }
 
 input:focus, textarea:focus, select:focus {
   border-color: #ffff00 !important;
   outline: none !important;
+  box-shadow: none !important;
 }
 
 input::placeholder {
-  color: #6666aa !important;
+  color: #0066aa !important;
 }
 
 /* === CODE EDITOR === */
@@ -224,191 +307,122 @@ input::placeholder {
 pre, code {
   background: #000033 !important;
   color: #00ff00 !important;
-  border: 2px solid #006600 !important;
+  border: 2px solid #00aa00 !important;
+  border-radius: 0 !important;
+  font-size: 1rem !important;
 }
 
-/* === CEEFAX CREDIT BOX === */
+.cm-lineNumbers {
+  color: #ffff00 !important;
+}
+
+/* === CREDIT BOX (CEEFAX STYLE) === */
 .skin-credit-box {
   display: none !important;
-  width: 200px;
-  background: #0000aa;
-  border: 3px solid #ffff00;
-  font-family: 'VT323', monospace;
+  width: 220px;
+  background: #000000 !important;
+  border: 3px solid #ffff00 !important;
+  font-family: 'Share Tech Mono', monospace !important;
 }
 
 .skin-credit-header {
   display: block !important;
-  background: #ff0000;
+  background: #ff0000 !important;
   color: #ffffff !important;
-  font-size: 14px;
-  padding: 4px 8px;
+  font-size: 18px;
+  padding: 6px 10px;
   text-transform: uppercase;
-  letter-spacing: 2px;
+  letter-spacing: 0.1em;
 }
 
 .skin-credit-header::before {
   content: "■ ";
+  color: #ffff00;
 }
 
 .skin-credit-content {
   display: block !important;
-  padding: 10px;
+  padding: 12px;
+  background: #0000aa !important;
 }
 
 .skin-credit-avatar {
   display: block !important;
   width: 100%;
   height: auto;
-  margin: 0 0 8px;
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  margin: 0 0 10px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   text-align: left;
 }
 
-/* ASCII art style TV */
+/* Ceefax logo in block graphics style */
 .skin-credit-avatar::before {
-  content: "╔══════════════╗\\A║   BBC TWO    ║\\A║   CEEFAX     ║\\A║  ▓▓▓▓▓▓▓▓▓▓  ║\\A╚══════════════╝";
+  content: "▄▄▄▄▄▄▄▄▄▄▄▄▄▄\\A█ ▀▄▀▄▀  BBC █\\A█  CEEFAX    █\\A▀▀▀▀▀▀▀▀▀▀▀▀▀▀";
   white-space: pre;
-  font-size: 12px;
-  line-height: 1.2;
-  color: #00ffff;
+  font-size: 14px;
+  line-height: 1.1;
+  color: #ffff00;
 }
 
 .skin-credit-name {
   display: block !important;
-  color: #ffff00 !important;
-  font-size: 14px;
-  margin-bottom: 6px;
+  color: #00ffff !important;
+  font-size: 16px;
+  margin-bottom: 8px;
 }
 
 .skin-credit-name::before {
-  content: "NEWS ";
+  content: "INDEX ";
 }
 
 .skin-credit-text {
   display: block !important;
-  font-size: 12px;
+  font-size: 14px;
   color: #ffffff !important;
 }
 
 .skin-credit-content::after {
-  content: "See P.100 for Index";
+  content: "▶ See P.100 for Index";
   display: block;
-  margin-top: 8px;
-  font-size: 12px;
+  margin-top: 10px;
+  font-size: 14px;
   color: #00ff00;
 }
 
 /* === HORIZONTAL RULES === */
 hr {
   border: none !important;
-  height: 4px !important;
+  height: 6px !important;
   background: repeating-linear-gradient(
     to right,
-    #ff0000 0, #ff0000 25%,
-    #00ff00 25%, #00ff00 50%,
-    #ffff00 50%, #ffff00 75%,
-    #00ffff 75%, #00ffff 100%
+    #ff0000 0, #ff0000 12.5%,
+    #ffff00 12.5%, #ffff00 25%,
+    #00ff00 25%, #00ff00 37.5%,
+    #00ffff 37.5%, #00ffff 50%,
+    #0000ff 50%, #0000ff 62.5%,
+    #ff00ff 62.5%, #ff00ff 75%,
+    #ffffff 75%, #ffffff 87.5%,
+    #000000 87.5%, #000000 100%
   ) !important;
 }
 
-/* === REVEAL EFFECT === */
-/* Hidden text that appears on hover */
-.annotation-content {
-  color: #0000aa !important;
-  background: #0000aa !important;
-}
-
-.annotation-content:hover {
-  color: #ffffff !important;
-  background: transparent !important;
-}
-
-/* === TOOLBAR ICONS === */
-header button[title="New project"] svg,
-header button[title*="new local session"] svg,
-header button[title="Save session"] svg,
-header button[title="Load session"] svg,
-header button[title*="load local session"] svg,
-header button[title="Export session log"] svg,
-header button[title="Sign in to collaborate"] svg,
-header button[title*="Connected to"] svg,
-header button[title*="Not connected to cloud"] svg,
-header button[title="Interface guide"] svg,
-header button[title="Settings"] svg {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
-}
-
-header button[title="New project"],
-header button[title*="new local session"],
-header button[title="Save session"],
-header button[title="Load session"],
-header button[title*="load local session"],
-header button[title="Export session log"],
-header button[title="Sign in to collaborate"],
-header button[title*="Connected to"],
-header button[title*="Not connected to cloud"],
-header button[title="Interface guide"],
-header button[title="Settings"] {
-  min-width: 32px !important;
-  min-height: 32px !important;
-  background-size: 24px 24px !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-}
-
-header button[title="New project"],
-header button[title*="new local session"] {
-  background-image: url('/assets/icons/toolbar/new.svg') !important;
-}
-
-header button[title="Save session"] {
-  background-image: url('/assets/icons/toolbar/save.svg') !important;
-}
-
-header button[title="Load session"],
-header button[title*="load local session"] {
-  background-image: url('/assets/icons/toolbar/open.svg') !important;
-}
-
-header button[title="Export session log"] {
-  background-image: url('/assets/icons/toolbar/download.svg') !important;
-}
-
-header button[title="Sign in to collaborate"] {
-  background-image: url('/assets/icons/toolbar/cloud-off.svg') !important;
-}
-
-header button[title*="Not connected to cloud"] {
-  background-image: url('/assets/icons/toolbar/cloud.svg') !important;
-}
-
-header button[title*="Connected to"] {
-  background-image: url('/assets/icons/toolbar/cloud-cog.svg') !important;
-}
-
-header button[title="Interface guide"] {
-  background-image: url('/assets/icons/toolbar/help.svg') !important;
-}
-
-header button[title="Settings"] {
-  background-image: url('/assets/icons/toolbar/settings.svg') !important;
-}
+/* === TOOLBAR - Keep default icons, just style them === */
+/* Icons are styled yellow via header svg rule above */
 
 /* === INTERFACE GUIDE POPUP === */
 header .absolute.w-80 {
   background: #0000aa !important;
   border: 3px solid #ffff00 !important;
   color: #ffffff !important;
+  border-radius: 0 !important;
 }
 
 header .absolute.w-80 h3,
 header .absolute.w-80 h4 {
-  color: #00ffff !important;
+  color: #ffff00 !important;
+  transform: none !important;
 }
 
 header .absolute.w-80 p,
@@ -418,7 +432,7 @@ header .absolute.w-80 div {
 }
 
 header .absolute.w-80 strong {
-  color: #ffff00 !important;
+  color: #00ff00 !important;
 }
 
 header .absolute.w-80 button {
@@ -435,79 +449,14 @@ header .absolute.w-80 button svg {
   position: static !important;
 }
 
-/* === MAIN PAGE ICONS === */
-main header button[title="Help & Getting Started"] svg,
-main header button[title="Settings"] svg {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
+/* === MAIN PAGE & MODE CARD ICONS === */
+/* Keep default Lucide icons, style with teletext colors */
+main svg {
+  color: #ffff00 !important;
 }
 
-main header button[title="Help & Getting Started"],
-main header button[title="Settings"] {
-  min-width: 28px !important;
-  min-height: 28px !important;
-  background-size: 20px 20px !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-}
-
-main header button[title="Help & Getting Started"] {
-  background-image: url('/assets/icons/toolbar/help.svg') !important;
-}
-
-main header button[title="Settings"] {
-  background-image: url('/assets/icons/toolbar/settings.svg') !important;
-}
-
-/* Load Project button icon */
-main button:has(.lucide-folder-open) svg.lucide-folder-open {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
-}
-
-main button:has(.lucide-folder-open) {
-  padding-left: 28px !important;
-  background-image: url('/assets/icons/toolbar/open.svg') !important;
-  background-size: 16px 16px !important;
-  background-repeat: no-repeat !important;
-  background-position: 8px center !important;
-}
-
-/* === ENTRY MODE CARD ICONS === */
-main .grid button.group svg.lucide-code,
-main .grid button.group svg.lucide-archive,
-main .grid button.group svg.lucide-book-open,
-main .grid button.group svg.lucide-sparkles {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
-}
-
-main .grid button.group > div:first-child {
-  background-size: 28px 28px !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-}
-
-main .grid button.group:nth-child(1) > div:first-child {
-  background-image: url('/assets/icons/modes/code.svg') !important;
-}
-
-main .grid button.group:nth-child(2) > div:first-child {
-  background-image: url('/assets/icons/modes/archive.svg') !important;
-}
-
-main .grid button.group:nth-child(3) > div:first-child {
-  background-image: url('/assets/icons/modes/book.svg') !important;
-}
-
-main .grid button.group:nth-child(4) > div:first-child {
-  background-image: url('/assets/icons/modes/sparkles.svg') !important;
+main .grid button.group svg {
+  color: #ffff00 !important;
 }
 
 /* === FILENAME INPUT === */
@@ -516,29 +465,83 @@ header input[type="text"] {
   background: #000066 !important;
   color: #00ffff !important;
   border: 2px solid #00ffff !important;
+  border-radius: 0 !important;
 }
 
 header button[title="Click to rename"] {
   background: #000066 !important;
   border: 2px solid #00ffff !important;
+  border-radius: 0 !important;
 }
 
 header button span.font-mono,
 header span.font-mono,
 header .font-mono {
-  color: #00ffff !important;
+  color: #ffff00 !important;
 }
 
-/* === FINAL CLEANUP === */
-.text-slate-muted,
-.text-slate {
-  background: transparent !important;
-  color: #00aaaa !important;
-  border: none !important;
-  padding: 0 !important;
+/* === ANNOTATIONS - REVEAL STYLE === */
+/* Hidden text that reveals on hover (like teletext REVEAL button) */
+.annotation-content {
+  background: #0000aa !important;
 }
 
-/* Add margin at bottom for Fastext bar */
-main {
-  margin-bottom: 30px;
+.annotation-preview code,
+.annotation-preview pre,
+.annotation-content code,
+.annotation-content pre,
+[class*="annotation"] code,
+[class*="annotation"] pre,
+a code, a pre {
+  text-decoration: none !important;
+}
+
+/* === BADGES AND TAGS === */
+[class*="rounded-full"] {
+  border-radius: 0 !important;
+}
+
+/* Mode badges */
+span[class*="bg-emerald"] {
+  background: #00ff00 !important;
+  color: #000000 !important;
+}
+
+span[class*="bg-amber"] {
+  background: #ffff00 !important;
+  color: #000000 !important;
+}
+
+span[class*="bg-blue"] {
+  background: #0000ff !important;
+  color: #ffffff !important;
+}
+
+span[class*="bg-purple"] {
+  background: #ff00ff !important;
+  color: #ffffff !important;
+}
+
+/* === REMOVE ALL ROUNDED CORNERS === */
+[class*="rounded"],
+button,
+input,
+textarea,
+select,
+[class*="shadow"] {
+  border-radius: 0 !important;
+}
+
+/* === REMOVE ALL SHADOWS === */
+[class*="shadow"] {
+  box-shadow: none !important;
+}
+
+/* === SMALL TEXT SHOULD STILL BE READABLE === */
+.text-xs, .text-ui-xs, [class*="text-[10px]"], [class*="text-[11px]"], [class*="text-[12px]"] {
+  font-size: 0.85rem !important;
+}
+
+.text-sm, .text-ui-sm {
+  font-size: 0.9rem !important;
 }

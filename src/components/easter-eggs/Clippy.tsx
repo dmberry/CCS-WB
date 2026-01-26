@@ -120,17 +120,29 @@ const HACKERMAN_MESSAGES = [
   "Access granted. Too easy.",
 ];
 
-type Position = "corner" | "center" | "top-center" | "left-center";
+type Position = "corner" | "center" | "top-center" | "left-center" | "corner-safe";
+
+// Helper to check credit box visibility synchronously
+function isCreditBoxVisible(): boolean {
+  if (typeof document === "undefined") return false;
+  const creditBox = document.getElementById("skin-credit-box");
+  if (!creditBox) return false;
+  const style = window.getComputedStyle(creditBox);
+  return style.display !== "none" && style.visibility !== "hidden";
+}
 
 export function Clippy() {
   const [isVisible, setIsVisible] = useState(false);
   const [message, setMessage] = useState(CLIPPY_MESSAGES[0]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [position, setPosition] = useState<Position>("corner");
+  // Initialize position based on credit box visibility
+  const [position, setPosition] = useState<Position>(() =>
+    isCreditBoxVisible() ? "corner-safe" : "corner"
+  );
   const [isHackerman, setIsHackerman] = useState(false);
   const [usedMessages, setUsedMessages] = useState<Set<number>>(new Set());
-  const [creditBoxVisible, setCreditBoxVisible] = useState(false);
+  const [creditBoxVisible, setCreditBoxVisible] = useState(isCreditBoxVisible);
 
   // Get skin context for skin-aware messages
   const { activeSkin, skinsEnabled } = useSkins();
@@ -296,7 +308,7 @@ export function Clippy() {
     // Determine safe corner position based on credit box
     const getSafeCorner = (): Position => {
       if (creditBoxVisible && activeSkin?.config?.clippy?.avoidCreditBox !== false) {
-        return "left-center"; // Move to left side when credit box is shown
+        return "corner-safe"; // Move above the credit box area
       }
       return "corner";
     };
@@ -317,7 +329,7 @@ export function Clippy() {
 
     // If credit box becomes visible while in corner, move away
     if (position === "corner" && creditBoxVisible && activeSkin?.config?.clippy?.avoidCreditBox !== false) {
-      setPosition("left-center");
+      setPosition("corner-safe");
     }
 
     const interval = setInterval(moveToCenter, 10000 + Math.random() * 5000);
@@ -349,6 +361,7 @@ export function Clippy() {
   // Position classes based on current position
   const positionClasses = {
     corner: "bottom-4 right-4",
+    "corner-safe": "bottom-64 right-4", // Above the credit box area (256px up)
     center: "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
     "top-center": "top-20 left-1/2 -translate-x-1/2",
     "left-center": "top-1/2 left-20 -translate-y-1/2",
@@ -359,7 +372,7 @@ export function Clippy() {
       className={cn(
         "fixed z-[10000] flex flex-col items-end gap-1 transition-all duration-500 ease-in-out",
         positionClasses[position],
-        position !== "corner" && "items-center"
+        position !== "corner" && position !== "corner-safe" && "items-center"
       )}
     >
       {/* Speech bubble */}
@@ -370,11 +383,11 @@ export function Clippy() {
             ? "bg-black border-green-500 text-green-400"
             : "bg-ivory border-ink/20",
           "before:absolute before:bottom-[-8px]",
-          position === "corner" ? "before:right-6" : "before:left-1/2 before:-translate-x-1/2",
+          (position === "corner" || position === "corner-safe") ? "before:right-6" : "before:left-1/2 before:-translate-x-1/2",
           "before:border-6 before:border-transparent",
           isHackerman ? "before:border-t-black" : "before:border-t-ivory",
           "after:absolute after:bottom-[-10px]",
-          position === "corner" ? "after:right-6" : "after:left-1/2 after:-translate-x-1/2",
+          (position === "corner" || position === "corner-safe") ? "after:right-6" : "after:left-1/2 after:-translate-x-1/2",
           "after:border-6 after:border-transparent",
           isHackerman ? "after:border-t-green-500" : "after:border-t-ink/20",
           "transition-all duration-300",

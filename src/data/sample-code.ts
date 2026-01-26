@@ -17,7 +17,7 @@ export const SAMPLE_CODE_FILES: SampleCodeFile[] = [
   {
     id: "eliza-1965",
     name: "ELIZA (1965)",
-    filename: "ELIZA-1965b.mad",
+    filename: "eliza/ELIZA-1965b.mad",
     language: "mad",
     description: "Joseph Weizenbaum's original ELIZA program - one of the first chatbots",
     era: "1960s",

@@ -129,12 +129,26 @@ export default function RootLayout({
         </AppSettingsProvider>
         {/* Skin credit box - hidden by default, skins can show and style this */}
         <div id="skin-credit-box" className="skin-credit-box" aria-hidden="true">
-          <div className="skin-credit-header">My Friend Space</div>
+          <div className="skin-credit-header">My Friend Space !!!</div>
           <div className="skin-credit-content">
             <div className="skin-credit-avatar"></div>
             <div className="skin-credit-name">Tom</div>
             <div className="skin-credit-text">You have 1 friends.</div>
+            <div className="skin-credit-link">Sign My Guestbook!</div>
           </div>
+        </div>
+        {/* Skin webring box - for Geocities-style webring */}
+        <div id="skin-webring-box" className="skin-webring-box" aria-hidden="true">
+          <div className="skin-webring-logo">GEOCITIES.ws</div>
+          <div className="skin-webring-tagline">YOUR HOME ON THE WEB</div>
+          <div className="skin-webring-content">
+            <div className="skin-webring-graphic"></div>
+            <div className="skin-webring-nav">
+              <span>Home</span> | <span>Hub</span> | <span>List</span> | <span>Skip</span> | <span>Next 5</span>
+              <br />&lt;&lt; <span>Prev</span> | <span>Next</span> &gt;&gt;
+            </div>
+          </div>
+          <div className="skin-webring-title">WEBRING</div>
         </div>
       </body>
     </html>

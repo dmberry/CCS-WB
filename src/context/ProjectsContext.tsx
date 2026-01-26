@@ -1114,14 +1114,14 @@ _Add relevant references, documentation links, or related scholarship:_
     }
 
     try {
-      // Verify the project is actually in the library (approved public)
+      // Verify the project is in the library (approved or submitted/Early Access)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: projectCheck } = await (supabase as any)
         .from("projects")
         .select("id, is_public, accession_status")
         .eq("id", projectId)
         .eq("is_public", true)
-        .eq("accession_status", "approved")
+        .in("accession_status", ["approved", "submitted"])
         .single();
 
       if (!projectCheck) {
@@ -1162,7 +1162,7 @@ _Add relevant references, documentation links, or related scholarship:_
           .select("*")
           .eq("id", projectId)
           .eq("is_public", true)
-          .eq("accession_status", "approved")
+          .in("accession_status", ["approved", "submitted"])
           .single(),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)

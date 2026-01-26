@@ -34,7 +34,7 @@ import {
   Cloud,
   FilePlus,
 } from "lucide-react";
-import { SAMPLE_CODE_FILES, fetchSampleCode } from "@/data/sample-code";
+import { SAMPLE_PROJECTS, fetchSampleProject } from "@/data/sample-projects";
 import type {
   LineAnnotation,
   LineAnnotationType,
@@ -67,7 +67,7 @@ interface CodeEditorPanelProps {
   onRevertFile?: (fileId: string) => void; // Revert file to original content
   onCommitFile?: (fileId: string) => void; // Commit current content as new base version
   onLoadCode?: () => void; // Trigger file upload from sidebar
-  onLoadSample?: (filename: string, content: string, language: string) => void; // Load a sample code file
+  onLoadSampleProject?: (projectData: Record<string, unknown>) => void; // Load a sample project
   onAddNewFile?: () => void; // Create a new blank file
   onReorderFiles?: (fileIds: string[]) => void; // Reorder files by new order
   onUpdateFileLanguage?: (fileId: string, language: string | undefined) => void; // Update file's language
@@ -369,7 +369,7 @@ export function CodeEditorPanel({
   onRevertFile,
   onCommitFile,
   onLoadCode,
-  onLoadSample,
+  onLoadSampleProject,
   onAddNewFile,
   onReorderFiles,
   onUpdateFileLanguage,
@@ -512,22 +512,22 @@ export function CodeEditorPanel({
     setCursorPosition({ line, column });
   }, []);
 
-  // Handler for loading a sample code file
-  const handleLoadSample = useCallback(async (sampleId: string) => {
-    const sample = SAMPLE_CODE_FILES.find(s => s.id === sampleId);
-    if (!sample || !onLoadSample) return;
+  // Handler for loading a sample project
+  const handleLoadSampleProject = useCallback(async (sampleId: string) => {
+    const sample = SAMPLE_PROJECTS.find(s => s.id === sampleId);
+    if (!sample || !onLoadSampleProject) return;
 
     setLoadingSample(sampleId);
     try {
-      const content = await fetchSampleCode(sample.filename);
-      onLoadSample(sample.filename, content, sample.language);
+      const projectData = await fetchSampleProject(sample.filename);
+      onLoadSampleProject(projectData);
       setShowSamplesDropdown(false);
     } catch (error) {
-      console.error("Failed to load sample:", error);
+      console.error("Failed to load sample project:", error);
     } finally {
       setLoadingSample(null);
     }
-  }, [onLoadSample]);
+  }, [onLoadSampleProject]);
 
   // File trash handlers
   const handleOpenFileTrash = useCallback(() => {
@@ -1310,7 +1310,7 @@ export function CodeEditorPanel({
                   </button>
                 )}
                 {/* Load sample code button - dropdown rendered outside overflow container */}
-                {onLoadSample && SAMPLE_CODE_FILES.length > 0 && (
+                {onLoadSampleProject && SAMPLE_PROJECTS.length > 0 && (
                   <button
                     ref={samplesButtonRef}
                     onClick={() => setShowSamplesDropdown(!showSamplesDropdown)}
@@ -1355,8 +1355,8 @@ export function CodeEditorPanel({
                     </span>
                   )}
                 </button>
-                {/* File trash button - only in cloud projects and not read-only */}
-                {isInProject && !readOnly && onLoadTrashedFiles && (
+                {/* File trash button - works in both cloud and local modes */}
+                {!readOnly && onLoadTrashedFiles && (
                   <button
                     ref={trashButtonRef}
                     onClick={handleOpenFileTrash}
@@ -1690,23 +1690,25 @@ export function CodeEditorPanel({
           }}
         >
           <div className="px-2 py-1 border-b border-parchment">
-            <span className="text-[9px] font-semibold text-slate-muted uppercase tracking-wide">Sample Code</span>
+            <span className="text-[9px] font-semibold text-slate-muted uppercase tracking-wide">Sample Projects</span>
           </div>
           <div className="max-h-[300px] overflow-y-auto">
-            {SAMPLE_CODE_FILES.map((sample) => (
+            {SAMPLE_PROJECTS.map((sample) => (
               <button
                 key={sample.id}
-                onClick={() => handleLoadSample(sample.id)}
+                onClick={() => handleLoadSampleProject(sample.id)}
                 disabled={loadingSample === sample.id}
                 className="w-full text-left px-2 py-1.5 hover:bg-cream/50 transition-colors disabled:opacity-50"
               >
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-mono text-burgundy">{sample.name}</span>
-                  <span className="text-[8px] px-1 py-0.5 bg-slate-muted/20 rounded text-slate-muted">{sample.era}</span>
+                  {sample.era && (
+                    <span className="text-[8px] px-1 py-0.5 bg-slate-muted/20 rounded text-slate-muted">{sample.era}</span>
+                  )}
                 </div>
                 <p className="text-[9px] text-slate-muted mt-0.5 leading-snug">{sample.description}</p>
-                {sample.source && (
-                  <p className="text-[8px] text-slate-muted/70 mt-0.5 italic">Source: {sample.source}</p>
+                {sample.annotationCount && (
+                  <p className="text-[8px] text-burgundy/70 mt-0.5">{sample.annotationCount} annotations</p>
                 )}
               </button>
             ))}

@@ -365,78 +365,7 @@ hr {
 }
 
 /* === TOOLBAR ICONS === */
-header button[title="New project"] svg,
-header button[title*="new local session"] svg,
-header button[title="Save session"] svg,
-header button[title="Load session"] svg,
-header button[title*="load local session"] svg,
-header button[title="Export session log"] svg,
-header button[title="Sign in to collaborate"] svg,
-header button[title*="Connected to"] svg,
-header button[title*="Not connected to cloud"] svg,
-header button[title="Interface guide"] svg,
-header button[title="Settings"] svg {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
-}
-
-header button[title="New project"],
-header button[title*="new local session"],
-header button[title="Save session"],
-header button[title="Load session"],
-header button[title*="load local session"],
-header button[title="Export session log"],
-header button[title="Sign in to collaborate"],
-header button[title*="Connected to"],
-header button[title*="Not connected to cloud"],
-header button[title="Interface guide"],
-header button[title="Settings"] {
-  min-width: 32px !important;
-  min-height: 32px !important;
-  background-size: 24px 24px !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-}
-
-header button[title="New project"],
-header button[title*="new local session"] {
-  background-image: url('/assets/icons/toolbar/new.svg') !important;
-}
-
-header button[title="Save session"] {
-  background-image: url('/assets/icons/toolbar/save.svg') !important;
-}
-
-header button[title="Load session"],
-header button[title*="load local session"] {
-  background-image: url('/assets/icons/toolbar/open.svg') !important;
-}
-
-header button[title="Export session log"] {
-  background-image: url('/assets/icons/toolbar/download.svg') !important;
-}
-
-header button[title="Sign in to collaborate"] {
-  background-image: url('/assets/icons/toolbar/cloud-off.svg') !important;
-}
-
-header button[title*="Not connected to cloud"] {
-  background-image: url('/assets/icons/toolbar/cloud.svg') !important;
-}
-
-header button[title*="Connected to"] {
-  background-image: url('/assets/icons/toolbar/cloud-cog.svg') !important;
-}
-
-header button[title="Interface guide"] {
-  background-image: url('/assets/icons/toolbar/help.svg') !important;
-}
-
-header button[title="Settings"] {
-  background-image: url('/assets/icons/toolbar/settings.svg') !important;
-}
+/* Using default Lucide icons with white color - no replacement needed */
 
 /* === INTERFACE GUIDE POPUP === */
 header .absolute.w-80 {
@@ -489,80 +418,8 @@ header .absolute.w-80 button svg {
   position: static !important;
 }
 
-/* === MAIN PAGE ICONS === */
-main header button[title="Help & Getting Started"] svg,
-main header button[title="Settings"] svg {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
-}
-
-main header button[title="Help & Getting Started"],
-main header button[title="Settings"] {
-  min-width: 28px !important;
-  min-height: 28px !important;
-  background-size: 20px 20px !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-}
-
-main header button[title="Help & Getting Started"] {
-  background-image: url('/assets/icons/toolbar/help.svg') !important;
-}
-
-main header button[title="Settings"] {
-  background-image: url('/assets/icons/toolbar/settings.svg') !important;
-}
-
-/* Load Project button icon */
-main button:has(.lucide-folder-open) svg.lucide-folder-open {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
-}
-
-main button:has(.lucide-folder-open) {
-  padding-left: 28px !important;
-  background-image: url('/assets/icons/toolbar/open.svg') !important;
-  background-size: 16px 16px !important;
-  background-repeat: no-repeat !important;
-  background-position: 8px center !important;
-}
-
-/* === ENTRY MODE CARD ICONS === */
-main .grid button.group svg.lucide-code,
-main .grid button.group svg.lucide-archive,
-main .grid button.group svg.lucide-book-open,
-main .grid button.group svg.lucide-sparkles {
-  opacity: 0 !important;
-  width: 0 !important;
-  height: 0 !important;
-  position: absolute !important;
-}
-
-main .grid button.group > div:first-child {
-  background-size: 28px 28px !important;
-  background-repeat: no-repeat !important;
-  background-position: center !important;
-}
-
-main .grid button.group:nth-child(1) > div:first-child {
-  background-image: url('/assets/icons/modes/code.svg') !important;
-}
-
-main .grid button.group:nth-child(2) > div:first-child {
-  background-image: url('/assets/icons/modes/archive.svg') !important;
-}
-
-main .grid button.group:nth-child(3) > div:first-child {
-  background-image: url('/assets/icons/modes/book.svg') !important;
-}
-
-main .grid button.group:nth-child(4) > div:first-child {
-  background-image: url('/assets/icons/modes/sparkles.svg') !important;
-}
+/* === MAIN PAGE & MODE CARD ICONS === */
+/* Using default Lucide icons with Teams purple color */
 
 /* === FILENAME INPUT === */
 header input,
@@ -585,6 +442,109 @@ header .font-mono {
   color: #ffffff !important;
 }
 
+/* === PRESENCE INDICATOR (The one that watches you) === */
+/* "Your manager can see when you're away" */
+
+/* Presence dot container - appears in top right corner */
+body::before {
+  content: "";
+  position: fixed;
+  top: 12px;
+  right: 80px;
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #5b5fc7 0%, #464775 100%);
+  border-radius: 50%;
+  z-index: 10001;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Profile initial inside presence circle */
+body::after {
+  content: "YU";
+  position: fixed;
+  top: 12px;
+  right: 80px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 10002;
+  border-radius: 50%;
+}
+
+/* The green "Available" presence dot */
+header::after {
+  content: "";
+  position: fixed;
+  top: 36px;
+  right: 80px;
+  width: 12px;
+  height: 12px;
+  background: #92c353;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  z-index: 10003;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+  /* Subtle pulse to remind you it's watching */
+  animation: presencePulse 3s ease-in-out infinite;
+}
+
+@keyframes presencePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.1), 0 0 8px rgba(146, 195, 83, 0.5);
+  }
+}
+
+/* Checkmark inside the presence dot (Available indicator) */
+header::before {
+  content: "✓";
+  position: fixed;
+  top: 36px;
+  right: 80px;
+  width: 12px;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 7px;
+  font-weight: bold;
+  z-index: 10004;
+}
+
+/* Status tooltip on hover */
+header:hover::before {
+  content: "Available • Set status message";
+  position: fixed;
+  top: 52px;
+  right: 40px;
+  width: auto;
+  height: auto;
+  padding: 8px 12px;
+  background: #ffffff;
+  color: #242424;
+  font-size: 12px;
+  font-family: 'Segoe UI', sans-serif;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  white-space: nowrap;
+  z-index: 10005;
+}
+
+.dark header:hover::before {
+  background: #2d2d2d;
+  color: #ffffff;
+}
+
 /* === FINAL CLEANUP === */
 .text-slate-muted,
 .text-slate {
@@ -597,4 +557,18 @@ header .font-mono {
 .dark .text-slate-muted,
 .dark .text-slate {
   color: #a0a0a0 !important;
+}
+
+/* === TOOLBAR ICON FIX === */
+/* Keep default Lucide icons - don't replace them */
+header svg {
+  color: #ffffff !important;
+  opacity: 1 !important;
+  width: auto !important;
+  height: auto !important;
+  position: static !important;
+}
+
+main svg {
+  color: #5b5fc7 !important;
 }

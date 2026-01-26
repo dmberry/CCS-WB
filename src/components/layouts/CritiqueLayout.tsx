@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCollaborativeSession } from "@/hooks/useCollaborativeSession";
 import { useAISettings } from "@/context/AISettingsContext";
 import { cn, formatTimestamp, fetchWithTimeout, retryWithBackoff, generateId, getCurrentTimestamp } from "@/lib/utils";
-import type { Message, CodeReference, ExperienceLevel } from "@/types";
+import type { Message, CodeReference, ExperienceLevel, Session } from "@/types";
 import { EXPERIENCE_LEVEL_LABELS, EXPERIENCE_LEVEL_DESCRIPTIONS, GUIDED_PROMPTS } from "@/types";
 import {
   Send,
@@ -247,6 +247,16 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveModalName, setSaveModalName] = useState("");
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+
+  // Local file trash (for when not in cloud mode)
+  interface LocalTrashedFile {
+    id: string;
+    name: string;
+    language: string;
+    content: string;
+    deletedAt: string;
+  }
+  const [localTrashedFiles, setLocalTrashedFiles] = useState<LocalTrashedFile[]>([]);
 
   // Message interaction state
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
@@ -1193,9 +1203,58 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
   // File management handlers
   const handleDeleteFile = useCallback((fileId: string) => {
+    // In cloud mode, the collaborative session handles trash via soft delete
+    // In local mode, save to local trash before removing
+    if (!isInProject) {
+      const file = session.codeFiles.find(f => f.id === fileId);
+      const content = session.codeContents[fileId];
+      if (file && content) {
+        setLocalTrashedFiles(prev => [{
+          id: fileId,
+          name: file.name,
+          language: file.language || "plaintext",
+          content: content,
+          deletedAt: new Date().toISOString(),
+        }, ...prev]);
+      }
+    }
     removeCode(fileId);
     // Note: removeCode already removes code content via REMOVE_CODE reducer
-  }, [removeCode]);
+  }, [removeCode, isInProject, session.codeFiles, session.codeContents]);
+
+  // Local trash handlers (for non-cloud mode)
+  const handleLocalLoadTrashedFiles = useCallback(() => {
+    // Local trash is already in state, nothing to fetch
+  }, []);
+
+  const handleLocalRestoreFile = useCallback(async (fileId: string) => {
+    const trashedFile = localTrashedFiles.find(f => f.id === fileId);
+    if (!trashedFile) return { error: new Error("File not found in trash") };
+
+    // Re-add the file to session
+    const newId = addCode({
+      name: trashedFile.name,
+      language: trashedFile.language,
+      source: "restored",
+      size: trashedFile.content.length,
+    });
+    setCodeContent(newId, trashedFile.content);
+
+    // Remove from local trash
+    setLocalTrashedFiles(prev => prev.filter(f => f.id !== fileId));
+
+    return { error: null };
+  }, [localTrashedFiles, addCode, setCodeContent]);
+
+  const handleLocalPermanentlyDeleteFile = useCallback(async (fileId: string) => {
+    setLocalTrashedFiles(prev => prev.filter(f => f.id !== fileId));
+    return { error: null };
+  }, []);
+
+  const handleLocalEmptyTrash = useCallback(async () => {
+    setLocalTrashedFiles([]);
+    return { error: null };
+  }, []);
 
   const handleRenameFile = useCallback((fileId: string, newName: string) => {
     updateCode(fileId, { name: newName });
@@ -2277,24 +2336,13 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             onRevertFile={handleRevertFile}
             onCommitFile={handleCommitFile}
             onLoadCode={() => fileInputRef.current?.click()}
-            onLoadSample={(filename, content, language) => {
-              // Add the sample code as a new file (same pattern as regular file upload)
-              const fileId = addCode({
-                name: filename,
-                language: language || undefined,
-                source: "sample",
-                size: content.length,
-              });
-              // Set the content and store original for revert (enables modification detection and revert)
-              setCodeContent(fileId, content);
-              storeOriginalContent(fileId, content);
-              // Reset manual resize flag to allow 80-column auto-extend for new files
+            onLoadSampleProject={(projectData) => {
+              // Import the sample project as the current session
+              // The projectData is a parsed .ccs file which has Session structure
+              importSession(projectData as unknown as Session);
+              // Reset manual resize flag
               userHasManuallyResized.current = false;
-              // Add message like regular file upload
-              addMessage({
-                role: "user",
-                content: `I've loaded the sample **${filename}**${language ? ` (${language})` : ""} for analysis.`,
-              });
+              // Note: importSession handles restoring all files, annotations, and messages
             }}
             onAddNewFile={() => {
               // Generate unique filename (untitled.md, untitled-2.md, etc.)
@@ -2335,13 +2383,18 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             newRemoteAnnotationIds={newRemoteAnnotationIds}
             isInProject={isInProject}
             readOnly={!!viewingLibraryProjectId}
-            // File trash props
-            trashedFiles={trashedFiles}
-            isLoadingFileTrash={isLoadingFileTrash}
-            onLoadTrashedFiles={loadTrashedFiles}
-            onRestoreFile={restoreFileFromTrash}
-            onPermanentlyDeleteFile={permanentlyDeleteFileFromTrash}
-            onEmptyFileTrash={emptyAllFileTrash}
+            // File trash props - use cloud trash when in project, local trash otherwise
+            trashedFiles={isInProject ? trashedFiles : localTrashedFiles.map(f => ({
+              id: f.id,
+              name: f.name,
+              language: f.language,
+              deletedAt: f.deletedAt,
+            }))}
+            isLoadingFileTrash={isInProject ? isLoadingFileTrash : false}
+            onLoadTrashedFiles={isInProject ? loadTrashedFiles : handleLocalLoadTrashedFiles}
+            onRestoreFile={isInProject ? restoreFileFromTrash : handleLocalRestoreFile}
+            onPermanentlyDeleteFile={isInProject ? permanentlyDeleteFileFromTrash : handleLocalPermanentlyDeleteFile}
+            onEmptyFileTrash={isInProject ? emptyAllFileTrash : handleLocalEmptyTrash}
           />
         </div>
 

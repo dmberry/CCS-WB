@@ -372,12 +372,12 @@ footer .text-xs,
   font-size: 10px;
 }
 
-/* === TOM'S FRIEND SPACE BOX === */
-/* Classic "My Friend Space" widget using the skin-credit-box element */
+/* === TOP 2 FRIENDS BOX === */
+/* Classic "My Friend Space" widget with Tom and Mark side by side */
 
 .skin-credit-box {
   display: block !important;
-  width: 160px;
+  width: 220px;
   background: white;
   border: 1px solid hsl(210 40% 75%);
   box-shadow: 2px 2px 4px hsl(0 0% 0% / 0.15);
@@ -409,56 +409,101 @@ footer .text-xs,
   color: hsl(216 100% 90%);
 }
 
-/* Content area */
+/* Content area - flex container for side-by-side friends */
 .skin-credit-content {
-  display: block !important;
-  padding: 8px;
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px;
   text-align: center;
 }
 
 /* Tom's avatar - the iconic photo */
 .skin-credit-avatar {
   display: block !important;
-  width: 75px;
-  height: 75px;
-  margin: 0 auto 6px;
+  width: 70px;
+  height: 70px;
+  margin: 0;
   background-color: hsl(30 30% 85%);
   background-image: url('/skins/myspace/assets/tom.png');
   background-size: cover;
   background-position: center top;
   border: 2px solid hsl(30 100% 50%);
   box-shadow: 0 0 0 2px white, 0 0 0 3px hsl(30 100% 50%);
+  flex-shrink: 0;
 }
 
-/* Tom's name as a link */
+/* Tom's name as a link - appears below Tom's avatar */
 .skin-credit-name {
   display: block !important;
   color: hsl(216 100% 35%) !important;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: bold;
   text-decoration: underline;
-  margin-bottom: 8px;
+  width: 70px;
+  text-align: center;
+  margin-top: 4px;
+  flex-shrink: 0;
 }
 
 .skin-credit-name:hover {
   color: hsl(30 100% 45%) !important;
 }
 
-/* Friends count */
+/* Friends count - hidden, we use the space for layout */
 .skin-credit-text {
-  display: block !important;
-  font-size: 10px;
-  color: hsl(0 0% 30%) !important;
+  display: none !important;
 }
 
-/* Add "View All of My Friends" link */
+/* View All link at bottom */
 .skin-credit-content::after {
   content: "View All of My Friends";
   display: block;
-  margin-top: 6px;
+  width: 100%;
+  margin-top: 4px;
   font-size: 9px;
   color: hsl(216 100% 35%);
   text-decoration: underline;
+}
+
+/* === MARK MARINO - Second Friend (side by side) === */
+
+/* Mark's avatar - using ::before on the link */
+.skin-credit-link {
+  display: block !important;
+  width: 70px;
+  flex-shrink: 0;
+  text-align: center;
+  order: -1; /* Place Mark's container before View All link */
+}
+
+.skin-credit-link::before {
+  content: "";
+  display: block;
+  width: 70px;
+  height: 70px;
+  margin: 0 auto;
+  background-color: hsl(30 30% 85%);
+  background-image: url('/skins/myspace/assets/mark.png');
+  background-size: cover;
+  background-position: center top;
+  border: 2px solid hsl(30 100% 50%);
+  box-shadow: 0 0 0 2px white, 0 0 0 3px hsl(30 100% 50%);
+}
+
+.skin-credit-link::after {
+  content: "Mark Marino";
+  display: block;
+  font-size: 10px;
+  font-weight: bold;
+  color: hsl(216 100% 35%);
+  text-decoration: underline;
+  margin-top: 4px;
+}
+
+.skin-credit-link:hover::after {
+  color: hsl(30 100% 45%);
 }
 
 /* === CLEANUP - ensure readability === */
@@ -830,4 +875,163 @@ main .grid button.group:nth-child(3) > div:first-child {
 /* Create code card - sparkles/wand icon */
 main .grid button.group:nth-child(4) > div:first-child {
   background-image: url('/assets/icons/modes/sparkles.svg') !important;
+}
+
+/* === GEOCITIES WEBRING BOX === */
+/* Classic late-90s webring in Geocities style */
+
+.skin-webring-box {
+  display: block !important;
+  width: 200px;
+  background: linear-gradient(180deg, #c0c0c0 0%, #e0e0e0 50%, #c0c0c0 100%);
+  border: 3px outset #d0d0d0;
+  box-shadow: 3px 3px 0 #666;
+  font-family: 'Arial', 'Helvetica', sans-serif;
+  padding: 8px;
+  text-align: center;
+}
+
+/* Geocities logo */
+.skin-webring-logo {
+  display: block !important;
+  font-family: 'Impact', 'Arial Black', sans-serif;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: -1px;
+  margin-bottom: 2px;
+}
+
+/* "GEO" in green, "CITIES" in blue, ".ws" in grey */
+.skin-webring-logo::before {
+  content: "GEO";
+  color: #00aa00;
+}
+
+.skin-webring-logo::after {
+  content: ".ws";
+  font-size: 12px;
+  color: #666;
+  vertical-align: super;
+}
+
+/* Hide the actual text, use pseudo-elements */
+.skin-webring-logo {
+  font-size: 0;
+  line-height: 1.2;
+}
+
+.skin-webring-logo::before,
+.skin-webring-logo::after {
+  font-size: 18px;
+}
+
+/* Recreate the logo properly */
+.skin-webring-logo {
+  display: flex !important;
+  justify-content: center;
+  align-items: baseline;
+  font-size: 18px;
+}
+
+.skin-webring-logo::before {
+  content: "GEO";
+  color: #00aa00;
+  font-size: 18px;
+}
+
+.skin-webring-logo::after {
+  content: "CITIES.ws";
+  color: #0066cc;
+  font-size: 18px;
+}
+
+/* Tagline */
+.skin-webring-tagline {
+  display: block !important;
+  font-size: 8px;
+  color: #666;
+  font-weight: bold;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+
+/* Content area with webring graphic */
+.skin-webring-content {
+  display: block !important;
+  background: white;
+  border: 2px inset #999;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+/* Webring graphic - circular arrangement of pages */
+.skin-webring-graphic {
+  display: block !important;
+  width: 140px;
+  height: 100px;
+  margin: 0 auto 8px;
+  background-image: url('/skins/myspace/assets/webring.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Navigation links */
+.skin-webring-nav {
+  display: block !important;
+  font-size: 10px;
+  color: #333;
+  line-height: 1.6;
+  border: 1px solid #999;
+  background: #f0f0f0;
+  padding: 4px;
+}
+
+.skin-webring-nav span {
+  color: #0000cc;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.skin-webring-nav span:hover {
+  color: #cc0000;
+}
+
+/* Rainbow "WEBRING" title at bottom */
+.skin-webring-title {
+  display: block !important;
+  font-family: 'Comic Sans MS', 'Arial', sans-serif;
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin-top: 4px;
+}
+
+/* Rainbow effect using background gradient and text clip */
+.skin-webring-title {
+  background: linear-gradient(90deg,
+    #ff0000 0%,
+    #ff7f00 14%,
+    #ffff00 28%,
+    #00ff00 42%,
+    #0000ff 57%,
+    #4b0082 71%,
+    #8f00ff 85%,
+    #ff0000 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* === ANNOTATION CODE - NO UNDERLINE === */
+/* Ensure code in annotations is never underlined */
+.annotation-preview code,
+.annotation-preview pre,
+.annotation-content code,
+.annotation-content pre,
+[class*="annotation"] code,
+[class*="annotation"] pre,
+a code, a pre {
+  text-decoration: none !important;
 }
