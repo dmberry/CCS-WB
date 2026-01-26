@@ -578,10 +578,10 @@ _Add relevant references, documentation links, or related scholarship:_
     }
   }, [supabase, user]);
 
-  // Delete a project
+  // Delete a project (only owner can delete, protects library projects which have null owner_id)
   const deleteProject = useCallback(async (projectId: string) => {
-    if (!supabase) {
-      return { error: new Error("Supabase not configured") };
+    if (!supabase || !user) {
+      return { error: new Error("Not authenticated") };
     }
 
     try {
@@ -589,7 +589,8 @@ _Add relevant references, documentation links, or related scholarship:_
       const { error } = await (supabase as any)
         .from("projects")
         .delete()
-        .eq("id", projectId);
+        .eq("id", projectId)
+        .eq("owner_id", user.id); // Only allow deletion if user is the owner
 
       if (error) {
         return { error: new Error(error.message) };
@@ -607,7 +608,7 @@ _Add relevant references, documentation links, or related scholarship:_
     } catch (error) {
       return { error: error as Error };
     }
-  }, [supabase, currentProjectId]);
+  }, [supabase, user, currentProjectId]);
 
   // Get project members with profile info
   const getProjectMembers = useCallback(async (projectId: string) => {
