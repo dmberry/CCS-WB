@@ -1646,39 +1646,48 @@ export function CodeEditorPanel({
           <div ref={toolbarRef} className="px-4 py-2 border-b border-parchment bg-cream/50 flex items-center justify-between">
             {/* Left group: mode toggle and tools */}
             <div className="flex items-center gap-2">
-              {/* Edit/Annotate mode toggle - always visible */}
-              <div className="flex items-center border border-parchment rounded-sm overflow-hidden">
-                <button
-                  onClick={handleSwitchToEdit}
-                  className={cn(
-                    "px-2 py-0.5 text-[9px] font-sans transition-colors",
-                    editorMode === "edit"
-                      ? "bg-burgundy text-ivory"
-                      : "bg-card text-slate hover:bg-cream"
-                  )}
-                  title="Edit code (annotations embedded as comments)"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => {
-                    if (editorMode === "annotate") {
-                      setShowAnnotationPanel(!showAnnotationPanel);
-                    } else {
-                      handleSwitchToAnnotate();
-                    }
-                  }}
-                  className={cn(
-                    "px-2 py-0.5 text-[9px] font-sans transition-colors",
-                    editorMode === "annotate"
-                      ? "bg-burgundy text-ivory"
-                      : "bg-card text-slate hover:bg-cream"
-                  )}
-                  title={editorMode === "annotate" ? "Toggle annotation panel" : "Annotate code (click lines to add annotations)"}
-                >
-                  Annotate
-                </button>
-              </div>
+              {/* Edit/Annotate mode toggle - hidden in read-only mode */}
+              {!readOnly && (
+                <div className="flex items-center border border-parchment rounded-sm overflow-hidden">
+                  <button
+                    onClick={handleSwitchToEdit}
+                    className={cn(
+                      "px-2 py-0.5 text-[9px] font-sans transition-colors",
+                      editorMode === "edit"
+                        ? "bg-burgundy text-ivory"
+                        : "bg-card text-slate hover:bg-cream"
+                    )}
+                    title="Edit code (annotations embedded as comments)"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (editorMode === "annotate") {
+                        setShowAnnotationPanel(!showAnnotationPanel);
+                      } else {
+                        handleSwitchToAnnotate();
+                      }
+                    }}
+                    className={cn(
+                      "px-2 py-0.5 text-[9px] font-sans transition-colors",
+                      editorMode === "annotate"
+                        ? "bg-burgundy text-ivory"
+                        : "bg-card text-slate hover:bg-cream"
+                    )}
+                    title={editorMode === "annotate" ? "Toggle annotation panel" : "Annotate code (click lines to add annotations)"}
+                  >
+                    Annotate
+                  </button>
+                </div>
+              )}
+
+              {/* Read-only indicator */}
+              {readOnly && (
+                <span className="px-2 py-0.5 text-[9px] font-sans text-slate bg-amber-100 border border-amber-200 rounded-sm">
+                  View Only
+                </span>
+              )}
 
               {/* Language selector - always visible */}
               <div className="relative" ref={languageDropdownRef}>
