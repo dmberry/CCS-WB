@@ -1,6 +1,7 @@
 /* Microsoft Teams - The Enterprise Collaboration Experience */
 /* "You're on mute." - Everyone, 2020-forever */
 /* This could have been an email. */
+/* ALWAYS LIGHT MODE - Teams skin ignores system dark mode */
 
 /* === TEAMS COLOR PALETTE (from actual Teams UI) === */
 /* Background: #F3F2F1 (light grey) */
@@ -15,8 +16,14 @@ body {
   background: #F3F2F1 !important;
 }
 
-.dark body {
-  background: #1f1f1f !important;
+/* Override dark mode at all levels */
+body, html, #__next, main, .dark, .dark body, .dark main {
+  background: #F3F2F1 !important;
+  background-color: #F3F2F1 !important;
+}
+
+main {
+  background: #F3F2F1 !important;
 }
 
 /* === TOOLBAR / HEADER - White like actual Teams === */
@@ -69,18 +76,8 @@ main button[class*="shadow-editorial"] {
   box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
 }
 
-.dark main .grid button.group,
-.dark main button[class*="shadow-editorial"] {
-  background: #2d2d2d !important;
-  border-color: #3d3d3d !important;
-}
-
 main .grid button.group * {
   color: #323130 !important;
-}
-
-.dark main .grid button.group * {
-  color: #ffffff !important;
 }
 
 main .grid button.group h3 {
@@ -100,11 +97,6 @@ main .grid button.group .bg-cream {
   background: #f0f0ff !important;
   border: none !important;
   border-radius: 8px !important;
-}
-
-.dark main .grid button.group > div:first-child,
-.dark main .grid button.group .bg-cream {
-  background: #3d3d5c !important;
 }
 
 main .grid button.group > div:first-child svg,
@@ -134,13 +126,34 @@ main button[class*="border-burgundy"]:hover {
   background: #ffffff !important;
   border: 1px solid #e0e0e0 !important;
   border-radius: 8px !important;
+  color: #323130 !important;
 }
 
-.dark .bg-popover,
-.dark .bg-cream,
-.dark .bg-card {
-  background: #2d2d2d !important;
-  border-color: #3d3d3d !important;
+.bg-popover *,
+.bg-cream *,
+.bg-card * {
+  color: #323130 !important;
+}
+
+.bg-popover h1, .bg-popover h2, .bg-popover h3, .bg-popover h4,
+.bg-cream h1, .bg-cream h2, .bg-cream h3, .bg-cream h4,
+.bg-card h1, .bg-card h2, .bg-card h3, .bg-card h4 {
+  color: #6264a7 !important;
+}
+
+.bg-popover button,
+.bg-cream button,
+.bg-card button {
+  background: #f3f2f1 !important;
+  border: 1px solid #e0e0e0 !important;
+  color: #323130 !important;
+}
+
+.bg-popover button:hover,
+.bg-cream button:hover,
+.bg-card button:hover {
+  background: #e8e8e8 !important;
+  border-color: #6264a7 !important;
 }
 
 /* === BUTTONS === */
@@ -184,10 +197,6 @@ a:hover {
   border-radius: 4px;
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: #4a4a4a;
-}
-
 ::-webkit-scrollbar-thumb:hover {
   background: #a0a0a0;
 }
@@ -199,12 +208,6 @@ input, textarea, select {
   border-radius: 4px !important;
   color: #323130 !important;
   font-family: 'Segoe UI', sans-serif !important;
-}
-
-.dark input, .dark textarea, .dark select {
-  background: #2d2d2d !important;
-  border-color: #4a4a4a !important;
-  color: #ffffff !important;
 }
 
 input:focus, textarea:focus, select:focus {
@@ -223,13 +226,6 @@ pre, code {
   font-family: 'Cascadia Code', 'Consolas', monospace !important;
 }
 
-.dark .cm-editor,
-.dark pre, .dark code {
-  background: #1f1f1f !important;
-  color: #d4d4d4 !important;
-  border-color: #3d3d3d !important;
-}
-
 /* === TEAMS CREDIT BOX - "Meeting" widget === */
 .skin-credit-box {
   display: none !important;
@@ -239,11 +235,6 @@ pre, code {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   overflow: hidden;
-}
-
-.dark .skin-credit-box {
-  background: #2d2d2d;
-  border-color: #3d3d3d;
 }
 
 .skin-credit-header {
@@ -301,20 +292,12 @@ pre, code {
   text-align: center;
 }
 
-.dark .skin-credit-name {
-  color: #ffffff !important;
-}
-
 .skin-credit-text {
   display: block !important;
   font-family: 'Segoe UI', sans-serif;
   font-size: 11px;
   color: #605E5C !important;
   text-align: center;
-}
-
-.dark .skin-credit-text {
-  color: #a0a0a0 !important;
 }
 
 .skin-credit-content::after {
@@ -337,10 +320,6 @@ hr {
   background: #e0e0e0 !important;
 }
 
-.dark hr {
-  background: #3d3d3d !important;
-}
-
 /* === TOOLBAR ICONS === */
 /* Using default Lucide icons with white color - no replacement needed */
 
@@ -353,12 +332,6 @@ header .absolute.w-80 {
   color: #323130 !important;
 }
 
-.dark header .absolute.w-80 {
-  background: #2d2d2d !important;
-  border-color: #3d3d3d !important;
-  color: #ffffff !important;
-}
-
 header .absolute.w-80 h3,
 header .absolute.w-80 h4 {
   color: #6264a7 !important;
@@ -369,12 +342,6 @@ header .absolute.w-80 p,
 header .absolute.w-80 span,
 header .absolute.w-80 div {
   color: #323130 !important;
-}
-
-.dark header .absolute.w-80 p,
-.dark header .absolute.w-80 span,
-.dark header .absolute.w-80 div {
-  color: #d1d1d1 !important;
 }
 
 header .absolute.w-80 strong {
@@ -431,11 +398,6 @@ header .font-mono {
   padding: 0 !important;
 }
 
-.dark .text-slate-muted,
-.dark .text-slate {
-  color: #a0a0a0 !important;
-}
-
 /* === TOOLBAR ICON FIX === */
 /* Keep default Lucide icons - grey in header, purple in main */
 header svg {
@@ -452,27 +414,42 @@ main svg {
 
 /* === ANNOTATION CODE - NO UNDERLINE === */
 /* Ensure code and annotations are never underlined */
-.annotation-preview code,
-.annotation-preview pre,
-.annotation-content code,
-.annotation-content pre,
-[class*="annotation"] code,
-[class*="annotation"] pre,
-a code, a pre,
-code, pre,
+.cm-editor,
+.cm-editor *,
+.cm-editor a,
+.cm-content,
+.cm-content *,
+.cm-content a,
+.cm-line,
+.cm-line *,
+.cm-line a,
 .cm-annotation-widget,
 .cm-annotation-widget *,
+.cm-annotation-widget a,
 .cm-annotation-editor,
 .cm-annotation-editor *,
+.cm-annotation-editor a,
 .cm-annotation-display,
 .cm-annotation-display *,
+.cm-annotation-display a,
 .cm-annotation-input,
 .cm-annotation-type-select,
 .cm-annotation-prefix,
 .cm-annotation-content,
-.cm-editor code,
-.cm-editor pre,
-.cm-content,
-.cm-line {
+.annotation-preview,
+.annotation-preview *,
+.annotation-preview a,
+.annotation-preview code,
+.annotation-preview pre,
+.annotation-content,
+.annotation-content *,
+.annotation-content a,
+.annotation-content code,
+.annotation-content pre,
+[class*="annotation"] code,
+[class*="annotation"] pre,
+[class*="annotation"] a,
+a code, a pre,
+code, pre {
   text-decoration: none !important;
 }

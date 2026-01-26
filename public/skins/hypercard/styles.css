@@ -5,8 +5,19 @@
 /* === IMPORT CHICAGO FONT (or fallback to system) === */
 @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
-/* === PURE BLACK AND WHITE === */
+/* === PURE BLACK AND WHITE - ALWAYS LIGHT MODE === */
+/* HyperCard skin ignores system dark mode */
 body {
+  background: #ffffff !important;
+}
+
+/* Override dark mode at all levels */
+body, html, #__next, main, .dark, .dark body, .dark main {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+main {
   background: #ffffff !important;
 }
 
