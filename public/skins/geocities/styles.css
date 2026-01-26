@@ -144,6 +144,35 @@ main button[class*="border-burgundy"]:hover {
   background: rgba(0,0,20,0.95) !important;
   border: 2px solid #ff00ff !important;
   box-shadow: 0 0 10px rgba(255,0,255,0.3) !important;
+  color: #00ffff !important;
+}
+
+.bg-popover *,
+.bg-cream *,
+.bg-card * {
+  color: #00ffff !important;
+}
+
+.bg-popover h1, .bg-popover h2, .bg-popover h3, .bg-popover h4,
+.bg-cream h1, .bg-cream h2, .bg-cream h3, .bg-cream h4,
+.bg-card h1, .bg-card h2, .bg-card h3, .bg-card h4 {
+  color: #00ff00 !important;
+  text-shadow: 0 0 10px #00ff00 !important;
+}
+
+.bg-popover button,
+.bg-cream button,
+.bg-card button {
+  background: linear-gradient(180deg, #330033 0%, #110011 100%) !important;
+  border: 2px solid #ff00ff !important;
+  color: #00ffff !important;
+}
+
+.bg-popover button:hover,
+.bg-cream button:hover,
+.bg-card button:hover {
+  background: linear-gradient(180deg, #440044 0%, #220022 100%) !important;
+  box-shadow: 0 0 15px rgba(255,0,255,0.5) !important;
 }
 
 /* === BUTTONS === */
@@ -257,6 +286,7 @@ pre, code {
   display: block !important;
   position: fixed !important;
   bottom: 20px !important;
+  left: auto !important;
   right: 20px !important;
   z-index: 1000 !important;
   width: 200px;
@@ -269,6 +299,7 @@ pre, code {
 }
 
 .skin-webring-logo {
+  display: block !important;
   font-family: 'Impact', 'Arial Black', sans-serif;
   font-size: 16px;
   font-weight: bold;
@@ -283,6 +314,7 @@ pre, code {
 }
 
 .skin-webring-tagline {
+  display: block !important;
   font-size: 8px;
   color: #666;
   font-weight: bold;
@@ -291,6 +323,7 @@ pre, code {
 }
 
 .skin-webring-content {
+  display: block !important;
   background: white;
   border: 2px inset #999;
   padding: 8px;
@@ -309,6 +342,7 @@ pre, code {
 }
 
 .skin-webring-nav {
+  display: block !important;
   font-size: 10px;
   color: #333;
   line-height: 1.6;
@@ -328,6 +362,7 @@ pre, code {
 }
 
 .skin-webring-title {
+  display: block !important;
   font-family: 'Comic Sans MS', 'Arial', sans-serif;
   font-size: 18px;
   font-weight: bold;

@@ -222,6 +222,34 @@ main button[class*="border-burgundy"] * {
   background: #0000aa !important;
   border: 3px solid #ffff00 !important;
   border-radius: 0 !important;
+  color: #ffffff !important;
+}
+
+.bg-popover *,
+.bg-cream *,
+.bg-card *,
+.bg-ivory * {
+  color: #ffffff !important;
+}
+
+.bg-popover h1, .bg-popover h2, .bg-popover h3, .bg-popover h4,
+.bg-cream h1, .bg-cream h2, .bg-cream h3, .bg-cream h4,
+.bg-card h1, .bg-card h2, .bg-card h3, .bg-card h4 {
+  color: #ffff00 !important;
+}
+
+.bg-popover button,
+.bg-cream button,
+.bg-card button {
+  background: #000066 !important;
+  border: 2px solid #ffff00 !important;
+  color: #ffffff !important;
+}
+
+.bg-popover button:hover,
+.bg-cream button:hover,
+.bg-card button:hover {
+  background: #0000ff !important;
 }
 
 /* Modals */

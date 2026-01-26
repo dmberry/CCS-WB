@@ -449,3 +449,30 @@ header svg {
 main svg {
   color: #6264a7 !important;
 }
+
+/* === ANNOTATION CODE - NO UNDERLINE === */
+/* Ensure code and annotations are never underlined */
+.annotation-preview code,
+.annotation-preview pre,
+.annotation-content code,
+.annotation-content pre,
+[class*="annotation"] code,
+[class*="annotation"] pre,
+a code, a pre,
+code, pre,
+.cm-annotation-widget,
+.cm-annotation-widget *,
+.cm-annotation-editor,
+.cm-annotation-editor *,
+.cm-annotation-display,
+.cm-annotation-display *,
+.cm-annotation-input,
+.cm-annotation-type-select,
+.cm-annotation-prefix,
+.cm-annotation-content,
+.cm-editor code,
+.cm-editor pre,
+.cm-content,
+.cm-line {
+  text-decoration: none !important;
+}

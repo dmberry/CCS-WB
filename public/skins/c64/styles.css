@@ -192,6 +192,28 @@ main button[class*="border-burgundy"]:hover {
 .bg-card {
   background: #303080 !important;
   border: 2px solid #a0a0f0 !important;
+  color: #a0a0f0 !important;
+}
+
+.bg-popover *,
+.bg-cream *,
+.bg-card * {
+  color: #a0a0f0 !important;
+}
+
+.bg-popover button,
+.bg-cream button,
+.bg-card button {
+  background: #4040a0 !important;
+  border: 2px solid #a0a0f0 !important;
+  color: #a0a0f0 !important;
+}
+
+.bg-popover button:hover,
+.bg-cream button:hover,
+.bg-card button:hover {
+  background: #a0a0f0 !important;
+  color: #4040a0 !important;
 }
 
 /* === BUTTONS === */

@@ -167,6 +167,36 @@ main button[class*="border-burgundy"]:hover {
 .bg-card {
   background: rgba(22,33,62,0.95) !important;
   border: 1px solid #b967ff !important;
+  color: #b967ff !important;
+}
+
+.bg-popover *,
+.bg-cream *,
+.bg-card * {
+  color: #b967ff !important;
+}
+
+.bg-popover h1, .bg-popover h2, .bg-popover h3, .bg-popover h4,
+.bg-cream h1, .bg-cream h2, .bg-cream h3, .bg-cream h4,
+.bg-card h1, .bg-card h2, .bg-card h3, .bg-card h4 {
+  color: #00ffff !important;
+  text-shadow: 0 0 10px #00ffff, 2px 2px 0 #ff71ce !important;
+}
+
+.bg-popover button,
+.bg-cream button,
+.bg-card button {
+  background: rgba(45,27,78,0.9) !important;
+  border: 1px solid #ff71ce !important;
+  color: #b967ff !important;
+}
+
+.bg-popover button:hover,
+.bg-cream button:hover,
+.bg-card button:hover {
+  background: rgba(255,113,206,0.2) !important;
+  border-color: #00ffff !important;
+  box-shadow: 0 0 15px rgba(0,255,255,0.5) !important;
 }
 
 /* === BUTTONS === */

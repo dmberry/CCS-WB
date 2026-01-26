@@ -92,8 +92,48 @@ header select option {
 .bg-popover,
 .bg-cream,
 .bg-card {
+  background: #ffffff !important;
   border: 1px solid hsl(210 40% 75%) !important;
   box-shadow: 2px 2px 4px hsl(216 30% 70% / 0.3);
+  color: #333333 !important;
+}
+
+/* Ensure all text in popovers is dark and readable */
+.bg-popover *,
+.bg-popover span,
+.bg-popover p,
+.bg-popover div,
+.bg-popover label {
+  color: #333333 !important;
+}
+
+.bg-popover h1, .bg-popover h2, .bg-popover h3, .bg-popover h4 {
+  color: hsl(216 100% 25%) !important;
+}
+
+.bg-popover button {
+  background: hsl(216 100% 95%) !important;
+  border: 1px solid hsl(216 50% 70%) !important;
+  color: #333333 !important;
+}
+
+.bg-popover button:hover {
+  background: hsl(216 100% 90%) !important;
+  border-color: hsl(216 100% 50%) !important;
+}
+
+/* Selected/active items in dropdowns */
+.bg-popover [data-state="checked"],
+.bg-popover [aria-selected="true"],
+.bg-popover .bg-accent {
+  background: hsl(216 100% 25%) !important;
+  color: white !important;
+}
+
+.bg-popover [data-state="checked"] *,
+.bg-popover [aria-selected="true"] *,
+.bg-popover .bg-accent * {
+  color: white !important;
 }
 
 /* === MAIN PAGE CTA BUTTONS - Classic Myspace Orange === */
