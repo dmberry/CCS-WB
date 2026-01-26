@@ -190,6 +190,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     copyLibraryProject,
     submitForReview,
     setShowAdminModal,
+    pendingSubmissions,
+    fetchPendingSubmissions,
   } = useProjects();
   const { markLocalUpdate } = useProjectSync();
   const aiEnabled = aiSettings.aiEnabled;
@@ -371,6 +373,21 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
       refreshProjects();
     }
   }, [showCloudMenu, isAuthenticated, refreshProjects]);
+
+  // Poll pending submissions for admin badge (every 60 seconds)
+  useEffect(() => {
+    if (!isAdmin || !isAuthenticated) return;
+
+    // Initial fetch
+    fetchPendingSubmissions();
+
+    // Poll every 60 seconds
+    const interval = setInterval(() => {
+      fetchPendingSubmissions();
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [isAdmin, isAuthenticated, fetchPendingSubmissions]);
 
   // Handle panel resize dragging
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -1744,24 +1761,6 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                   </button>
                 )}
 
-                {/* Admin button - only for admins */}
-                {isAdmin && (
-                  <button
-                    onClick={() => {
-                      setShowAdminModal(true);
-                      setShowCloudMenu(false);
-                    }}
-                    className={cn(
-                      "w-full flex items-center gap-2 px-2 py-1.5 rounded-sm",
-                      "text-[11px] text-amber-600 hover:text-amber-700 hover:bg-amber-50",
-                      "transition-colors"
-                    )}
-                  >
-                    <Shield className="h-3 w-3" />
-                    Admin: Review Submissions
-                  </button>
-                )}
-
                 {/* Divider before projects list */}
                 <div className="border-t border-parchment my-1" />
 
@@ -1785,7 +1784,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                           className={cn(
                             "flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm",
                             isCurrentProject
-                              ? "bg-burgundy/10 border-l-2 border-burgundy"
+                              ? "bg-burgundy/15 border-l-2 border-burgundy"
                               : "hover:bg-cream"
                           )}
                         >
@@ -1796,16 +1795,23 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                             ) : (
                               <User className="h-2.5 w-2.5 text-slate/40 flex-shrink-0" />
                             )}
-                            <div className="min-w-0 max-w-[160px]">
-                              <span
-                                className={cn(
-                                  "text-[11px] truncate block font-medium",
-                                  isCurrentProject ? "text-burgundy" : "text-ink"
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className={cn(
+                                    "text-[11px] truncate font-medium",
+                                    isCurrentProject ? "text-burgundy" : "text-ink"
+                                  )}
+                                  title={project.name}
+                                >
+                                  {project.name}
+                                </span>
+                                {isCurrentProject && (
+                                  <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[8px] font-medium bg-burgundy text-white">
+                                    Current
+                                  </span>
                                 )}
-                                title={project.name}
-                              >
-                                {project.name}
-                              </span>
+                              </div>
                               {!isOwner && project.owner && (
                                 <span className="text-[9px] text-slate-muted">
                                   by {project.owner.display_name || project.owner.initials}
@@ -1929,6 +1935,34 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                         Refresh
                       </button>
                     </div>
+                  </>
+                )}
+
+                {/* Admin button - only for admins, at bottom of menu */}
+                {isAdmin && (
+                  <>
+                    <div className="border-t border-parchment my-1" />
+                    <button
+                      onClick={() => {
+                        setShowAdminModal(true);
+                        setShowCloudMenu(false);
+                      }}
+                      className={cn(
+                        "w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-sm",
+                        "text-[11px] text-slate hover:text-ink hover:bg-cream",
+                        "transition-colors"
+                      )}
+                    >
+                      <span className="flex items-center gap-2">
+                        <Shield className="h-3 w-3" />
+                        Review Submissions
+                      </span>
+                      {pendingSubmissions.length > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-amber-100 text-amber-700">
+                          {pendingSubmissions.length}
+                        </span>
+                      )}
+                    </button>
                   </>
                 )}
               </div>
