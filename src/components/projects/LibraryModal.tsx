@@ -84,6 +84,9 @@ export function LibraryModal() {
     setActionLoading(`preview-${project.id}`);
     setError(null);
 
+    // Clear any existing preview state first
+    setViewingLibraryProjectId(null);
+
     // Reset current session before loading library project
     resetSession();
 

@@ -271,6 +271,17 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   // Track if user has manually resized the panel (disables auto-extend for 80-column files)
   const userHasManuallyResized = useRef(false);
 
+  // Cleanup: clear library preview state when leaving critique mode
+  useEffect(() => {
+    return () => {
+      // When unmounting (navigating away), clear preview state
+      if (viewingLibraryProjectId) {
+        setViewingLibraryProjectId(null);
+        resetSession();
+      }
+    };
+  }, [viewingLibraryProjectId, setViewingLibraryProjectId, resetSession]);
+
   // Create a Map from session.codeContents for compatibility with existing code
   const codeContents = useMemo(() => new Map(Object.entries(session.codeContents)), [session.codeContents]);
 

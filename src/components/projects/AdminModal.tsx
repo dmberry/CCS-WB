@@ -56,6 +56,7 @@ export function AdminModal() {
     approveProject,
     rejectProject,
     loadProject,
+    setViewingLibraryProjectId,
   } = useProjects();
   const { importSession, resetSession } = useSession();
 
@@ -94,6 +95,9 @@ export function AdminModal() {
     setActionLoading(`preview-${project.id}`);
     setError(null);
 
+    // Clear any existing preview state first
+    setViewingLibraryProjectId(null);
+
     // Reset current session before loading
     resetSession();
 
@@ -107,6 +111,8 @@ export function AdminModal() {
     }
 
     if (session) {
+      // Set as viewing (read-only mode)
+      setViewingLibraryProjectId(project.id);
       importSession(session);
       handleClose();
       router.push("/conversation");
