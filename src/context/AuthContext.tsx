@@ -59,36 +59,86 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isSupabaseEnabled = isSupabaseConfigured();
   const supabase = isSupabaseEnabled ? getSupabaseClient() : null;
 
-  // Fetch user profile from database with timeout
+  // Cache key for localStorage
+  const PROFILE_CACHE_KEY = "ccs-profile-cache";
+
+  // Get cached profile from localStorage
+  const getCachedProfile = useCallback((userId: string): Profile | null => {
+    try {
+      const cached = localStorage.getItem(PROFILE_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        // Only use cache if it's for the same user and not too old (1 hour)
+        if (parsed.id === userId && Date.now() - parsed._cachedAt < 3600000) {
+          return parsed;
+        }
+      }
+    } catch {
+      // Ignore cache errors
+    }
+    return null;
+  }, []);
+
+  // Save profile to localStorage cache
+  const cacheProfile = useCallback((profile: Profile) => {
+    try {
+      localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({
+        ...profile,
+        _cachedAt: Date.now(),
+      }));
+    } catch {
+      // Ignore cache errors
+    }
+  }, []);
+
+  // Fetch user profile from database with timeout and cache fallback
   const fetchProfile = useCallback(async (userId: string) => {
     if (!supabase) return null;
 
-    console.log("Fetching profile for user:", userId);
+    // Try cache first for immediate display
+    const cached = getCachedProfile(userId);
+
+    console.log("Fetching profile for user:", userId, cached ? "(have cache)" : "(no cache)");
+
     try {
+      // Add timeout to the query
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from("profiles")
         .select("*")
         .eq("id", userId)
-        .single();
+        .single()
+        .abortSignal(controller.signal);
 
-      console.log("Profile fetch result:", { data, error, errorKeys: error ? Object.keys(error) : null });
+      clearTimeout(timeoutId);
 
       if (error) {
         // PGRST116 means no rows found - this is expected for new users
         if (error.code !== "PGRST116") {
           console.warn("Profile fetch issue (non-critical):", error.message || error.code);
         }
-        return null;
+        return cached; // Return cached profile if query fails
+      }
+
+      // Cache the fresh profile
+      if (data) {
+        cacheProfile(data);
       }
 
       return data;
     } catch (err) {
-      // Any error - just log and continue without profile
+      // On timeout or error, return cached profile
+      if (cached) {
+        console.log("Using cached profile due to fetch timeout/error");
+        return cached;
+      }
       console.warn("Profile fetch failed - continuing without profile:", err);
       return null;
     }
-  }, [supabase]);
+  }, [supabase, getCachedProfile, cacheProfile]);
 
   // Create profile if it doesn't exist
   const createProfile = useCallback(async (user: User) => {
@@ -272,6 +322,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     if (!supabase) {
       return { error: new Error("Supabase not configured") as unknown as AuthError };
+    }
+
+    // Clear profile cache
+    try {
+      localStorage.removeItem(PROFILE_CACHE_KEY);
+    } catch {
+      // Ignore cache errors
     }
 
     // Add timeout to prevent hanging
