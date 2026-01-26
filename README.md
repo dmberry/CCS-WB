@@ -68,6 +68,17 @@ The critique mode features a three-panel layout for focused code analysis:
 - Session logs include metadata, annotated code, full conversation, and statistics
 - Click filename in header to rename project
 
+### Cloud Projects (Collaboration)
+- **Real-time sync**: Annotations and code files sync automatically (5-second polling)
+- **OAuth login**: Sign in with Google, GitHub, or Apple
+- **Shareable invite links**: Generate links to invite collaborators as viewers or editors
+- **Member management**: View and manage project members and their roles
+- **User attribution**: Annotations show author initials for multi-user projects
+- **Staleness detection**: Prevents overwriting collaborators' changes
+- **Trash can**: Deleted files and projects move to trash for recovery
+  - Projects: Trash tab in Projects modal with restore and permanent delete
+  - Files: Trash icon in files pane header with dropdown for restore/delete
+
 ### Conversation Phases
 
 **Critique/Archaeology/Interpret modes:**
@@ -287,6 +298,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 2.6.2 | **Trash can for files and projects**: Soft delete for cloud projects and files with recovery via Trash tabs/dropdowns, rename projects from cloud dropdown and Projects modal, admin library management (rename, delete, duplicate, deaccession approved projects) |
 | 2.6.1 | **Library & accessioning**: Admin panel for reviewing library submissions (Submit to Library button for owners, Admin: Review Submissions for admins), BASIC syntax highlighting with full keyword support, code font selection (8 monospace fonts including Fira Code, JetBrains Mono, Source Code Pro) in Settings → Appearance |
 | 2.6.0 | **Custom skins**: Retro-themed visual skins system with nostalgic Myspace skin included, skin-aware Clippy with custom messages, shared retro icons, skin credit box support; enable in Settings → Appearance |
 | 2.5.1 | **Easter eggs**: Hidden features for the discerning scholar (try typing "clippy" or "hacker" anywhere outside text fields) |
