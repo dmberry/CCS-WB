@@ -262,9 +262,17 @@ export function LibraryModal() {
                         )}>
                           {MODE_LABELS[project.mode as EntryMode] || project.mode}
                         </span>
+                        {/* Early Access badge for submitted (not yet approved) projects */}
+                        {project.accession_status === "submitted" && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-ui-xs font-sans font-medium bg-amber-100 text-amber-700 border border-amber-200">
+                            Early Access
+                          </span>
+                        )}
                         <span className="flex items-center gap-1 text-ui-xs text-slate/60 font-sans">
                           <Clock className="h-3 w-3" />
-                          {formatDate(project.approved_at)}
+                          {project.accession_status === "submitted"
+                            ? formatDate(project.submitted_at)
+                            : formatDate(project.approved_at)}
                         </span>
                       </div>
                     </div>

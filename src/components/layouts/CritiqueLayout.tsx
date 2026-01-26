@@ -1423,15 +1423,25 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             <button
               onClick={() => setShowProjectInfo(!showProjectInfo)}
               className={cn(
-                "flex items-center gap-1 px-2 py-0.5 rounded-sm transition-colors max-w-[200px]",
+                "flex items-center gap-1 px-2 py-0.5 rounded-sm transition-colors max-w-[220px]",
                 showProjectInfo ? "bg-cream" : "hover:bg-cream"
               )}
               title="Click for project info"
             >
               <Cloud className="h-2.5 w-2.5 text-slate-muted flex-shrink-0" strokeWidth={1.5} />
-              <span className="font-mono text-[10px] text-ink font-medium truncate">
-                {currentProject?.name || "Cloud Project"}
-              </span>
+              <div className="flex flex-col items-start min-w-0">
+                <span className="font-mono text-[10px] text-ink font-medium truncate max-w-[160px]">
+                  {currentProject?.name || "Cloud Project"}
+                </span>
+                {/* Owner initials or Public indicator */}
+                {viewingLibraryProjectId ? (
+                  <span className="font-sans text-[8px] text-emerald-600 font-medium">Public</span>
+                ) : currentProject?.owner?.initials ? (
+                  <span className="font-sans text-[8px] text-slate/60">{currentProject.owner.initials}</span>
+                ) : user?.id === currentProject?.owner_id ? (
+                  <span className="font-sans text-[8px] text-slate/60">You</span>
+                ) : null}
+              </div>
               <ChevronDown className={cn("h-2.5 w-2.5 text-slate transition-transform flex-shrink-0", showProjectInfo && "rotate-180")} strokeWidth={1.5} />
             </button>
 

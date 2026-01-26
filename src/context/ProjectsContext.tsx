@@ -1056,21 +1056,22 @@ _Add relevant references, documentation links, or related scholarship:_
   // Library Functions
   // =============================================================================
 
-  // Fetch approved public projects for the library
+  // Fetch public library projects (approved + submitted for "Early Access")
   const fetchLibraryProjects = useCallback(async () => {
     if (!supabase) return;
 
     setIsLoadingLibrary(true);
 
     try {
-      // Fetch approved public projects (without FK join - FK doesn't exist)
+      // Fetch approved AND submitted public projects (submitted = "Early Access")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: projectsData, error: projectsError } = await (supabase as any)
         .from("projects")
         .select("*")
         .eq("is_public", true)
-        .eq("accession_status", "approved")
-        .order("approved_at", { ascending: false });
+        .in("accession_status", ["approved", "submitted"])
+        .order("approved_at", { ascending: false, nullsFirst: false })
+        .order("submitted_at", { ascending: false });
 
       if (projectsError) {
         console.error("Error fetching library projects:", projectsError);
