@@ -86,6 +86,13 @@ interface CodeEditorPanelProps {
   isInProject?: boolean;
   // Whether the panel is in read-only mode (e.g., viewing library project)
   readOnly?: boolean;
+  // File trash props (for cloud projects)
+  trashedFiles?: Array<{ id: string; name: string; language: string; deletedAt: string }>;
+  isLoadingFileTrash?: boolean;
+  onLoadTrashedFiles?: () => void;
+  onRestoreFile?: (fileId: string) => Promise<{ error: Error | null }>;
+  onPermanentlyDeleteFile?: (fileId: string) => Promise<{ error: Error | null }>;
+  onEmptyFileTrash?: () => Promise<{ error: Error | null }>;
 }
 
 // Historical punch card languages that typically used 80-column format
@@ -377,6 +384,13 @@ export function CodeEditorPanel({
   newRemoteAnnotationIds,
   isInProject = false,
   readOnly = false,
+  // File trash props
+  trashedFiles = [],
+  isLoadingFileTrash = false,
+  onLoadTrashedFiles,
+  onRestoreFile,
+  onPermanentlyDeleteFile,
+  onEmptyFileTrash,
 }: CodeEditorPanelProps) {
   const {
     session,
@@ -487,6 +501,11 @@ export function CodeEditorPanel({
   const [samplesDropdownPosition, setSamplesDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const samplesDropdownRef = useRef<HTMLDivElement>(null);
   const samplesButtonRef = useRef<HTMLButtonElement>(null);
+  // File trash state
+  const [showFileTrash, setShowFileTrash] = useState(false);
+  const [trashActionLoading, setTrashActionLoading] = useState<string | null>(null);
+  const trashDropdownRef = useRef<HTMLDivElement>(null);
+  const trashButtonRef = useRef<HTMLButtonElement>(null);
 
   // Handler for cursor position changes from CodeMirror (converts two args to object)
   const handleCursorPositionChange = useCallback((line: number, column: number) => {
@@ -509,6 +528,33 @@ export function CodeEditorPanel({
       setLoadingSample(null);
     }
   }, [onLoadSample]);
+
+  // File trash handlers
+  const handleOpenFileTrash = useCallback(() => {
+    setShowFileTrash(true);
+    onLoadTrashedFiles?.();
+  }, [onLoadTrashedFiles]);
+
+  const handleRestoreFile = useCallback(async (fileId: string) => {
+    if (!onRestoreFile) return;
+    setTrashActionLoading(`restore-${fileId}`);
+    await onRestoreFile(fileId);
+    setTrashActionLoading(null);
+  }, [onRestoreFile]);
+
+  const handlePermanentlyDeleteFile = useCallback(async (fileId: string) => {
+    if (!onPermanentlyDeleteFile) return;
+    setTrashActionLoading(`delete-${fileId}`);
+    await onPermanentlyDeleteFile(fileId);
+    setTrashActionLoading(null);
+  }, [onPermanentlyDeleteFile]);
+
+  const handleEmptyFileTrash = useCallback(async () => {
+    if (!onEmptyFileTrash) return;
+    setTrashActionLoading("empty");
+    await onEmptyFileTrash();
+    setTrashActionLoading(null);
+  }, [onEmptyFileTrash]);
 
   // Reset cursor position when switching files
   useEffect(() => {
@@ -1128,6 +1174,27 @@ export function CodeEditorPanel({
     }
   }, [showSamplesDropdown]);
 
+  // Close file trash dropdown when clicking outside
+  useEffect(() => {
+    if (!showFileTrash) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (trashButtonRef.current?.contains(target)) return;
+      if (trashDropdownRef.current?.contains(target)) return;
+      setShowFileTrash(false);
+    };
+
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 10);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showFileTrash]);
+
   // Close file menu dropdown when clicking outside
   useEffect(() => {
     if (!fileMenuOpen) return;
@@ -1288,6 +1355,25 @@ export function CodeEditorPanel({
                     </span>
                   )}
                 </button>
+                {/* File trash button - only in cloud projects and not read-only */}
+                {isInProject && !readOnly && onLoadTrashedFiles && (
+                  <button
+                    ref={trashButtonRef}
+                    onClick={handleOpenFileTrash}
+                    className={cn(
+                      "relative p-1 transition-colors",
+                      showFileTrash ? "text-burgundy" : "text-slate-muted hover:text-burgundy"
+                    )}
+                    title="View trashed files"
+                  >
+                    <Trash2 className="h-3 w-3" strokeWidth={1.5} />
+                    {trashedFiles.length > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-burgundy rounded-full text-[6px] text-white flex items-center justify-center font-bold">
+                        {trashedFiles.length > 9 ? "+" : trashedFiles.length}
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -1624,6 +1710,78 @@ export function CodeEditorPanel({
                 )}
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* File trash dropdown - positioned relative to sidebar */}
+      {showFileTrash && isInProject && (
+        <div
+          ref={trashDropdownRef}
+          className="absolute top-10 left-2 z-50 bg-card border border-parchment rounded-lg shadow-lg min-w-[200px] max-w-[260px]"
+        >
+          <div className="px-3 py-2 border-b border-parchment flex items-center justify-between">
+            <span className="text-[10px] font-semibold text-slate-muted uppercase tracking-wide flex items-center gap-1.5">
+              <Trash2 className="h-3 w-3" />
+              Trashed Files
+            </span>
+            {trashedFiles.length > 0 && (
+              <button
+                onClick={handleEmptyFileTrash}
+                disabled={trashActionLoading === "empty"}
+                className="text-[9px] text-burgundy hover:text-burgundy/80 disabled:opacity-50"
+                title="Empty trash"
+              >
+                Empty
+              </button>
+            )}
+          </div>
+          <div className="max-h-[250px] overflow-y-auto">
+            {isLoadingFileTrash ? (
+              <div className="px-3 py-4 text-center">
+                <span className="text-[10px] text-slate-muted">Loading...</span>
+              </div>
+            ) : trashedFiles.length === 0 ? (
+              <div className="px-3 py-4 text-center">
+                <span className="text-[10px] text-slate-muted italic">Trash is empty</span>
+              </div>
+            ) : (
+              <div className="py-1">
+                {trashedFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className="px-3 py-1.5 hover:bg-cream/50 transition-colors flex items-center justify-between gap-2"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[10px] font-mono text-ink/70 truncate block" title={file.name}>
+                        {file.name}
+                      </span>
+                      <span className="text-[8px] text-slate-muted">
+                        {new Date(file.deletedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleRestoreFile(file.id)}
+                        disabled={!!trashActionLoading}
+                        className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-colors disabled:opacity-50"
+                        title="Restore"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                      </button>
+                      <button
+                        onClick={() => handlePermanentlyDeleteFile(file.id)}
+                        disabled={!!trashActionLoading}
+                        className="p-1 text-burgundy hover:bg-burgundy/10 rounded transition-colors disabled:opacity-50"
+                        title="Delete permanently"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

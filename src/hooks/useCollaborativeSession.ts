@@ -13,7 +13,7 @@ import { useProjects } from "@/context/ProjectsContext";
 import { useAuth } from "@/context/AuthContext";
 import { useAppSettings } from "@/context/AppSettingsContext";
 import { useAnnotationsSync } from "./useAnnotationsSync";
-import { useCodeFilesSync } from "./useCodeFilesSync";
+import { useCodeFilesSync, type TrashedCodeFile } from "./useCodeFilesSync";
 import type { LineAnnotation, CodeReference } from "@/types/session";
 
 // Local CodeFile interface for sync
@@ -53,6 +53,9 @@ export function useCollaborativeSession() {
   const [pendingFileDeletions, setPendingFileDeletions] = useState<PendingDeletion[]>([]);
   // Track annotation IDs that just arrived from remote (for animation)
   const [newRemoteAnnotationIds, setNewRemoteAnnotationIds] = useState<Set<string>>(new Set());
+  // File trash state
+  const [trashedFiles, setTrashedFiles] = useState<TrashedCodeFile[]>([]);
+  const [isLoadingFileTrash, setIsLoadingFileTrash] = useState(false);
 
   // Get user initials - prefer manually-set app profile initials (from Settings), fall back to auth profile (auto-generated)
   // getDisplayName() returns initials > name from AppSettings, with proper empty string handling
@@ -291,6 +294,11 @@ export function useCollaborativeSession() {
     fetchCodeFiles,
     pendingDeletions,
     isConnected: filesConnected,
+    // File trash functions
+    fetchTrashedFiles,
+    restoreFile,
+    permanentlyDeleteFile,
+    emptyFileTrash,
   } = useCodeFilesSync({
     onFileAdded: handleFileAddedOrUpdated,
     onFileDeleted: handleFileDeleted,
@@ -615,6 +623,68 @@ export function useCollaborativeSession() {
     [rejectDeletion]
   );
 
+  // Fetch trashed files for current project
+  const loadTrashedFiles = useCallback(async () => {
+    if (!isInProject) return;
+    setIsLoadingFileTrash(true);
+    try {
+      const files = await fetchTrashedFiles();
+      setTrashedFiles(files);
+    } finally {
+      setIsLoadingFileTrash(false);
+    }
+  }, [isInProject, fetchTrashedFiles]);
+
+  // Restore a file from trash
+  const restoreFileFromTrash = useCallback(
+    async (fileId: string) => {
+      if (!isInProject) {
+        return { error: new Error("Not in a project") };
+      }
+      const result = await restoreFile(fileId);
+      if (!result.error) {
+        // Remove from local trash state
+        setTrashedFiles(prev => prev.filter(f => f.id !== fileId));
+        // Refresh files to get the restored file
+        const files = await fetchCodeFiles();
+        // Add restored file to session
+        const restoredFile = files.find(f => f.id === fileId);
+        if (restoredFile) {
+          handleFileAddedOrUpdated(restoredFile);
+        }
+      }
+      return result;
+    },
+    [isInProject, restoreFile, fetchCodeFiles, handleFileAddedOrUpdated]
+  );
+
+  // Permanently delete a file from trash
+  const permanentlyDeleteFileFromTrash = useCallback(
+    async (fileId: string) => {
+      if (!isInProject) {
+        return { error: new Error("Not in a project") };
+      }
+      const result = await permanentlyDeleteFile(fileId);
+      if (!result.error) {
+        setTrashedFiles(prev => prev.filter(f => f.id !== fileId));
+      }
+      return result;
+    },
+    [isInProject, permanentlyDeleteFile]
+  );
+
+  // Empty all files from trash
+  const emptyAllFileTrash = useCallback(async () => {
+    if (!isInProject) {
+      return { error: new Error("Not in a project") };
+    }
+    const result = await emptyFileTrash();
+    if (!result.error) {
+      setTrashedFiles([]);
+    }
+    return result;
+  }, [isInProject, emptyFileTrash]);
+
   // Refresh from cloud - fetches latest annotations and files and replaces local state
   const refreshFromCloud = useCallback(async () => {
     if (!isInProject) {
@@ -697,11 +767,20 @@ export function useCollaborativeSession() {
     refreshFromCloud,
     saveAllToCloud,
 
+    // File trash methods
+    loadTrashedFiles,
+    restoreFileFromTrash,
+    permanentlyDeleteFileFromTrash,
+    emptyAllFileTrash,
+
     // Collaboration state
     isInProject,
     isCollaborationConnected: annotationsConnected || filesConnected,
     pendingFileDeletions,
     // Animation state for remote annotations (IDs that just arrived)
     newRemoteAnnotationIds,
+    // File trash state
+    trashedFiles,
+    isLoadingFileTrash,
   };
 }

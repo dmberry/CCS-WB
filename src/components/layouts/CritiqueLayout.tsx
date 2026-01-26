@@ -173,6 +173,13 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     saveAllToCloud,
     resetSession,
     newRemoteAnnotationIds,
+    // File trash
+    trashedFiles,
+    isLoadingFileTrash,
+    loadTrashedFiles,
+    restoreFileFromTrash,
+    permanentlyDeleteFileFromTrash,
+    emptyAllFileTrash,
   } = useCollaborativeSession();
   const { settings: aiSettings, getRequestHeaders, isConfigured: isAIConfigured, connectionStatus, isAiReady } = useAISettings();
   const { settings: appSettings, getFontSizes, setModeCodeFontSize, setModeChatFontSize, getDisplayName, profile } = useAppSettings();
@@ -2318,6 +2325,13 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             newRemoteAnnotationIds={newRemoteAnnotationIds}
             isInProject={isInProject}
             readOnly={!!viewingLibraryProjectId}
+            // File trash props
+            trashedFiles={trashedFiles}
+            isLoadingFileTrash={isLoadingFileTrash}
+            onLoadTrashedFiles={loadTrashedFiles}
+            onRestoreFile={restoreFileFromTrash}
+            onPermanentlyDeleteFile={permanentlyDeleteFileFromTrash}
+            onEmptyFileTrash={emptyAllFileTrash}
           />
         </div>
 

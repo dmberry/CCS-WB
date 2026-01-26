@@ -33,6 +33,15 @@ interface CodeFileRow {
   uploaded_by: string | null;
   created_at: string;
   updated_at: string;
+  deleted_at: string | null;
+}
+
+// Trashed file info for UI display
+export interface TrashedCodeFile {
+  id: string;
+  name: string;
+  language: string;
+  deletedAt: string;
 }
 
 interface PendingDeletion {
@@ -125,16 +134,18 @@ export function useCodeFilesSync({
   onDeletionRequestedRef.current = onDeletionRequested;
   onDeletionRejectedRef.current = onDeletionRejected;
 
-  // Fetch all code files for current project
+  // Fetch all code files for current project (excludes trashed files)
   const fetchCodeFiles = useCallback(async (): Promise<CodeFile[]> => {
     if (!supabase || !currentProjectId) return [];
 
     // Order by display_order to preserve user-defined ordering (falls back to created_at)
+    // Filter out deleted files (deleted_at IS NULL)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let { data, error } = await (supabase as any)
       .from("code_files")
       .select("*")
       .eq("project_id", currentProjectId)
+      .is("deleted_at", null)
       .order("display_order", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: true });
 
@@ -145,6 +156,7 @@ export function useCodeFilesSync({
         .from("code_files")
         .select("*")
         .eq("project_id", currentProjectId)
+        .is("deleted_at", null)
         .order("created_at", { ascending: true });
       data = fallback.data;
       error = fallback.error;
@@ -234,7 +246,7 @@ export function useCodeFilesSync({
     [supabase, currentProjectId, user?.id]
   );
 
-  // Delete a code file from Supabase (immediate deletion, no confirmation)
+  // Soft delete a code file (moves to trash by setting deleted_at)
   const deleteCodeFile = useCallback(
     async (fileId: string) => {
       if (!supabase || !currentProjectId) {
@@ -242,17 +254,18 @@ export function useCodeFilesSync({
         return { error: new Error("Not connected to project") };
       }
 
-      console.log("deleteCodeFile: Deleting file", fileId, "from project", currentProjectId);
+      console.log("deleteCodeFile: Moving file to trash", fileId, "in project", currentProjectId);
 
       // Remove from known files and timestamps BEFORE delete to prevent polling from re-adding
       knownFilesRef.current.delete(fileId);
       fileTimestampsRef.current.delete(fileId);
       lastUpdateRef.current = Date.now();
 
+      // Soft delete: set deleted_at timestamp
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error, count } = await (supabase as any)
+      const { error } = await (supabase as any)
         .from("code_files")
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq("id", fileId)
         .eq("project_id", currentProjectId);
 
@@ -261,7 +274,7 @@ export function useCodeFilesSync({
         return { error: new Error(error.message) };
       }
 
-      console.log("deleteCodeFile: Successfully deleted, rows affected:", count);
+      console.log("deleteCodeFile: Successfully moved to trash");
 
       // Update timestamp again after delete completes
       lastUpdateRef.current = Date.now();
@@ -270,6 +283,112 @@ export function useCodeFilesSync({
     },
     [supabase, currentProjectId]
   );
+
+  // Fetch trashed files for current project
+  const fetchTrashedFiles = useCallback(async (): Promise<TrashedCodeFile[]> => {
+    if (!supabase || !currentProjectId) return [];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from("code_files")
+      .select("id, filename, language, deleted_at")
+      .eq("project_id", currentProjectId)
+      .not("deleted_at", "is", null)
+      .order("deleted_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching trashed files:", error);
+      return [];
+    }
+
+    return (data || []).map((row: { id: string; filename: string; language: string | null; deleted_at: string }) => ({
+      id: row.id,
+      name: row.filename,
+      language: row.language || "plaintext",
+      deletedAt: row.deleted_at,
+    }));
+  }, [supabase, currentProjectId]);
+
+  // Restore a file from trash
+  const restoreFile = useCallback(
+    async (fileId: string) => {
+      if (!supabase || !currentProjectId) {
+        return { error: new Error("Not connected to project") };
+      }
+
+      console.log("restoreFile: Restoring file", fileId);
+      lastUpdateRef.current = Date.now();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("code_files")
+        .update({ deleted_at: null })
+        .eq("id", fileId)
+        .eq("project_id", currentProjectId);
+
+      if (error) {
+        console.error("restoreFile: Database error:", error);
+        return { error: new Error(error.message) };
+      }
+
+      console.log("restoreFile: Successfully restored");
+      lastUpdateRef.current = Date.now();
+
+      return { error: null };
+    },
+    [supabase, currentProjectId]
+  );
+
+  // Permanently delete a file (cannot be undone)
+  const permanentlyDeleteFile = useCallback(
+    async (fileId: string) => {
+      if (!supabase || !currentProjectId) {
+        return { error: new Error("Not connected to project") };
+      }
+
+      console.log("permanentlyDeleteFile: Permanently deleting", fileId);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("code_files")
+        .delete()
+        .eq("id", fileId)
+        .eq("project_id", currentProjectId);
+
+      if (error) {
+        console.error("permanentlyDeleteFile: Database error:", error);
+        return { error: new Error(error.message) };
+      }
+
+      console.log("permanentlyDeleteFile: Successfully deleted");
+      return { error: null };
+    },
+    [supabase, currentProjectId]
+  );
+
+  // Empty file trash (permanently delete all trashed files)
+  const emptyFileTrash = useCallback(async () => {
+    if (!supabase || !currentProjectId) {
+      return { error: new Error("Not connected to project") };
+    }
+
+    console.log("emptyFileTrash: Emptying trash for project", currentProjectId);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from("code_files")
+      .delete()
+      .eq("project_id", currentProjectId)
+      .not("deleted_at", "is", null);
+
+    if (error) {
+      console.error("emptyFileTrash: Database error:", error);
+      return { error: new Error(error.message) };
+    }
+
+    console.log("emptyFileTrash: Successfully emptied");
+    return { error: null };
+  }, [supabase, currentProjectId]);
 
   // Request file deletion (creates pending deletion for other users to confirm/reject)
   const requestFileDeletion = useCallback(
@@ -493,7 +612,7 @@ export function useCodeFilesSync({
     fetchCodeFiles,
     /** Save a code file to Supabase */
     saveCodeFile,
-    /** Delete a code file from Supabase */
+    /** Delete a code file (moves to trash) */
     deleteCodeFile,
     /** Request file deletion (other users must confirm) */
     requestFileDeletion,
@@ -505,5 +624,14 @@ export function useCodeFilesSync({
     pendingDeletions,
     /** Whether sync is connected */
     isConnected: !!channelRef.current,
+    // File trash functions
+    /** Fetch trashed files for current project */
+    fetchTrashedFiles,
+    /** Restore a file from trash */
+    restoreFile,
+    /** Permanently delete a file */
+    permanentlyDeleteFile,
+    /** Empty all trashed files */
+    emptyFileTrash,
   };
 }
