@@ -29,6 +29,8 @@ import {
   FileText,
   FilePlus2,
   Crown,
+  Pencil,
+  Check,
 } from "lucide-react";
 import type { ProjectWithOwner } from "@/lib/supabase/types";
 import type { EntryMode, Session } from "@/types/session";
@@ -62,6 +64,7 @@ export function ProjectsModal() {
     loadProject,
     saveProject,
     deleteProject,
+    renameProject,
     setCurrentProjectId,
     setShowMembersModal,
     setMembersModalProjectId,
@@ -83,6 +86,9 @@ export function ProjectsModal() {
   const [error, setError] = useState<string | null>(null);
   const [showNewProjectMenu, setShowNewProjectMenu] = useState(false);
   const [deleteConfirmProject, setDeleteConfirmProject] = useState<ProjectWithOwner | null>(null);
+  const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [isRenamingLoading, setIsRenamingLoading] = useState(false);
 
   if (!showProjectsModal) return null;
 
@@ -94,6 +100,8 @@ export function ProjectsModal() {
     setNewProjectDescription("");
     setError(null);
     setShowNewProjectMenu(false);
+    setRenamingProjectId(null);
+    setRenameValue("");
   };
 
   const handleCreate = async () => {
@@ -198,6 +206,33 @@ export function ProjectsModal() {
     }
 
     setActionLoading(null);
+  };
+
+  const handleStartRename = (project: ProjectWithOwner) => {
+    setRenamingProjectId(project.id);
+    setRenameValue(project.name);
+  };
+
+  const handleCancelRename = () => {
+    setRenamingProjectId(null);
+    setRenameValue("");
+  };
+
+  const handleSubmitRename = async (projectId: string) => {
+    if (!renameValue.trim()) {
+      handleCancelRename();
+      return;
+    }
+
+    setIsRenamingLoading(true);
+    const { error } = await renameProject(projectId, renameValue.trim());
+    setIsRenamingLoading(false);
+
+    if (error) {
+      setError(error.message);
+    } else {
+      handleCancelRename();
+    }
   };
 
   const isOwner = (project: ProjectWithOwner) => project.owner_id === user?.id;
@@ -432,9 +467,49 @@ export function ProjectsModal() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-serif text-ui-base text-ink truncate" title={project.name}>
-                        {project.name}
-                      </h4>
+                      {renamingProjectId === project.id ? (
+                        <div className="flex items-center gap-2 mb-1">
+                          <input
+                            type="text"
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSubmitRename(project.id);
+                              if (e.key === "Escape") handleCancelRename();
+                            }}
+                            autoFocus
+                            className={cn(
+                              "flex-1 px-2 py-1 font-serif text-ui-base text-ink",
+                              "bg-ivory border border-burgundy rounded",
+                              "focus:outline-none focus:ring-2 focus:ring-burgundy/20"
+                            )}
+                          />
+                          <button
+                            onClick={() => handleSubmitRename(project.id)}
+                            disabled={isRenamingLoading}
+                            className="p-1 rounded hover:bg-emerald-100 transition-colors"
+                            title="Save"
+                          >
+                            {isRenamingLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                            ) : (
+                              <Check className="h-4 w-4 text-emerald-600" />
+                            )}
+                          </button>
+                          <button
+                            onClick={handleCancelRename}
+                            disabled={isRenamingLoading}
+                            className="p-1 rounded hover:bg-burgundy/10 transition-colors"
+                            title="Cancel"
+                          >
+                            <X className="h-4 w-4 text-burgundy" />
+                          </button>
+                        </div>
+                      ) : (
+                        <h4 className="font-serif text-ui-base text-ink truncate" title={project.name}>
+                          {project.name}
+                        </h4>
+                      )}
                       {/* Owner indicator */}
                       <p className="font-sans text-ui-xs text-slate/60 mb-1 flex items-center gap-1">
                         {isOwner(project) ? (
@@ -510,6 +585,20 @@ export function ProjectsModal() {
                             <LogIn className="h-3.5 w-3.5" />
                           )}
                           Join
+                        </button>
+                      )}
+                      {/* Rename button (owner only) */}
+                      {isOwner(project) && renamingProjectId !== project.id && (
+                        <button
+                          onClick={() => handleStartRename(project)}
+                          disabled={!!actionLoading || !!renamingProjectId}
+                          title="Rename project"
+                          className={cn(
+                            "p-2 rounded-lg hover:bg-cream transition-colors",
+                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                          )}
+                        >
+                          <Pencil className="h-4 w-4 text-slate" />
                         </button>
                       )}
                       {/* Members button (owner only) */}

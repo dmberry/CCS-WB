@@ -16,7 +16,7 @@ import React, {
 } from "react";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { useAuth } from "./AuthContext";
-import type { Project, ProjectWithOwner, Profile, MemberWithProfile, MemberRole, LibraryProject, AccessionStatus } from "@/lib/supabase/types";
+import type { Project, ProjectWithOwner, Profile, MemberWithProfile, MemberRole, LibraryProject, AccessionStatus, CodeFile, Annotation } from "@/lib/supabase/types";
 import type { Session, EntryMode } from "@/types/session";
 import { DEFAULT_DISPLAY_SETTINGS } from "@/types/session";
 
@@ -76,6 +76,10 @@ interface ProjectsContextValue {
   fetchPendingSubmissions: () => Promise<void>;
   approveProject: (projectId: string) => Promise<{ error: Error | null }>;
   rejectProject: (projectId: string, reason?: string) => Promise<{ error: Error | null }>;
+  adminDeleteProject: (projectId: string) => Promise<{ error: Error | null }>;
+  adminRenameProject: (projectId: string, newName: string) => Promise<{ error: Error | null }>;
+  deaccessionProject: (projectId: string) => Promise<{ error: Error | null }>;
+  adminDuplicateProject: (projectId: string) => Promise<{ project: Project | null; error: Error | null }>;
 }
 
 const ProjectsContext = createContext<ProjectsContextValue | null>(null);
@@ -1336,6 +1340,244 @@ ${reason.trim()}
     }
   }, [supabase, user]);
 
+  // Admin delete - can delete any project (for cleaning up library)
+  const adminDeleteProject = useCallback(async (projectId: string) => {
+    if (!supabase || !user) {
+      return { error: new Error("Not authenticated") };
+    }
+
+    try {
+      // Delete annotations first (FK constraint)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("annotations")
+        .delete()
+        .eq("project_id", projectId);
+
+      // Delete code files
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("code_files")
+        .delete()
+        .eq("project_id", projectId);
+
+      // Delete project memberships
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("project_members")
+        .delete()
+        .eq("project_id", projectId);
+
+      // Delete the project (admin RLS should allow this)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("projects")
+        .delete()
+        .eq("id", projectId);
+
+      if (error) {
+        return { error: new Error(error.message) };
+      }
+
+      // Update local state
+      setProjects(prev => prev.filter(p => p.id !== projectId));
+      setPendingSubmissions(prev => prev.filter(p => p.id !== projectId));
+      setLibraryProjects(prev => prev.filter(p => p.id !== projectId));
+
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  }, [supabase, user]);
+
+  // Admin rename - can rename any project
+  const adminRenameProject = useCallback(async (projectId: string, newName: string) => {
+    if (!supabase || !user) {
+      return { error: new Error("Not authenticated") };
+    }
+
+    // Strip $ prefix (reserved for library namespace)
+    const sanitizedName = newName.replace(/^\$+/, "").trim();
+    if (!sanitizedName) {
+      return { error: new Error("Project name cannot be empty") };
+    }
+
+    try {
+      // Admin RLS should allow updating any project
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("projects")
+        .update({ name: sanitizedName, updated_at: new Date().toISOString() })
+        .eq("id", projectId);
+
+      if (error) {
+        return { error: new Error(error.message) };
+      }
+
+      // Update local state
+      setProjects(prev => prev.map(p =>
+        p.id === projectId ? { ...p, name: sanitizedName } : p
+      ));
+      setPendingSubmissions(prev => prev.map(p =>
+        p.id === projectId ? { ...p, name: sanitizedName } : p
+      ));
+      setLibraryProjects(prev => prev.map(p =>
+        p.id === projectId ? { ...p, name: sanitizedName } : p
+      ));
+
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  }, [supabase, user]);
+
+  // Deaccession - move approved project back to submitted (removes from library)
+  const deaccessionProject = useCallback(async (projectId: string) => {
+    if (!supabase || !user) {
+      return { error: new Error("Not authenticated") };
+    }
+
+    try {
+      // Get original project name (strip $ prefix if present)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: project } = await (supabase as any)
+        .from("projects")
+        .select("name, owner_id")
+        .eq("id", projectId)
+        .single();
+
+      if (!project) {
+        return { error: new Error("Project not found") };
+      }
+
+      // Strip $ namespace prefix if present
+      const cleanName = project.name.replace(/^\$+/, "");
+
+      // Move back to submitted status, restore owner if we have one stored
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("projects")
+        .update({
+          name: cleanName,
+          is_public: true, // Keep public but change status
+          accession_status: "submitted" as AccessionStatus,
+          approved_at: null,
+          approved_by: null,
+        })
+        .eq("id", projectId);
+
+      if (error) {
+        return { error: new Error(error.message) };
+      }
+
+      // Update local state - remove from library, add to pending
+      const deaccessionedProject = libraryProjects.find(p => p.id === projectId);
+      setLibraryProjects(prev => prev.filter(p => p.id !== projectId));
+      if (deaccessionedProject) {
+        setPendingSubmissions(prev => [...prev, { ...deaccessionedProject, name: cleanName, accession_status: "submitted" }]);
+      }
+
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  }, [supabase, user, libraryProjects]);
+
+  // Admin duplicate - create a copy of a project (for variants or backups)
+  const adminDuplicateProject = useCallback(async (projectId: string) => {
+    if (!supabase || !user) {
+      return { project: null, error: new Error("Not authenticated") };
+    }
+
+    try {
+      // Fetch source project
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: sourceProject, error: projectError } = await (supabase as any)
+        .from("projects")
+        .select("*")
+        .eq("id", projectId)
+        .single();
+
+      if (projectError || !sourceProject) {
+        return { project: null, error: new Error("Project not found") };
+      }
+
+      // Fetch files and annotations
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [filesRes, annotationsRes] = await Promise.all([
+        (supabase as any).from("code_files").select("*").eq("project_id", projectId),
+        (supabase as any).from("annotations").select("*").eq("project_id", projectId),
+      ]);
+
+      const files = filesRes.data || [];
+      const annotations = annotationsRes.data || [];
+
+      // Create new project
+      const newProjectId = crypto.randomUUID();
+      const baseName = sourceProject.name.replace(/^\$+/, ""); // Strip $ prefix
+      const newName = `${baseName} (Copy)`;
+
+      const newProject = {
+        id: newProjectId,
+        name: newName,
+        description: sourceProject.description,
+        mode: sourceProject.mode,
+        owner_id: user.id, // Admin becomes owner of copy
+        is_public: false,
+        accession_status: "draft" as AccessionStatus,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: insertError } = await (supabase as any)
+        .from("projects")
+        .insert(newProject);
+
+      if (insertError) {
+        return { project: null, error: new Error(insertError.message) };
+      }
+
+      // Copy files with new IDs
+      const fileIdMap = new Map<string, string>();
+      const newFiles = files.map((f: CodeFile) => {
+        const newId = crypto.randomUUID();
+        fileIdMap.set(f.id, newId);
+        return {
+          ...f,
+          id: newId,
+          project_id: newProjectId,
+        };
+      });
+
+      if (newFiles.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("code_files").insert(newFiles);
+      }
+
+      // Copy annotations with remapped file IDs
+      const newAnnotations = annotations.map((a: Annotation) => ({
+        ...a,
+        id: crypto.randomUUID(),
+        file_id: fileIdMap.get(a.file_id) || a.file_id,
+        project_id: newProjectId,
+        user_id: user.id,
+      }));
+
+      if (newAnnotations.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("annotations").insert(newAnnotations);
+      }
+
+      // Refresh projects list
+      await fetchProjects();
+
+      return { project: newProject as Project, error: null };
+    } catch (error) {
+      return { project: null, error: error as Error };
+    }
+  }, [supabase, user, fetchProjects]);
+
   return (
     <ProjectsContext.Provider
       value={{
@@ -1379,6 +1621,10 @@ ${reason.trim()}
         fetchPendingSubmissions,
         approveProject,
         rejectProject,
+        adminDeleteProject,
+        adminRenameProject,
+        deaccessionProject,
+        adminDuplicateProject,
       }}
     >
       {children}
