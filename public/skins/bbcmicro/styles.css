@@ -37,6 +37,7 @@ body {
 }
 
 h1, h2, h3, h4, .font-display {
+  font-family: 'Press Start 2P', 'Courier New', 'Lucida Console', monospace !important;
   color: #e8e8d0 !important;
   font-weight: bold !important;
   text-shadow: none !important;
@@ -116,9 +117,14 @@ main .grid button.group * {
 }
 
 main .grid button.group h3 {
+  font-family: 'Press Start 2P', 'Courier New', monospace !important;
   font-weight: bold !important;
   text-transform: uppercase !important;
   letter-spacing: 1px !important;
+}
+
+main .grid button.group p {
+  font-family: 'Press Start 2P', 'Courier New', monospace !important;
 }
 
 main .grid button.group:hover {
