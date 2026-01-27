@@ -102,6 +102,10 @@ const languageLoaders: Record<string, LanguageLoader> = {
   // Historical languages (punch card era)
   mad: () => import("./cm-lang-mad").then((m) => m.mad()),
   basic: () => import("./cm-lang-basic").then((m) => m.basic()),
+
+  // Assembly/AGC - use C syntax as approximation for comments, numbers, strings
+  assembly: () => import("@codemirror/lang-cpp").then((m) => m.cpp()),
+  agc: () => import("@codemirror/lang-cpp").then((m) => m.cpp()),
 };
 
 // File extension to language name mapping
@@ -190,8 +194,8 @@ const extensionToLanguage: Record<string, string> = {
   // Assembly
   asm: "assembly",
   s: "assembly",
-  // AGC (Apollo Guidance Computer)
-  agc: "agc",
+  // AGC (Apollo Guidance Computer) - maps to assembly
+  agc: "assembly",
   // MAD (Michigan Algorithm Decoder) - has syntax highlighting
   mad: "mad",
   // SLIP (Symmetric List Processor)
@@ -263,7 +267,7 @@ const languageAliases: Record<string, string> = {
   pascal: "plain",
   assembly: "assembly",
   asm: "assembly",
-  agc: "agc", // Apollo Guidance Computer assembly
+  agc: "assembly", // Apollo Guidance Computer assembly
   mad: "mad", // Michigan Algorithm Decoder - has syntax highlighting
   slip: "plain", // Symmetric List Processor
   pli: "plain", // PL/I
