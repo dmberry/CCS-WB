@@ -35,7 +35,7 @@ import {
   Cloud,
   FilePlus,
 } from "lucide-react";
-import { SAMPLE_PROJECTS, fetchSampleProject } from "@/data/sample-projects";
+import { fetchSampleProject, fetchSampleProjectsManifest, type SampleProject } from "@/data/sample-projects";
 import type {
   LineAnnotation,
   LineAnnotationType,
@@ -508,6 +508,7 @@ export function CodeEditorPanel({
   const [samplesDropdownPosition, setSamplesDropdownPosition] = useState<{ top: number; left: number } | null>(null);
   const samplesDropdownRef = useRef<HTMLDivElement>(null);
   const samplesButtonRef = useRef<HTMLButtonElement>(null);
+  const [sampleProjects, setSampleProjects] = useState<SampleProject[]>([]); // Dynamically loaded samples
   // File trash state - inline in file list
   const [trashExpanded, setTrashExpanded] = useState(false);
   const [trashActionLoading, setTrashActionLoading] = useState<string | null>(null);
@@ -519,7 +520,7 @@ export function CodeEditorPanel({
 
   // Handler for loading a sample project
   const handleLoadSampleProject = useCallback(async (sampleId: string) => {
-    const sample = SAMPLE_PROJECTS.find(s => s.id === sampleId);
+    const sample = sampleProjects.find(s => s.id === sampleId);
     if (!sample || !onLoadSampleProject) return;
 
     setLoadingSample(sampleId);
@@ -532,7 +533,7 @@ export function CodeEditorPanel({
     } finally {
       setLoadingSample(null);
     }
-  }, [onLoadSampleProject]);
+  }, [sampleProjects, onLoadSampleProject]);
 
   // File trash handlers
   const handleToggleTrash = useCallback(() => {
@@ -563,6 +564,19 @@ export function CodeEditorPanel({
     await onEmptyFileTrash();
     setTrashActionLoading(null);
   }, [onEmptyFileTrash]);
+
+  // Fetch sample projects manifest on mount
+  useEffect(() => {
+    let mounted = true;
+    fetchSampleProjectsManifest().then(projects => {
+      if (mounted) {
+        setSampleProjects(projects);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Reset cursor position when switching files
   useEffect(() => {
@@ -1298,7 +1312,7 @@ export function CodeEditorPanel({
                   </button>
                 )}
                 {/* Load sample code button - dropdown rendered outside overflow container */}
-                {onLoadSampleProject && SAMPLE_PROJECTS.length > 0 && (
+                {onLoadSampleProject && sampleProjects.length > 0 && (
                   <button
                     ref={samplesButtonRef}
                     onClick={() => setShowSamplesDropdown(!showSamplesDropdown)}
@@ -1740,7 +1754,7 @@ export function CodeEditorPanel({
             <span className="text-[9px] font-semibold text-slate-muted uppercase tracking-wide">Sample Projects</span>
           </div>
           <div className="max-h-[300px] overflow-y-auto">
-            {SAMPLE_PROJECTS.map((sample) => (
+            {sampleProjects.map((sample) => (
               <button
                 key={sample.id}
                 onClick={() => handleLoadSampleProject(sample.id)}
