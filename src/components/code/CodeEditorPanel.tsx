@@ -1768,8 +1768,10 @@ export function CodeEditorPanel({
                   )}
                 </div>
                 <p className="text-[9px] text-slate-muted mt-0.5 leading-snug">{sample.description}</p>
-                {sample.annotationCount && (
-                  <p className="text-[8px] text-burgundy/70 mt-0.5">{sample.annotationCount} annotations</p>
+                {sample.annotationCount !== undefined && (
+                  <p className="text-[8px] text-burgundy/70 mt-0.5">
+                    {sample.annotationCount === 0 ? 'Unannotated' : `${sample.annotationCount} annotation${sample.annotationCount !== 1 ? 's' : ''}`}
+                  </p>
                 )}
               </button>
             ))}

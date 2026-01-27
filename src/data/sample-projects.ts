@@ -25,8 +25,20 @@ export interface SampleProject {
 export function parseSamplesManifest(markdown: string): SampleProject[] {
   const projects: SampleProject[] = [];
   const lines = markdown.split("\n");
+  let inCodeBlock = false;
 
   for (const line of lines) {
+    // Track code blocks to skip example lines
+    if (line.trim().startsWith("```")) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+
+    // Skip lines inside code blocks
+    if (inCodeBlock) {
+      continue;
+    }
+
     // Match lines like "- eliza/eliza-1965b-CR.ccs: ELIZA (1965) | critique | Description | 1960s | 30"
     const match = line.match(/^-\s+([a-z0-9_/-]+\.ccs):\s*(.+)$/i);
     if (match) {
@@ -38,6 +50,12 @@ export function parseSamplesManifest(markdown: string): SampleProject[] {
         const validModes: EntryMode[] = ["critique", "archaeology", "interpret", "create"];
         const projectMode = validModes.includes(mode as EntryMode) ? (mode as EntryMode) : "critique";
 
+        // Parse annotation count - handle both numeric strings and undefined
+        let annotationCount: number | undefined = undefined;
+        if (countStr && !isNaN(parseInt(countStr, 10))) {
+          annotationCount = parseInt(countStr, 10);
+        }
+
         projects.push({
           id: filename.replace(".ccs", ""),
           name,
@@ -45,7 +63,7 @@ export function parseSamplesManifest(markdown: string): SampleProject[] {
           mode: projectMode,
           description,
           era: era || undefined,
-          annotationCount: countStr ? parseInt(countStr, 10) : undefined,
+          annotationCount,
         });
       }
     }
