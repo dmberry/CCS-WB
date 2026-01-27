@@ -22,6 +22,8 @@ Each sample project is defined on a single line with the following format:
 ## Available Sample Projects
 
 - eliza/eliza-1965b-CR.ccs: ELIZA (1965) - Annotated | critique | Complete critique session with 30+ scholarly annotations | 1960s | 30
+- apollo-11-comanche/comanche055.ccs: Apollo 11 - Comanche055 (CM) | critique | Command Module guidance computer source code | 1960s | 0
+- apollo-11-luminary/luminary099.ccs: Apollo 11 - Luminary099 (LM) | critique | Lunar Module guidance computer source code | 1960s | 0
 
 ## Adding Your Own Sample Projects
 
