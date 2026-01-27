@@ -227,9 +227,16 @@ button[class*="bg-burgundy"]:active,
 }
 
 /* === LINKS === */
-a, [class*="text-burgundy"] {
+/* Only underline actual anchor tags, not all burgundy text */
+a {
   color: #00ff00 !important;
   text-decoration: underline;
+}
+
+/* Burgundy text (not links) should NOT be underlined */
+[class*="text-burgundy"]:not(a) {
+  color: #00ff00 !important;
+  text-decoration: none !important;
 }
 
 a:hover {
@@ -317,6 +324,67 @@ a code, a pre,
 .cm-content,
 .cm-line {
   text-decoration: none !important;
+}
+
+/* === ANNOTATION WIDGET FONT SIZES === */
+/* Ensure annotations have readable terminal-sized fonts */
+.cm-annotation-widget,
+.cm-annotation-editor,
+.cm-annotation-display {
+  font-family: 'VT323', 'Courier New', monospace !important;
+  font-size: 18px !important;
+  background: #001500 !important;
+  border: 1px solid #00aa00 !important;
+  color: #00ff00 !important;
+}
+
+.cm-annotation-widget *,
+.cm-annotation-editor *,
+.cm-annotation-display * {
+  font-family: 'VT323', 'Courier New', monospace !important;
+  font-size: 18px !important;
+  color: #00ff00 !important;
+}
+
+.cm-annotation-input,
+.cm-annotation-input textarea {
+  font-size: 18px !important;
+  background: #001a00 !important;
+  border: 1px solid #00aa00 !important;
+  color: #00ff00 !important;
+}
+
+.cm-annotation-type-select {
+  font-size: 16px !important;
+  background: #001a00 !important;
+  border: 1px solid #00aa00 !important;
+  color: #00ff00 !important;
+}
+
+.cm-annotation-prefix,
+.cm-annotation-content {
+  font-size: 18px !important;
+}
+
+.cm-annotation-btn {
+  font-family: 'VT323', 'Courier New', monospace !important;
+  font-size: 16px !important;
+  background: #003300 !important;
+  border: 1px solid #00ff00 !important;
+  color: #00ff00 !important;
+}
+
+.cm-annotation-btn:hover {
+  background: #004400 !important;
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.5) !important;
+}
+
+/* Annotation preview/display text */
+.annotation-preview,
+.annotation-preview *,
+[class*="annotation-content"],
+[class*="annotation-content"] * {
+  font-size: 18px !important;
 }
 
 /* === ELIZA CREDIT BOX === */
