@@ -17,6 +17,14 @@
 
 ---
 
+## Development Resources
+
+| Document | Description |
+|----------|-------------|
+| [Human Configuration](./HUMAN_CONFIGURATION.md) | How to configure and maintain a Human for LLM-assisted development |
+
+---
+
 ## Quick Start
 
 ### Local Development Only
