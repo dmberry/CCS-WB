@@ -204,9 +204,16 @@ button[class*="bg-burgundy"]:active,
 }
 
 /* === LINKS === */
-a, [class*="text-burgundy"] {
+/* Only underline actual anchor tags, not all burgundy text */
+a {
   color: #000000 !important;
   text-decoration: underline;
+}
+
+/* Burgundy text (not links) should NOT be underlined */
+[class*="text-burgundy"]:not(a) {
+  color: #000000 !important;
+  text-decoration: none !important;
 }
 
 /* Links containing code should not have underlines */

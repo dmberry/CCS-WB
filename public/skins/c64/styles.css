@@ -621,6 +621,43 @@ header .font-mono {
   background: #4040a0 !important;
   border: 2px solid #a0a0f0 !important;
   color: #a0a0f0 !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+/* Select dropdown options */
+.cm-annotation-type-select option,
+select option {
+  background: #4040a0 !important;
+  color: #a0a0f0 !important;
+}
+
+/* Annotation settings panel/popover */
+[class*="annotation"] [role="listbox"],
+[class*="annotation"] [role="menu"],
+[class*="annotation"] .popover,
+[class*="annotation"] [class*="dropdown"],
+.annotation-settings,
+.annotation-popover {
+  background: #303080 !important;
+  border: 2px solid #a0a0f0 !important;
+  color: #a0a0f0 !important;
+}
+
+/* Annotation settings buttons and options */
+[class*="annotation"] button,
+[class*="annotation"] [role="option"],
+[class*="annotation"] [role="menuitem"] {
+  background: #4040a0 !important;
+  color: #a0a0f0 !important;
+  border: 1px solid #a0a0f0 !important;
+}
+
+[class*="annotation"] button:hover,
+[class*="annotation"] [role="option"]:hover,
+[class*="annotation"] [role="menuitem"]:hover {
+  background: #a0a0f0 !important;
+  color: #4040a0 !important;
 }
 
 .cm-annotation-prefix,
@@ -638,6 +675,84 @@ header .font-mono {
 
 .cm-annotation-btn:hover {
   background: #c0c0ff !important;
+}
+
+/* === MODALS AND DIALOGS === */
+[role="dialog"],
+.modal,
+.modal-content,
+[class*="Modal"] {
+  background: #303080 !important;
+  border: 4px solid #a0a0f0 !important;
+  color: #a0a0f0 !important;
+}
+
+[role="dialog"] *,
+.modal *,
+.modal-content *,
+[class*="Modal"] * {
+  color: #a0a0f0 !important;
+}
+
+[role="dialog"] input,
+[role="dialog"] select,
+[role="dialog"] textarea,
+.modal input,
+.modal select,
+.modal textarea {
+  background: #4040a0 !important;
+  border: 2px solid #a0a0f0 !important;
+  color: #a0a0f0 !important;
+}
+
+[role="dialog"] button,
+.modal button {
+  background: #4040a0 !important;
+  border: 2px solid #a0a0f0 !important;
+  color: #a0a0f0 !important;
+}
+
+[role="dialog"] button:hover,
+.modal button:hover {
+  background: #a0a0f0 !important;
+  color: #4040a0 !important;
+}
+
+/* Settings panels */
+[class*="settings"],
+[class*="Settings"],
+[class*="config"],
+[class*="Config"] {
+  background: #303080 !important;
+  color: #a0a0f0 !important;
+}
+
+/* Checkboxes and radio buttons */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: #a0a0f0 !important;
+}
+
+/* Dropdown menus */
+[role="menu"],
+[role="listbox"],
+.dropdown-menu,
+[class*="dropdown"] {
+  background: #303080 !important;
+  border: 2px solid #a0a0f0 !important;
+}
+
+[role="menuitem"],
+[role="option"] {
+  color: #a0a0f0 !important;
+}
+
+[role="menuitem"]:hover,
+[role="option"]:hover,
+[role="menuitem"][data-highlighted],
+[role="option"][data-highlighted] {
+  background: #a0a0f0 !important;
+  color: #4040a0 !important;
 }
 
 /* === FINAL CLEANUP === */
