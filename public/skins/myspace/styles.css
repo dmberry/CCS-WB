@@ -317,12 +317,19 @@ button[class*="bg-gold"],
 }
 
 /* === LINKS === */
-a, [class*="text-burgundy"] {
+/* Only underline actual anchor tags, not all burgundy text */
+a {
   color: hsl(216 100% 35%) !important;
   text-decoration: underline;
 }
 
-a:hover, [class*="hover:text-burgundy"]:hover {
+/* Burgundy text (not links) should NOT be underlined */
+[class*="text-burgundy"]:not(a) {
+  color: hsl(216 100% 35%) !important;
+  text-decoration: none !important;
+}
+
+a:hover {
   color: hsl(30 100% 45%) !important;
 }
 

@@ -1553,50 +1553,31 @@ ${reason.trim()}
     }
   }, [supabase, user]);
 
-  // Admin delete - can delete any project (for cleaning up library)
+  // Admin delete - soft delete any project (for cleaning up library)
+  // Uses UPDATE with deleted_at because RLS allows admin updates but not deletes
   const adminDeleteProject = useCallback(async (projectId: string) => {
     if (!supabase || !user) {
       return { error: new Error("Not authenticated") };
     }
 
     try {
-      // Delete annotations first (FK constraint)
+      // Soft delete by setting deleted_at (works with admin UPDATE policy)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
-        .from("annotations")
-        .delete()
-        .eq("project_id", projectId);
-
-      // Delete code files
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
-        .from("code_files")
-        .delete()
-        .eq("project_id", projectId);
-
-      // Delete project memberships
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
-        .from("project_members")
-        .delete()
-        .eq("project_id", projectId);
-
-      // Delete project invites
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any)
-        .from("project_invites")
-        .delete()
-        .eq("project_id", projectId);
-
-      // Delete the project (admin RLS should allow this)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
+      const { error, data } = await (supabase as any)
         .from("projects")
-        .delete()
-        .eq("id", projectId);
+        .update({
+          deleted_at: new Date().toISOString(),
+        })
+        .eq("id", projectId)
+        .select();
 
       if (error) {
         return { error: new Error(error.message) };
+      }
+
+      // Check if update actually affected any rows
+      if (!data || data.length === 0) {
+        return { error: new Error("Project not found or could not be deleted") };
       }
 
       // Update local state
