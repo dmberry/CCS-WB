@@ -1516,7 +1516,13 @@ export function CodeEditorPanel({
                       )}
                       {/* Filename button */}
                       <button
-                        onClick={() => setSelectedFileId(file.id)}
+                        onClick={() => {
+                          // If in edit mode and selecting a different file, switch to annotate mode first
+                          if (editorMode === "edit" && file.id !== selectedFileId) {
+                            setEditorMode("annotate");
+                          }
+                          setSelectedFileId(file.id);
+                        }}
                         className="flex-1 min-w-0 py-1 pr-2 text-left overflow-hidden flex items-center gap-0.5"
                         title={file.name}
                       >
