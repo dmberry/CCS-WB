@@ -287,7 +287,7 @@ export function MembersModal() {
                       </button>
                     </div>
                     <p className="font-sans text-ui-xs text-slate">
-                      Anyone with this link can join as {ROLE_LABELS[inviteRole].toLowerCase()}. Link expires in 7 days.
+                      Anyone with this link can join as {ROLE_LABELS[inviteRole].toLowerCase()}. Link expires in 1 month.
                     </p>
                   </div>
                 )}
