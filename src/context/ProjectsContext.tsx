@@ -1470,25 +1470,22 @@ _Add relevant references, documentation links, or related scholarship:_
   }, [supabase, user]);
 
   // Reject a submitted project (admin only)
-  // Uses same pattern as approveProject - set owner_id to null to satisfy RLS WITH CHECK
-  // The project becomes a "reviewed" library item that the user can copy back
+  // Returns project to owner as draft so they can edit and resubmit
+  // Requires RLS policy: "Admins can update any project"
   const rejectProject = useCallback(async (projectId: string, reason?: string) => {
     if (!supabase || !user) {
       return { error: new Error("Not authenticated") };
     }
 
     try {
-      // Set owner_id to null (like approveProject) to satisfy RLS WITH CHECK
-      // Use "reviewed" status (not "approved") to indicate rejection
-      // The project stays in the system but isn't in the public library
+      // Reset to draft status - owner keeps the project
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error, data } = await (supabase as any)
         .from("projects")
         .update({
           is_public: false,
-          owner_id: null, // Required for RLS to allow admin updates
-          accession_status: "reviewed" as AccessionStatus,
-          reviewed_at: new Date().toISOString(),
+          accession_status: "draft" as AccessionStatus,
+          submitted_at: null,
         })
         .eq("id", projectId)
         .eq("accession_status", "submitted") // Only reject submitted projects
