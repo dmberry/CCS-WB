@@ -738,6 +738,118 @@ button[class*="annotation-type"],
   text-shadow: 0 0 3px #00ff00 !important;
 }
 
+/* === MODALS AND DIALOGS === */
+[role="dialog"],
+.modal,
+.modal-content,
+[class*="Modal"] {
+  background: #001a00 !important;
+  border: 1px solid #00ff00 !important;
+  color: #00ff00 !important;
+  box-shadow: 0 0 30px rgba(0, 255, 0, 0.3) !important;
+}
+
+[role="dialog"] *,
+.modal *,
+.modal-content *,
+[class*="Modal"] * {
+  color: #00ff00 !important;
+}
+
+[role="dialog"] input,
+[role="dialog"] select,
+[role="dialog"] textarea,
+.modal input,
+.modal select,
+.modal textarea {
+  background: #002200 !important;
+  border: 1px solid #00aa00 !important;
+  color: #00ff00 !important;
+}
+
+[role="dialog"] button,
+.modal button {
+  background: #003300 !important;
+  border: 1px solid #00ff00 !important;
+  color: #00ff00 !important;
+}
+
+[role="dialog"] button:hover,
+.modal button:hover {
+  background: #004400 !important;
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.4) !important;
+}
+
+/* Settings panels */
+[class*="settings"],
+[class*="Settings"],
+[class*="config"],
+[class*="Config"] {
+  background: #001a00 !important;
+  color: #00ff00 !important;
+}
+
+/* Checkboxes and radio buttons */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: #00ff00 !important;
+}
+
+/* Dropdown menus */
+[role="menu"],
+[role="listbox"],
+.dropdown-menu,
+[class*="dropdown"] {
+  background: #001a00 !important;
+  border: 1px solid #00ff00 !important;
+}
+
+[role="menuitem"],
+[role="option"] {
+  color: #00ff00 !important;
+}
+
+[role="menuitem"]:hover,
+[role="option"]:hover,
+[role="menuitem"][data-highlighted],
+[role="option"][data-highlighted] {
+  background: #003300 !important;
+  color: #88ff88 !important;
+}
+
+/* Select dropdown options */
+.cm-annotation-type-select option,
+select option {
+  background: #001a00 !important;
+  color: #00ff00 !important;
+}
+
+/* Annotation settings panel/popover */
+[class*="annotation"] [role="listbox"],
+[class*="annotation"] [role="menu"],
+[class*="annotation"] .popover,
+[class*="annotation"] [class*="dropdown"],
+.annotation-settings,
+.annotation-popover {
+  background: #001a00 !important;
+  border: 1px solid #00ff00 !important;
+  color: #00ff00 !important;
+}
+
+/* Annotation settings buttons and options */
+[class*="annotation"] [role="option"],
+[class*="annotation"] [role="menuitem"] {
+  background: #002200 !important;
+  color: #00ff00 !important;
+  border: 1px solid #004400 !important;
+}
+
+[class*="annotation"] [role="option"]:hover,
+[class*="annotation"] [role="menuitem"]:hover {
+  background: #003300 !important;
+  color: #88ff88 !important;
+}
+
 /* === FINAL CLEANUP === */
 .text-slate-muted {
   background: transparent !important;
