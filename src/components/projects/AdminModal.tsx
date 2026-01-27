@@ -139,7 +139,7 @@ export function AdminModal() {
     setIsLoadingUsers(false);
   };
 
-  // Fetch orphaned projects (owner_id is null)
+  // Fetch orphaned projects (owner_id is null, but NOT library projects)
   const fetchOrphanedProjects = async () => {
     setIsLoadingOrphaned(true);
     const supabase = getSupabaseClient();
@@ -148,10 +148,12 @@ export function AdminModal() {
       return;
     }
 
+    // Library projects intentionally have owner_id = null, so exclude them
     const { data, error } = await (supabase as any)
       .from("projects")
-      .select("id, name, description, mode, created_at, updated_at")
+      .select("id, name, description, mode, created_at, updated_at, is_public")
       .is("owner_id", null)
+      .eq("is_public", false)  // Exclude library projects
       .order("updated_at", { ascending: false });
 
     if (error) {
