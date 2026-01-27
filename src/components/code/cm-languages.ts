@@ -30,6 +30,8 @@ export const LANGUAGE_COLORS: Record<string, { light: string; dark: string }> = 
   fortran: { light: "#4d148c", dark: "#7b1fa2" }, // FORTRAN deep purple
   cobol: { light: "#0d47a1", dark: "#1976d2" }, // COBOL blue
   basic: { light: "#0066cc", dark: "#4da6ff" }, // BASIC Dartmouth blue
+  agc: { light: "#8b4513", dark: "#cd853f" }, // AGC saddle brown (Apollo missions)
+  assembly: { light: "#696969", dark: "#a9a9a9" }, // Assembly grey
 };
 
 /**
@@ -186,8 +188,10 @@ const extensionToLanguage: Record<string, string> = {
   // BASIC - has syntax highlighting
   bas: "basic",
   // Assembly
-  asm: "plain",
-  s: "plain",
+  asm: "assembly",
+  s: "assembly",
+  // AGC (Apollo Guidance Computer)
+  agc: "agc",
   // MAD (Michigan Algorithm Decoder) - has syntax highlighting
   mad: "mad",
   // SLIP (Symmetric List Processor)
@@ -257,8 +261,9 @@ const languageAliases: Record<string, string> = {
   fortran: "fortran",
   cobol: "cobol",
   pascal: "plain",
-  assembly: "plain",
-  asm: "plain",
+  assembly: "assembly",
+  asm: "assembly",
+  agc: "agc", // Apollo Guidance Computer assembly
   mad: "mad", // Michigan Algorithm Decoder - has syntax highlighting
   slip: "plain", // Symmetric List Processor
   pli: "plain", // PL/I

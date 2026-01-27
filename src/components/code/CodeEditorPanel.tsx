@@ -101,7 +101,7 @@ interface CodeEditorPanelProps {
 
 // Historical punch card languages that typically used 80-column format
 const PUNCH_CARD_LANGUAGES = [
-  'fortran', 'cobol', 'basic', 'pascal', 'assembly', 'asm',
+  'fortran', 'cobol', 'basic', 'pascal', 'assembly', 'asm', 'agc',
   // Early variants
   'fortran77', 'fortran90', 'f77', 'f90', 'cob', 'bas',
   // MIT/early AI languages
@@ -277,7 +277,7 @@ const LANGUAGE_CATEGORIES: Record<string, FileCategory> = {
   lisp: "code", scheme: "code", prolog: "code", haskell: "code",
   erlang: "code", elixir: "code", clojure: "code", lua: "code",
   matlab: "code", julia: "code", dart: "code", groovy: "code",
-  assembly: "code", asm: "code",
+  assembly: "code", asm: "code", agc: "code",
   // Web
   html: "web", css: "web", jsx: "web", tsx: "web", vue: "web",
   // Shell/scripting
