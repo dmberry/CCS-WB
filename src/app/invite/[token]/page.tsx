@@ -13,6 +13,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useProjects } from "@/context/ProjectsContext";
+import { useSession } from "@/context/SessionContext";
 import { cn } from "@/lib/utils";
 import { Users, Loader2, AlertCircle, LogIn, CheckCircle } from "lucide-react";
 import { LoginModal } from "@/components/auth/LoginModal";
@@ -26,6 +27,7 @@ export default function InvitePage() {
 
   const { isAuthenticated, isLoading: authLoading, setShowLoginModal } = useAuth();
   const { joinProjectByInvite, loadProject, setCurrentProjectId } = useProjects();
+  const { importSession } = useSession();
 
   const [status, setStatus] = useState<InviteStatus>("loading");
   const [error, setError] = useState<string | null>(null);
@@ -54,11 +56,13 @@ export default function InvitePage() {
       setProjectName(project.name);
       setStatus("success");
 
-      // Load the project and redirect
+      // Load the project and import session data
       setCurrentProjectId(project.id);
       const { session } = await loadProject(project.id);
 
       if (session) {
+        // Import session to load code files into state
+        importSession(session);
         // Small delay to show success state
         setTimeout(() => {
           router.push("/conversation");
@@ -70,7 +74,7 @@ export default function InvitePage() {
         }, 1500);
       }
     }
-  }, [token, joinProjectByInvite, loadProject, setCurrentProjectId, router]);
+  }, [token, joinProjectByInvite, loadProject, setCurrentProjectId, importSession, router]);
 
   // Effect to handle initial state and auto-join
   useEffect(() => {
