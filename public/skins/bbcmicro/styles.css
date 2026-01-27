@@ -2,8 +2,8 @@
 /* BBC Computer 32K. Acorn DFS. BASIC. */
 /* The machine that taught a generation to code */
 
-/* === IMPORT TELETEXT/BBC FONT === */
-@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+/* === IMPORT BBC FONT === */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 /* === ALWAYS DARK MODE - BBC Micro phosphor display === */
 body {
@@ -24,16 +24,16 @@ main {
 
 /* === BBC MICRO OFF-WHITE TEXT === */
 * {
-  font-family: 'VT323', 'Courier New', 'Lucida Console', monospace !important;
+  font-family: 'Press Start 2P', 'Courier New', 'Lucida Console', monospace !important;
 }
 
-/* Base font size - VT323 renders small so boost it */
+/* Base font size - Press Start 2P is chunky so use moderate size */
 html {
-  font-size: 18px !important;
+  font-size: 14px !important;
 }
 
 body {
-  font-size: 18px !important;
+  font-size: 14px !important;
 }
 
 h1, h2, h3, h4, .font-display {
@@ -90,10 +90,10 @@ header button:active {
 }
 
 header h1 {
-  font-size: 18px !important;
+  font-size: 12px !important;
   font-weight: bold !important;
   text-transform: uppercase !important;
-  letter-spacing: 2px !important;
+  letter-spacing: 1px !important;
 }
 
 /* BBC prompt style */
@@ -303,7 +303,7 @@ input::placeholder {
   border: 2px solid #e8e8d0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;
-  font-family: 'VT323', 'Courier New', monospace !important;
+  font-family: 'Press Start 2P', 'Courier New', monospace !important;
   position: relative !important;
   margin-top: 24px !important;
 }
@@ -319,7 +319,7 @@ input::placeholder {
   background: #e8e8d0 !important;
   border: 2px solid #e8e8d0;
   border-bottom: 1px solid #a0a090;
-  font-family: 'VT323', 'Courier New', monospace !important;
+  font-family: 'Press Start 2P', 'Courier New', monospace !important;
   font-size: 14px;
   font-weight: bold;
   line-height: 18px;
@@ -332,7 +332,7 @@ input::placeholder {
 .cm-editor *,
 pre *, code * {
   color: #e8e8d0 !important;
-  font-family: 'VT323', 'Courier New', monospace !important;
+  font-family: 'Press Start 2P', 'Courier New', monospace !important;
 }
 
 /* Code content area */
@@ -350,7 +350,7 @@ pre *, code * {
 
 .cm-lineNumbers .cm-gutterElement {
   color: #a0a090 !important;
-  font-family: 'VT323', 'Courier New', monospace !important;
+  font-family: 'Press Start 2P', 'Courier New', monospace !important;
 }
 
 /* Active line highlight */
@@ -383,7 +383,7 @@ pre, code {
   background: #000000 !important;
   color: #e8e8d0 !important;
   border: 1px solid #a0a090 !important;
-  font-family: 'VT323', 'Courier New', monospace !important;
+  font-family: 'Press Start 2P', 'Courier New', monospace !important;
 }
 
 /* === BBC MICRO CREDIT BOX === */
@@ -608,8 +608,8 @@ main code * {
 .cm-annotation-widget,
 .cm-annotation-editor,
 .cm-annotation-display {
-  font-family: 'VT323', 'Courier New', monospace !important;
-  font-size: 18px !important;
+  font-family: 'Press Start 2P', 'Courier New', monospace !important;
+  font-size: 14px !important;
   background: #0a0a0a !important;
   border: 1px solid #e8e8d0 !important;
   color: #e8e8d0 !important;
@@ -618,14 +618,14 @@ main code * {
 .cm-annotation-widget *,
 .cm-annotation-editor *,
 .cm-annotation-display * {
-  font-family: 'VT323', 'Courier New', monospace !important;
-  font-size: 18px !important;
+  font-family: 'Press Start 2P', 'Courier New', monospace !important;
+  font-size: 14px !important;
   color: #e8e8d0 !important;
 }
 
 .cm-annotation-input,
 .cm-annotation-input textarea {
-  font-size: 18px !important;
+  font-size: 14px !important;
   background: #000000 !important;
   border: 1px solid #a0a090 !important;
   color: #e8e8d0 !important;
@@ -642,11 +642,11 @@ main code * {
 
 .cm-annotation-prefix,
 .cm-annotation-content {
-  font-size: 18px !important;
+  font-size: 14px !important;
 }
 
 .cm-annotation-btn {
-  font-family: 'VT323', 'Courier New', monospace !important;
+  font-family: 'Press Start 2P', 'Courier New', monospace !important;
   font-size: 16px !important;
   background: #1a1a1a !important;
   border: 1px solid #e8e8d0 !important;
@@ -663,7 +663,7 @@ main code * {
 .annotation-preview *,
 [class*="annotation-content"],
 [class*="annotation-content"] * {
-  font-size: 18px !important;
+  font-size: 14px !important;
 }
 
 /* === MODALS AND DIALOGS === */
@@ -788,7 +788,7 @@ button[class*="annotation-type"],
   background: #1a1a1a !important;
   border: 1px solid #e8e8d0 !important;
   color: #e8e8d0 !important;
-  font-family: 'VT323', monospace !important;
+  font-family: 'Press Start 2P', monospace !important;
   font-size: 14px !important;
 }
 
