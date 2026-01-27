@@ -774,6 +774,11 @@ _Add relevant references, documentation links, or related scholarship:_
         return { error: new Error(error.message) };
       }
 
+      // Clear currentProjectId if it matches the deleted project (defensive check)
+      if (currentProjectId === projectId) {
+        setCurrentProjectId(null);
+      }
+
       // Remove from trashedProjects in local state
       setTrashedProjects(prev => prev.filter(p => p.id !== projectId));
 
@@ -781,7 +786,7 @@ _Add relevant references, documentation links, or related scholarship:_
     } catch (error) {
       return { error: error as Error };
     }
-  }, [supabase, user]);
+  }, [supabase, user, currentProjectId]);
 
   // Empty trash - permanently delete all trashed projects
   const emptyTrash = useCallback(async () => {
@@ -830,6 +835,11 @@ _Add relevant references, documentation links, or related scholarship:_
         return { error: new Error(error.message) };
       }
 
+      // Clear currentProjectId if it was among the trashed projects (defensive check)
+      if (currentProjectId && trashedIds.includes(currentProjectId)) {
+        setCurrentProjectId(null);
+      }
+
       // Clear trashedProjects in local state
       setTrashedProjects([]);
 
@@ -837,7 +847,7 @@ _Add relevant references, documentation links, or related scholarship:_
     } catch (error) {
       return { error: error as Error };
     }
-  }, [supabase, user, trashedProjects]);
+  }, [supabase, user, trashedProjects, currentProjectId]);
 
   // Get project members with profile info
   const getProjectMembers = useCallback(async (projectId: string) => {
