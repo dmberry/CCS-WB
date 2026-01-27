@@ -86,7 +86,7 @@ export function AdminModal() {
     libraryProjects,
     approveProject,
     rejectProject,
-    adminDeleteProject,
+    adminHardDeleteProject,
     adminRenameProject,
     deaccessionProject,
     adminDuplicateProject,
@@ -149,10 +149,12 @@ export function AdminModal() {
     }
 
     // Library projects intentionally have owner_id = null, so exclude them
+    // Also exclude soft-deleted projects
     const { data, error } = await (supabase as any)
       .from("projects")
       .select("id, name, description, mode, created_at, updated_at, is_public")
       .is("owner_id", null)
+      .is("deleted_at", null)  // Exclude soft-deleted projects
       .eq("is_public", false)  // Exclude library projects
       .order("updated_at", { ascending: false });
 
@@ -196,12 +198,12 @@ export function AdminModal() {
     setActionLoading(null);
   };
 
-  // Delete orphaned project
+  // Delete orphaned project - permanently removes it
   const handleDeleteOrphanedProject = async (projectId: string) => {
     setActionLoading(`delete-orphan-${projectId}`);
     setError(null);
 
-    const { error } = await adminDeleteProject(projectId);
+    const { error } = await adminHardDeleteProject(projectId);
 
     if (error) {
       setError(error.message);
@@ -445,12 +447,12 @@ export function AdminModal() {
     }
   };
 
-  // Admin delete handler
+  // Admin delete handler - permanently deletes project and all related data
   const handleDelete = async (projectId: string) => {
     setActionLoading(`delete-${projectId}`);
     setError(null);
 
-    const { error } = await adminDeleteProject(projectId);
+    const { error } = await adminHardDeleteProject(projectId);
 
     if (error) {
       setError(error.message);
@@ -458,6 +460,7 @@ export function AdminModal() {
       // Refresh the lists to ensure sync with server
       await fetchPendingSubmissions();
       await fetchLibraryProjects();
+      await fetchOrphanedProjects();
     }
 
     setDeleteConfirmId(null);

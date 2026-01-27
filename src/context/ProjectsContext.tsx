@@ -85,6 +85,7 @@ interface ProjectsContextValue {
   approveProject: (projectId: string) => Promise<{ error: Error | null }>;
   rejectProject: (projectId: string, reason?: string) => Promise<{ error: Error | null }>;
   adminDeleteProject: (projectId: string) => Promise<{ error: Error | null }>;
+  adminHardDeleteProject: (projectId: string) => Promise<{ error: Error | null }>;
   adminRenameProject: (projectId: string, newName: string) => Promise<{ error: Error | null }>;
   deaccessionProject: (projectId: string) => Promise<{ error: Error | null }>;
   adminDuplicateProject: (projectId: string) => Promise<{ project: Project | null; error: Error | null }>;
@@ -1093,6 +1094,7 @@ _Add relevant references, documentation links, or related scholarship:_
         .from("projects")
         .select("*")
         .eq("is_public", true)
+        .is("deleted_at", null) // Exclude soft-deleted projects
         .in("accession_status", ["approved", "submitted"])
         .order("approved_at", { ascending: false, nullsFirst: false })
         .order("submitted_at", { ascending: false });
@@ -1382,6 +1384,7 @@ _Add relevant references, documentation links, or related scholarship:_
         .from("projects")
         .select("*")
         .eq("is_public", true)
+        .is("deleted_at", null) // Exclude soft-deleted projects
         .eq("accession_status", "submitted")
         .order("submitted_at", { ascending: true });
 
@@ -1561,15 +1564,15 @@ ${reason.trim()}
     }
   }, [supabase, user]);
 
-  // Admin delete - soft delete any project (for cleaning up library)
-  // Uses UPDATE with deleted_at because RLS allows admin updates but not deletes
+  // Admin soft delete - marks project as deleted but keeps data
+  // Uses UPDATE with deleted_at
   const adminDeleteProject = useCallback(async (projectId: string) => {
     if (!supabase || !user) {
       return { error: new Error("Not authenticated") };
     }
 
     try {
-      // Soft delete by setting deleted_at (works with admin UPDATE policy)
+      // Soft delete by setting deleted_at
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error, data } = await (supabase as any)
         .from("projects")
@@ -1586,6 +1589,65 @@ ${reason.trim()}
       // Check if update actually affected any rows
       if (!data || data.length === 0) {
         return { error: new Error("Project not found or could not be deleted") };
+      }
+
+      // Update local state
+      setProjects(prev => prev.filter(p => p.id !== projectId));
+      setPendingSubmissions(prev => prev.filter(p => p.id !== projectId));
+      setLibraryProjects(prev => prev.filter(p => p.id !== projectId));
+
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  }, [supabase, user]);
+
+  // Admin hard delete - permanently removes project and all related data
+  // Requires RLS policy: "Admins can delete any project"
+  const adminHardDeleteProject = useCallback(async (projectId: string) => {
+    if (!supabase || !user) {
+      return { error: new Error("Not authenticated") };
+    }
+
+    try {
+      // Delete in order due to FK constraints
+      // 1. Delete annotations
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("annotations")
+        .delete()
+        .eq("project_id", projectId);
+
+      // 2. Delete code files
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("code_files")
+        .delete()
+        .eq("project_id", projectId);
+
+      // 3. Delete project members
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("project_members")
+        .delete()
+        .eq("project_id", projectId);
+
+      // 4. Delete project invites
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("project_invites")
+        .delete()
+        .eq("project_id", projectId);
+
+      // 5. Delete the project itself
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("projects")
+        .delete()
+        .eq("id", projectId);
+
+      if (error) {
+        return { error: new Error(error.message) };
       }
 
       // Update local state
@@ -1838,6 +1900,7 @@ ${reason.trim()}
         approveProject,
         rejectProject,
         adminDeleteProject,
+        adminHardDeleteProject,
         adminRenameProject,
         deaccessionProject,
         adminDuplicateProject,
