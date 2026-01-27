@@ -762,6 +762,13 @@ _Add relevant references, documentation links, or related scholarship:_
         .delete()
         .eq("project_id", projectId);
 
+      // Delete project invites
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("project_invites")
+        .delete()
+        .eq("project_id", projectId);
+
       // Delete the project itself
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any)
@@ -820,6 +827,13 @@ _Add relevant references, documentation links, or related scholarship:_
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any)
         .from("project_members")
+        .delete()
+        .in("project_id", trashedIds);
+
+      // Delete project invites for all trashed projects
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("project_invites")
         .delete()
         .in("project_id", trashedIds);
 
@@ -1564,6 +1578,13 @@ ${reason.trim()}
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase as any)
         .from("project_members")
+        .delete()
+        .eq("project_id", projectId);
+
+      // Delete project invites
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from("project_invites")
         .delete()
         .eq("project_id", projectId);
 

@@ -452,6 +452,10 @@ export function AdminModal() {
 
     if (error) {
       setError(error.message);
+    } else {
+      // Refresh the lists to ensure sync with server
+      await fetchPendingSubmissions();
+      await fetchLibraryProjects();
     }
 
     setDeleteConfirmId(null);
@@ -541,41 +545,48 @@ export function AdminModal() {
       {/* Modal */}
       <div className="relative bg-popover rounded-sm shadow-lg border border-parchment max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden modal-content">
         {/* Header */}
-        <div className="relative px-5 py-4 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20 border-b border-parchment">
+        <div className="relative px-5 py-4 border-b border-parchment">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-500/10 rounded-lg">
-              <Shield className="h-5 w-5 text-amber-600" />
+            <div className="p-2 bg-burgundy/10 rounded-lg">
+              <Shield className="h-5 w-5 text-burgundy" />
             </div>
             <div>
-              <h2 className="font-serif text-ui-title text-ink">Admin: Library Management</h2>
-              <p className="font-sans text-ui-xs text-slate">
-                Review submissions and manage library projects
+              <h2 className="font-serif text-ui-title text-ink">Library Management</h2>
+              <p className="font-sans text-ui-xs text-slate flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-burgundy/10 text-burgundy text-[10px] font-medium">
+                  <Shield className="h-2.5 w-2.5" />
+                  Admin
+                </span>
+                Review submissions and manage library
               </p>
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="absolute top-4 right-4 p-1.5 hover:bg-parchment/50 rounded-lg transition-colors"
+            className="absolute top-4 right-4 p-1.5 hover:bg-cream rounded-lg transition-colors"
           >
             <X className="h-4 w-4 text-slate" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="px-5 py-2 border-b border-parchment bg-cream/30 dark:bg-slate-800/30 flex gap-2">
+        <div className="px-5 py-2 border-b border-parchment flex gap-2">
           <button
             onClick={() => setActiveTab("pending")}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium transition-colors",
               activeTab === "pending"
-                ? "bg-amber-500 text-white"
-                : "bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50"
+                ? "bg-burgundy text-ivory"
+                : "bg-cream text-slate hover:bg-parchment dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
             )}
           >
             <Clock className="h-3.5 w-3.5" />
             Pending
             {pendingSubmissions.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 bg-white/30 rounded-full text-[10px]">
+              <span className={cn(
+                "ml-1 px-1.5 py-0.5 rounded-full text-[10px]",
+                activeTab === "pending" ? "bg-ivory/30 text-ivory" : "bg-burgundy/20 text-burgundy"
+              )}>
                 {pendingSubmissions.length}
               </span>
             )}
@@ -585,14 +596,17 @@ export function AdminModal() {
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium transition-colors",
               activeTab === "approved"
-                ? "bg-emerald-500 text-white"
-                : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
+                ? "bg-burgundy text-ivory"
+                : "bg-cream text-slate hover:bg-parchment dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
             )}
           >
             <Library className="h-3.5 w-3.5" />
             Library
             {libraryProjects.filter(p => p.accession_status === "approved").length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 bg-white/30 rounded-full text-[10px]">
+              <span className={cn(
+                "ml-1 px-1.5 py-0.5 rounded-full text-[10px]",
+                activeTab === "approved" ? "bg-ivory/30 text-ivory" : "bg-slate/20 text-slate"
+              )}>
                 {libraryProjects.filter(p => p.accession_status === "approved").length}
               </span>
             )}
@@ -602,14 +616,17 @@ export function AdminModal() {
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium transition-colors",
               activeTab === "users"
-                ? "bg-purple-500 text-white"
-                : "bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50"
+                ? "bg-burgundy text-ivory"
+                : "bg-cream text-slate hover:bg-parchment dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
             )}
           >
             <Users className="h-3.5 w-3.5" />
             Users
             {users.filter(u => u.is_admin).length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 bg-white/30 rounded-full text-[10px]">
+              <span className={cn(
+                "ml-1 px-1.5 py-0.5 rounded-full text-[10px]",
+                activeTab === "users" ? "bg-ivory/30 text-ivory" : "bg-slate/20 text-slate"
+              )}>
                 {users.filter(u => u.is_admin).length}
               </span>
             )}
@@ -619,14 +636,17 @@ export function AdminModal() {
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-ui-xs font-medium transition-colors",
               activeTab === "orphaned"
-                ? "bg-slate-500 text-white"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700/50 dark:text-slate-300 dark:hover:bg-slate-700/70"
+                ? "bg-burgundy text-ivory"
+                : "bg-cream text-slate hover:bg-parchment dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
             )}
           >
             <UserX className="h-3.5 w-3.5" />
             Orphaned
             {orphanedProjects.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 bg-white/30 rounded-full text-[10px]">
+              <span className={cn(
+                "ml-1 px-1.5 py-0.5 rounded-full text-[10px]",
+                activeTab === "orphaned" ? "bg-ivory/30 text-ivory" : "bg-slate/20 text-slate"
+              )}>
                 {orphanedProjects.length}
               </span>
             )}
@@ -646,7 +666,7 @@ export function AdminModal() {
                 "w-full pl-9 pr-3 py-2",
                 "font-sans text-ui-base text-ink placeholder:text-slate/50",
                 "bg-ivory dark:bg-slate-800 border border-parchment rounded-lg",
-                "focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+                "focus:outline-none focus:ring-2 focus:ring-burgundy/20 focus:border-burgundy"
               )}
             />
           </div>
@@ -666,13 +686,13 @@ export function AdminModal() {
             <>
               {isLoadingAdmin ? (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-amber-600 mb-2" />
+                  <Loader2 className="h-6 w-6 animate-spin text-burgundy mb-2" />
                   <p className="font-sans text-ui-base text-slate">Loading submissions...</p>
                 </div>
               ) : filteredPending.length === 0 ? (
                 <div className="text-center py-8 px-4">
-                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-900/30 dark:to-amber-800/30 rounded-2xl mb-4 shadow-sm">
-                    <BookOpen className="h-7 w-7 text-amber-600/40" />
+                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-cream to-parchment/50 dark:from-slate-700 dark:to-slate-800 rounded-2xl mb-4 shadow-sm">
+                    <BookOpen className="h-7 w-7 text-slate/40" />
                   </div>
                   <h3 className="font-serif text-ui-lg text-ink mb-2">
                     {searchQuery ? "No matching submissions" : "No pending submissions"}
@@ -688,7 +708,7 @@ export function AdminModal() {
                   {filteredPending.map((project) => (
                     <div
                       key={project.id}
-                      className="group p-4 rounded-xl border border-parchment bg-ivory dark:bg-slate-800/50 hover:border-amber-300 hover:shadow-sm transition-all"
+                      className="group p-4 rounded-xl border border-parchment bg-ivory dark:bg-slate-800/50 hover:border-burgundy/30 hover:shadow-sm transition-all"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -706,8 +726,8 @@ export function AdminModal() {
                                 autoFocus
                                 className={cn(
                                   "flex-1 px-2 py-1 font-serif text-ui-base text-ink",
-                                  "bg-ivory border border-amber-500 rounded",
-                                  "focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                                  "bg-ivory border border-burgundy rounded",
+                                  "focus:outline-none focus:ring-2 focus:ring-burgundy/20"
                                 )}
                               />
                               <button
@@ -1484,7 +1504,7 @@ export function AdminModal() {
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-parchment bg-amber-50/30 dark:bg-amber-900/10">
+        <div className="px-5 py-3 border-t border-parchment">
           <p className="font-sans text-ui-xs text-slate/70 text-center">
             {activeTab === "pending"
               ? `${pendingSubmissions.length} submission${pendingSubmissions.length !== 1 ? "s" : ""} pending review`
