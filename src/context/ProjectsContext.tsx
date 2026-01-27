@@ -1482,7 +1482,7 @@ _Add relevant references, documentation links, or related scholarship:_
       // Use "reviewed" status (not "approved") to indicate rejection
       // The project stays in the system but isn't in the public library
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
+      const { error, data } = await (supabase as any)
         .from("projects")
         .update({
           is_public: false,
@@ -1491,10 +1491,16 @@ _Add relevant references, documentation links, or related scholarship:_
           reviewed_at: new Date().toISOString(),
         })
         .eq("id", projectId)
-        .eq("accession_status", "submitted"); // Only reject submitted projects
+        .eq("accession_status", "submitted") // Only reject submitted projects
+        .select();
 
       if (error) {
         return { error: new Error(error.message) };
+      }
+
+      // Check if update actually affected any rows
+      if (!data || data.length === 0) {
+        return { error: new Error("Project not found or not in submitted status") };
       }
 
       // If a reason was provided, create LIBRARY_REJECT.md in the project
