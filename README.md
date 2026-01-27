@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 2.8.1** | CCS Methodology v2.5
+**Version 2.8.3** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -78,6 +78,14 @@ The critique mode features a three-panel layout for focused code analysis:
 - **Trash can**: Deleted files and projects move to trash for recovery
   - Projects: Trash tab in Projects modal with restore and permanent delete
   - Files: Trash icon in files pane header with dropdown for restore/delete
+
+### Sample Projects
+Load pre-packaged historical code for immediate critique and analysis:
+- **ELIZA (1965)**: Weizenbaum's chatbot with 30+ scholarly annotations
+- **Apollo 11 Comanche055**: Command Module guidance computer source code (85 AGC files)
+- **Apollo 11 Luminary099**: Lunar Module guidance computer source code (90 AGC files)
+
+Sample projects demonstrate annotation practices and provide rich material for exploring computational culture of the 1960s. Add your own samples by editing `public/sample-code/Samples.md`.
 
 ### Conversation Phases
 
