@@ -6,6 +6,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import type {
   SkinManifestEntry,
@@ -14,6 +15,7 @@ import type {
 } from "@/types/app-settings";
 
 const SKINS_STORAGE_KEY = "ccs-wb-skin-settings";
+const APP_SETTINGS_STORAGE_KEY = "ccs-wb-settings";
 
 interface SkinSettings {
   enabled: boolean;
@@ -40,6 +42,32 @@ interface SkinsContextValue {
 }
 
 const SkinsContext = createContext<SkinsContextValue | null>(null);
+
+/**
+ * Get the user's actual theme preference from AppSettings localStorage
+ */
+function getUserThemePreference(): "light" | "dark" | "system" {
+  try {
+    const stored = localStorage.getItem(APP_SETTINGS_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed.theme || "system";
+    }
+  } catch {
+    // Ignore errors
+  }
+  return "system";
+}
+
+/**
+ * Get the effective theme (resolving "system" to actual value)
+ */
+function getEffectiveTheme(preference: "light" | "dark" | "system"): "light" | "dark" {
+  if (preference === "system") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  }
+  return preference;
+}
 
 /**
  * Scope CSS selectors to .skin-active to ensure styles only apply when skin is active.
@@ -156,6 +184,9 @@ export function SkinsProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingSkin, setIsLoadingSkin] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Track if we've forced a theme mode so we can restore it
+  const themeWasForcedRef = useRef(false);
+
   // Load settings from localStorage
   useEffect(() => {
     try {
@@ -266,6 +297,69 @@ export function SkinsProvider({ children }: { children: React.ReactNode }) {
     loadSkin();
   }, [skinsEnabled, activeSkinId, availableSkins]);
 
+  // Helper function to fully clean up skin styles and restore theme
+  const cleanupSkinStyles = useCallback(() => {
+    const root = document.documentElement;
+    root.classList.remove("skin-active");
+
+    // Remove all skin style elements by ID
+    const styleIds = [
+      "ccs-skin-styles",
+      "ccs-skin-fonts",
+    ];
+    styleIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    });
+
+    // Remove any other skin-related styles
+    document.querySelectorAll('style[data-skin-style]').forEach(el => el.remove());
+    document.querySelectorAll('link[data-skin-font]').forEach(el => el.remove());
+
+    // Force reset of common CSS properties on root
+    root.style.removeProperty('font-size');
+    root.style.removeProperty('--font-display');
+    root.style.removeProperty('--font-body');
+    root.style.removeProperty('--font-mono');
+    root.style.removeProperty('--code-font-family');
+    root.style.fontSize = '';
+
+    // Reset body styles that skins commonly override
+    document.body.style.removeProperty('background');
+    document.body.style.removeProperty('background-color');
+    document.body.style.removeProperty('background-image');
+    document.body.style.removeProperty('font-family');
+    document.body.style.removeProperty('color');
+
+    // Remove any inline styles on common elements that skins might have set
+    const elementsToReset = ['header', 'main', 'footer', 'nav', '.cm-editor', '.cm-content'];
+    elementsToReset.forEach(selector => {
+      document.querySelectorAll(selector).forEach(el => {
+        (el as HTMLElement).style.cssText = '';
+      });
+    });
+
+    // IMPORTANT: Restore the user's actual theme preference
+    // This is critical when a skin forced dark/light mode
+    if (themeWasForcedRef.current) {
+      const userThemePref = getUserThemePreference();
+      const effectiveTheme = getEffectiveTheme(userThemePref);
+
+      if (effectiveTheme === "dark") {
+        root.classList.add("dark");
+      } else {
+        root.classList.remove("dark");
+      }
+      themeWasForcedRef.current = false;
+    }
+
+    // Trigger a reflow to ensure styles are recalculated
+    void root.offsetHeight;
+
+    // Dispatch a custom event that AppSettingsContext can listen for
+    window.dispatchEvent(new CustomEvent('skin-disabled'));
+  }, []);
+
   // Apply skin styles via injected <style> element
   useEffect(() => {
     const styleId = "ccs-skin-styles";
@@ -361,7 +455,7 @@ export function SkinsProvider({ children }: { children: React.ReactNode }) {
       const fontStyle = document.getElementById(fontStyleId);
       if (fontStyle) fontStyle.remove();
     };
-  }, [activeSkin, skinsEnabled]);
+  }, [activeSkin, skinsEnabled, cleanupSkinStyles]);
 
   // Handle skin mode forcing theme
   useEffect(() => {
@@ -371,11 +465,13 @@ export function SkinsProvider({ children }: { children: React.ReactNode }) {
     const root = document.documentElement;
 
     if (mode === "light-only") {
+      themeWasForcedRef.current = true;
       root.classList.remove("dark");
     } else if (mode === "dark-only") {
+      themeWasForcedRef.current = true;
       root.classList.add("dark");
     }
-    // "both" - let user control
+    // "both" - let user control, don't set the flag
   }, [activeSkin, skinsEnabled]);
 
   // Determine if skin forces a mode
@@ -387,55 +483,6 @@ export function SkinsProvider({ children }: { children: React.ReactNode }) {
         ? "dark"
         : null
       : null;
-
-  // Helper function to fully clean up skin styles
-  const cleanupSkinStyles = useCallback(() => {
-    const root = document.documentElement;
-    root.classList.remove("skin-active");
-
-    // Remove all skin style elements by ID
-    const styleIds = [
-      "ccs-skin-styles",
-      "ccs-skin-fonts",
-    ];
-    styleIds.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.remove();
-    });
-
-    // Remove any other skin-related styles
-    document.querySelectorAll('style[data-skin-style]').forEach(el => el.remove());
-    document.querySelectorAll('link[data-skin-font]').forEach(el => el.remove());
-
-    // Force reset of common CSS properties on root
-    root.style.removeProperty('font-size');
-    root.style.removeProperty('--font-display');
-    root.style.removeProperty('--font-body');
-    root.style.removeProperty('--font-mono');
-    root.style.removeProperty('--code-font-family');
-    root.style.fontSize = '';
-
-    // Reset body styles that skins commonly override
-    document.body.style.removeProperty('background');
-    document.body.style.removeProperty('background-color');
-    document.body.style.removeProperty('background-image');
-    document.body.style.removeProperty('font-family');
-    document.body.style.removeProperty('color');
-
-    // Remove any inline styles on common elements that skins might have set
-    const elementsToReset = ['header', 'main', 'footer', 'nav', '.cm-editor', '.cm-content'];
-    elementsToReset.forEach(selector => {
-      document.querySelectorAll(selector).forEach(el => {
-        (el as HTMLElement).style.cssText = '';
-      });
-    });
-
-    // Trigger a reflow to ensure styles are recalculated
-    void root.offsetHeight;
-
-    // Dispatch a custom event that AppSettingsContext can listen for
-    window.dispatchEvent(new CustomEvent('skin-disabled'));
-  }, []);
 
   // Setters that update state
   const setSkinsEnabled = useCallback((enabled: boolean) => {
