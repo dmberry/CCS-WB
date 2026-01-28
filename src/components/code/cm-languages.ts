@@ -30,7 +30,7 @@ export const LANGUAGE_COLORS: Record<string, { light: string; dark: string }> = 
   fortran: { light: "#4d148c", dark: "#7b1fa2" }, // FORTRAN deep purple
   cobol: { light: "#0d47a1", dark: "#1976d2" }, // COBOL blue
   basic: { light: "#0066cc", dark: "#4da6ff" }, // BASIC Dartmouth blue
-  agc: { light: "#8b4513", dark: "#cd853f" }, // AGC saddle brown (Apollo missions)
+  agc: { light: "#c45100", dark: "#ff8c1a" }, // AGC bright orange (Apollo spacesuit orange)
   assembly: { light: "#696969", dark: "#a9a9a9" }, // Assembly grey
 };
 
