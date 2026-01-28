@@ -551,17 +551,17 @@ const ccsDarkTheme = EditorView.theme(
 // Syntax highlighting style - works for both light and dark
 // Uses CSS variables which change based on theme
 const ccsHighlightStyleLight = HighlightStyle.define([
-  // Keywords in burgundy
-  { tag: t.keyword, color: "hsl(352 47% 33%)" },
-  { tag: t.controlKeyword, color: "hsl(352 47% 33%)", fontWeight: "500" },
-  { tag: t.moduleKeyword, color: "hsl(352 47% 33%)" },
-  { tag: t.operatorKeyword, color: "hsl(352 47% 33%)" },
+  // Keywords in brown/orange for AGC assembly style
+  { tag: t.keyword, color: "hsl(20 75% 40%)" },
+  { tag: t.controlKeyword, color: "hsl(20 75% 40%)", fontWeight: "500" },
+  { tag: t.moduleKeyword, color: "hsl(20 75% 40%)" },
+  { tag: t.operatorKeyword, color: "hsl(20 75% 40%)" },
 
-  // Comments in muted grey, italic
-  { tag: t.comment, color: "hsl(0 0% 45%)", fontStyle: "italic" },
-  { tag: t.lineComment, color: "hsl(0 0% 45%)", fontStyle: "italic" },
-  { tag: t.blockComment, color: "hsl(0 0% 45%)", fontStyle: "italic" },
-  { tag: t.docComment, color: "hsl(0 0% 45%)", fontStyle: "italic" },
+  // Comments in vibrant purple/magenta, italic
+  { tag: t.comment, color: "hsl(280 60% 50%)", fontStyle: "italic" },
+  { tag: t.lineComment, color: "hsl(280 60% 50%)", fontStyle: "italic" },
+  { tag: t.blockComment, color: "hsl(280 60% 50%)", fontStyle: "italic" },
+  { tag: t.docComment, color: "hsl(280 60% 50%)", fontStyle: "italic" },
 
   // Strings in forest green
   { tag: t.string, color: "hsl(150 40% 35%)" },
@@ -582,10 +582,10 @@ const ccsHighlightStyleLight = HighlightStyle.define([
   { tag: t.className, color: "hsl(20 60% 45%)" },
   { tag: t.namespace, color: "hsl(20 50% 50%)" },
 
-  // Variables and properties
-  { tag: t.variableName, color: "hsl(0 0% 20%)" },
-  { tag: t.propertyName, color: "hsl(220 30% 40%)" },
-  { tag: t.definition(t.variableName), color: "hsl(220 40% 35%)" },
+  // Variables and properties - vibrant blue for labels/symbols
+  { tag: t.variableName, color: "hsl(210 80% 45%)" },
+  { tag: t.propertyName, color: "hsl(210 70% 45%)" },
+  { tag: t.definition(t.variableName), color: "hsl(210 80% 40%)" },
 
   // Operators and punctuation
   { tag: t.operator, color: "hsl(352 30% 40%)" },
@@ -623,17 +623,17 @@ const ccsHighlightStyleLight = HighlightStyle.define([
 
 // Dark mode highlight style
 const ccsHighlightStyleDark = HighlightStyle.define([
-  // Keywords in lighter burgundy
-  { tag: t.keyword, color: "hsl(352 55% 60%)" },
-  { tag: t.controlKeyword, color: "hsl(352 55% 60%)", fontWeight: "500" },
-  { tag: t.moduleKeyword, color: "hsl(352 55% 60%)" },
-  { tag: t.operatorKeyword, color: "hsl(352 55% 60%)" },
+  // Keywords in brown/orange for AGC assembly style
+  { tag: t.keyword, color: "hsl(20 75% 55%)" },
+  { tag: t.controlKeyword, color: "hsl(20 75% 55%)", fontWeight: "500" },
+  { tag: t.moduleKeyword, color: "hsl(20 75% 55%)" },
+  { tag: t.operatorKeyword, color: "hsl(20 75% 55%)" },
 
-  // Comments in muted grey, italic
-  { tag: t.comment, color: "hsl(40 8% 55%)", fontStyle: "italic" },
-  { tag: t.lineComment, color: "hsl(40 8% 55%)", fontStyle: "italic" },
-  { tag: t.blockComment, color: "hsl(40 8% 55%)", fontStyle: "italic" },
-  { tag: t.docComment, color: "hsl(40 8% 55%)", fontStyle: "italic" },
+  // Comments in vibrant purple/magenta, italic
+  { tag: t.comment, color: "hsl(280 65% 65%)", fontStyle: "italic" },
+  { tag: t.lineComment, color: "hsl(280 65% 65%)", fontStyle: "italic" },
+  { tag: t.blockComment, color: "hsl(280 65% 65%)", fontStyle: "italic" },
+  { tag: t.docComment, color: "hsl(280 65% 65%)", fontStyle: "italic" },
 
   // Strings in lighter forest green
   { tag: t.string, color: "hsl(150 45% 55%)" },
@@ -654,10 +654,10 @@ const ccsHighlightStyleDark = HighlightStyle.define([
   { tag: t.className, color: "hsl(20 65% 60%)" },
   { tag: t.namespace, color: "hsl(20 55% 65%)" },
 
-  // Variables and properties
-  { tag: t.variableName, color: "hsl(40 20% 85%)" },
-  { tag: t.propertyName, color: "hsl(210 40% 70%)" },
-  { tag: t.definition(t.variableName), color: "hsl(210 50% 70%)" },
+  // Variables and properties - vibrant blue for labels/symbols
+  { tag: t.variableName, color: "hsl(210 80% 65%)" },
+  { tag: t.propertyName, color: "hsl(210 70% 65%)" },
+  { tag: t.definition(t.variableName), color: "hsl(210 80% 70%)" },
 
   // Operators and punctuation
   { tag: t.operator, color: "hsl(352 40% 65%)" },
