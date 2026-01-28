@@ -103,6 +103,7 @@ const languageLoaders: Record<string, LanguageLoader> = {
   mad: () => import("./cm-lang-mad").then((m) => m.mad()),
   basic: () => import("./cm-lang-basic").then((m) => m.basic()),
   agc: () => import("./cm-lang-agc").then((m) => m.agc()),
+  fortran: () => import("./cm-lang-fortran").then((m) => m.fortran()),
 
   // Assembly - use C syntax as approximation for comments, numbers, strings
   assembly: () => import("@codemirror/lang-cpp").then((m) => m.cpp()),
