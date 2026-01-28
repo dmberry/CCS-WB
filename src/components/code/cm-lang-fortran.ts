@@ -3,7 +3,7 @@
  * Supports classic FORTRAN IV syntax (1960s-1970s) as used in Adventure (1977)
  */
 
-import { StreamLanguage } from "@codemirror/language";
+import { StreamLanguage, LanguageSupport } from "@codemirror/language";
 import type { StreamParser } from "@codemirror/language";
 import type { StringStream } from "@codemirror/language";
 
@@ -235,6 +235,11 @@ const fortranLanguage: StreamParser<FortranState> = {
   },
 };
 
-export function fortran() {
-  return StreamLanguage.define(fortranLanguage);
+const fortranLang = StreamLanguage.define(fortranLanguage);
+
+/**
+ * FORTRAN language support for CodeMirror
+ */
+export function fortran(): LanguageSupport {
+  return new LanguageSupport(fortranLang);
 }
