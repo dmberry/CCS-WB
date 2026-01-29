@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseRouteClient } from "@/lib/supabase/server";
 
-export const runtime = "edge";
-
 export async function POST(request: NextRequest) {
   try {
     const { color } = await request.json();
