@@ -101,6 +101,8 @@ interface CodeEditorPanelProps {
   readOnly?: boolean;
   // Number of members in the shared project (0 = not shared, undefined = unknown)
   sharedProjectMemberCount?: number;
+  // List of members in the shared project
+  sharedProjectMembers?: Array<{ user_id: string; initials?: string; avatar_url?: string; display_name?: string; role: string }>;
   // File trash props (for cloud projects)
   trashedFiles?: Array<{ id: string; name: string; language: string; deletedAt: string }>;
   isLoadingFileTrash?: boolean;
@@ -407,6 +409,7 @@ export function CodeEditorPanel({
   isInProject = false,
   readOnly = false,
   sharedProjectMemberCount = 0,
+  sharedProjectMembers = [],
   // File trash props
   trashedFiles = [],
   isLoadingFileTrash = false,
@@ -498,6 +501,7 @@ export function CodeEditorPanel({
   const [editContent, setEditContent] = useState("");
   const [editType, setEditType] = useState<LineAnnotationType>("observation");
   const [showAnnotationHelp, setShowAnnotationHelp] = useState(false);
+  const [showMembersDropdown, setShowMembersDropdown] = useState(false);
   const [fileMenuOpen, setFileMenuOpen] = useState<string | null>(null);
   const [deleteConfirmFile, setDeleteConfirmFile] = useState<{ id: string; name: string } | null>(null);
   const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
@@ -613,6 +617,7 @@ export function CodeEditorPanel({
   const toolbarRef = useRef<HTMLDivElement>(null);
   const toolbarMenuRef = useRef<HTMLDivElement>(null);
   const languageDropdownRef = useRef<HTMLDivElement>(null);
+  const membersDropdownRef = useRef<HTMLDivElement>(null);
   const customLanguageInputRef = useRef<HTMLInputElement>(null);
 
   // Compute set of modified file IDs for efficient lookup
@@ -1087,6 +1092,27 @@ export function CodeEditorPanel({
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showDisplaySettings]);
+
+  // Click outside to close members dropdown
+  useEffect(() => {
+    if (!showMembersDropdown) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (membersDropdownRef.current && !membersDropdownRef.current.contains(e.target as Node)) {
+        setShowMembersDropdown(false);
+      }
+    };
+
+    // Small delay to avoid immediate trigger from the opening click
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside);
+    }, 10);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showMembersDropdown]);
 
   // Trigger discovery animation when a file is first loaded in annotate mode
   const previousFileIdRef = useRef<string | null>(null);
@@ -1865,23 +1891,6 @@ export function CodeEditorPanel({
                 </span>
               )}
 
-              {/* Shared project indicator */}
-              {(() => {
-                console.log("Shared project indicator check:", {
-                  sharedProjectMemberCount,
-                  readOnly,
-                  shouldShow: sharedProjectMemberCount > 0 && !readOnly
-                });
-                return sharedProjectMemberCount > 0 && !readOnly && (
-                  <span className="px-2 py-0.5 text-[9px] font-sans text-burgundy bg-burgundy/10 border border-burgundy/30 rounded-sm flex items-center gap-1">
-                    <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    Shared ({sharedProjectMemberCount} {sharedProjectMemberCount === 1 ? 'member' : 'members'})
-                  </span>
-                );
-              })()}
-
               {/* Language selector - always visible */}
               <div className="relative" ref={languageDropdownRef}>
                 <button
@@ -2224,6 +2233,53 @@ export function CodeEditorPanel({
                 >
                   L{cursorPosition.line}:C{cursorPosition.column}
                 </span>
+              )}
+
+              {/* Shared project members indicator */}
+              {sharedProjectMemberCount > 0 && !readOnly && (
+                <div className="relative" ref={membersDropdownRef}>
+                  <button
+                    onClick={() => setShowMembersDropdown(!showMembersDropdown)}
+                    className={cn(
+                      "p-1 transition-colors flex items-center gap-0.5",
+                      showMembersDropdown ? "text-burgundy" : "text-slate-muted hover:text-ink"
+                    )}
+                    title={`${sharedProjectMemberCount} ${sharedProjectMemberCount === 1 ? 'member' : 'members'}`}
+                  >
+                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <span className="text-[9px] font-sans">{sharedProjectMemberCount}</span>
+                  </button>
+                  {showMembersDropdown && (
+                    <div className="absolute top-full right-0 mt-1 w-56 bg-popover rounded-sm shadow-lg border border-parchment py-1 z-50">
+                      <div className="px-3 py-1.5 border-b border-parchment">
+                        <h4 className="font-display text-[10px] text-ink font-medium">Project Members</h4>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto">
+                        {sharedProjectMembers.map((member) => (
+                          <div key={member.user_id} className="px-3 py-2 hover:bg-cream/50 flex items-center gap-2">
+                            {member.avatar_url ? (
+                              <img src={member.avatar_url} alt="" className="w-6 h-6 rounded-full" />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-burgundy/10 text-burgundy flex items-center justify-center text-[9px] font-sans">
+                                {member.initials || '?'}
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="font-sans text-[10px] text-ink truncate">
+                                {member.display_name || 'Unknown'}
+                              </div>
+                              <div className="font-sans text-[9px] text-slate-muted capitalize">
+                                {member.role}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
 
               {/* Help - annotation types */}

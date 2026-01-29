@@ -254,6 +254,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [saveModalName, setSaveModalName] = useState("");
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [projectMemberCount, setProjectMemberCount] = useState<number>(0);
+  const [projectMembers, setProjectMembers] = useState<Array<{ user_id: string; initials?: string; avatar_url?: string; display_name?: string; role: string }>>([]);
   const [showProjectRestoredBanner, setShowProjectRestoredBanner] = useState(false);
 
   // Check if cloud project was restored on page load
@@ -479,13 +480,21 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   useEffect(() => {
     if (!currentProjectId || !isAuthenticated) {
       setProjectMemberCount(0);
+      setProjectMembers([]);
       return;
     }
 
     const fetchMembers = async () => {
       const { members } = await getProjectMembers(currentProjectId);
-      console.log("Shared project indicator - member count:", members?.length || 0, "members:", members);
-      setProjectMemberCount(members?.length || 0);
+      const memberList = members || [];
+      setProjectMemberCount(memberList.length);
+      setProjectMembers(memberList.map(m => ({
+        user_id: m.user_id,
+        initials: m.profile?.initials || undefined,
+        avatar_url: m.profile?.avatar_url || undefined,
+        display_name: m.profile?.display_name || m.profile?.initials || 'Member',
+        role: m.role
+      })));
     };
 
     fetchMembers();
@@ -2553,6 +2562,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             isInProject={isInProject}
             readOnly={!!viewingLibraryProjectId}
             sharedProjectMemberCount={projectMemberCount}
+            sharedProjectMembers={projectMembers}
             // File trash props - use cloud trash when in project, local trash otherwise
             trashedFiles={isInProject ? trashedFiles : localTrashedFiles.map(f => ({
               id: f.id,
