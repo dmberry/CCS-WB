@@ -662,6 +662,19 @@ export class AnnotationWidget extends WidgetType {
 
           // Auto-focus the input immediately
           requestAnimationFrame(() => replyInput.focus());
+
+          // Click-away handler: close reply input if user clicks outside
+          const clickAwayHandler = (e: MouseEvent) => {
+            // Check if click is outside the reply form
+            if (!replyForm.contains(e.target as Node)) {
+              document.removeEventListener("mousedown", clickAwayHandler);
+              this.onCloseReplyInput?.();
+            }
+          };
+          // Add listener on next tick to avoid immediate trigger
+          setTimeout(() => {
+            document.addEventListener("mousedown", clickAwayHandler);
+          }, 0);
         } else if (this.annotation.replies && this.annotation.replies.length > 0) {
           // Show small "+" button after all replies
           const addReplyBtn = document.createElement("button");
