@@ -1551,7 +1551,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="border-b border-parchment bg-background px-2 sm:px-4 py-1 flex items-center justify-between z-10 relative min-w-0">
+      <header className="border-b border-parchment bg-background px-2 sm:px-4 py-1 grid grid-cols-[auto_1fr_auto] items-center gap-2 z-10 relative min-w-0">
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
           <button
             onClick={onNavigateHome}
@@ -1652,7 +1652,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
         {/* Center: Project/session name - shows cloud project name when connected, otherwise local session name */}
         {currentProjectId ? (
           // Cloud project: clickable name with info dropdown
-          <div className="hidden sm:block absolute left-1/2 transform -translate-x-1/2" data-dropdown ref={projectInfoRef}>
+          <div className="hidden sm:flex justify-center min-w-0" data-dropdown ref={projectInfoRef}>
             <button
               onClick={() => setShowProjectInfo(!showProjectInfo)}
               className={cn(
@@ -1863,12 +1863,12 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                 setProjectName(newName.trim());
               }
             }}
-            className="hidden sm:flex absolute left-1/2 transform -translate-x-1/2 hover:bg-cream px-2 py-0.5 rounded-sm transition-colors items-center gap-1.5"
+            className="hidden sm:flex justify-center hover:bg-cream px-2 py-0.5 rounded-sm transition-colors items-center gap-1.5 min-w-0 max-w-[280px]"
             title="Local session (click to rename)"
           >
             <HardDrive className="h-3 w-3 text-slate-muted flex-shrink-0" strokeWidth={1.5} />
             {projectName ? (
-              <span className="font-mono text-[10px] text-ink whitespace-nowrap">
+              <span className="font-mono text-[10px] text-ink truncate">
                 {projectName.replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase()}-{MODE_CODES[session.mode] || "XX"}.ccs
               </span>
             ) : (
