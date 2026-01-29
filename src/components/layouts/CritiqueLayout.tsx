@@ -207,6 +207,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     pendingSubmissions,
     fetchPendingSubmissions,
     renameProject,
+    getProjectMembers,
   } = useProjects();
   const { markLocalUpdate } = useProjectSync();
   const aiEnabled = aiSettings.aiEnabled;
@@ -252,6 +253,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveModalName, setSaveModalName] = useState("");
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [projectMemberCount, setProjectMemberCount] = useState<number>(0);
   const [showProjectRestoredBanner, setShowProjectRestoredBanner] = useState(false);
 
   // Check if cloud project was restored on page load
@@ -472,6 +474,21 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
     return () => clearInterval(interval);
   }, [isAdmin, isAuthenticated, fetchPendingSubmissions]);
+
+  // Fetch project members to determine if project is shared
+  useEffect(() => {
+    if (!currentProjectId || !isAuthenticated) {
+      setProjectMemberCount(0);
+      return;
+    }
+
+    const fetchMembers = async () => {
+      const { members } = await getProjectMembers(currentProjectId);
+      setProjectMemberCount(members?.length || 0);
+    };
+
+    fetchMembers();
+  }, [currentProjectId, isAuthenticated, getProjectMembers]);
 
   // Handle panel resize dragging
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -2530,6 +2547,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             onCloseReplyInput={handleCloseReplyInput}
             isInProject={isInProject}
             readOnly={!!viewingLibraryProjectId}
+            sharedProjectMemberCount={projectMemberCount}
             // File trash props - use cloud trash when in project, local trash otherwise
             trashedFiles={isInProject ? trashedFiles : localTrashedFiles.map(f => ({
               id: f.id,

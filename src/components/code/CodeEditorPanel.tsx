@@ -99,6 +99,8 @@ interface CodeEditorPanelProps {
   isInProject?: boolean;
   // Whether the panel is in read-only mode (e.g., viewing library project)
   readOnly?: boolean;
+  // Number of members in the shared project (0 = not shared, undefined = unknown)
+  sharedProjectMemberCount?: number;
   // File trash props (for cloud projects)
   trashedFiles?: Array<{ id: string; name: string; language: string; deletedAt: string }>;
   isLoadingFileTrash?: boolean;
@@ -404,6 +406,7 @@ export function CodeEditorPanel({
   onCloseReplyInput,
   isInProject = false,
   readOnly = false,
+  sharedProjectMemberCount = 0,
   // File trash props
   trashedFiles = [],
   isLoadingFileTrash = false,
@@ -1859,6 +1862,16 @@ export function CodeEditorPanel({
               {readOnly && (
                 <span className="px-2 py-0.5 text-[9px] font-sans text-slate bg-amber-100 border border-amber-200 rounded-sm">
                   View Only
+                </span>
+              )}
+
+              {/* Shared project indicator */}
+              {sharedProjectMemberCount > 0 && !readOnly && (
+                <span className="px-2 py-0.5 text-[9px] font-sans text-burgundy bg-burgundy/10 border border-burgundy/30 rounded-sm flex items-center gap-1">
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  Shared ({sharedProjectMemberCount} {sharedProjectMemberCount === 1 ? 'member' : 'members'})
                 </span>
               )}
 
