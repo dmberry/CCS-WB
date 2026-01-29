@@ -384,43 +384,52 @@ export function SettingsModal({
                     Reply Color <span className="text-slate-muted font-normal">(shows on your replies in shared projects)</span>
                   </label>
                   {authProfile ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={tempColor || authProfile.profile_color || "#6b7280"}
-                        onChange={(e) => {
-                          // Update local state for live preview
-                          setTempColor(e.target.value);
-                        }}
-                        onBlur={async (e) => {
-                          // Save to database when user finishes selecting
-                          const color = e.target.value;
-                          if (color === authProfile.profile_color) {
-                            setTempColor(null);
-                            return;
-                          }
-                          setIsSavingColor(true);
-                          try {
-                            await fetch("/api/profile/update-color", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ color }),
-                            });
-                            // Refresh profile from database
-                            await refreshProfile();
-                            setTempColor(null);
-                          } catch (err) {
-                            console.error("Failed to update color:", err);
-                          } finally {
-                            setIsSavingColor(false);
-                          }
-                        }}
-                        disabled={isSavingColor}
-                        className="w-12 h-8 rounded border border-parchment-dark cursor-pointer disabled:opacity-50"
-                      />
-                      <span className="font-sans text-[10px] text-slate-muted">
-                        {isSavingColor ? "Saving..." : (authProfile.profile_color || "Using auto-generated color")}
-                      </span>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={tempColor || authProfile.profile_color || "#6b7280"}
+                          onChange={(e) => {
+                            // Update local state for live preview
+                            setTempColor(e.target.value);
+                          }}
+                          disabled={isSavingColor}
+                          className="w-12 h-8 rounded border border-parchment-dark cursor-pointer disabled:opacity-50"
+                        />
+                        {tempColor && tempColor !== authProfile.profile_color && (
+                          <button
+                            onClick={async () => {
+                              setIsSavingColor(true);
+                              try {
+                                await fetch("/api/profile/update-color", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ color: tempColor }),
+                                });
+                                // Refresh profile from database
+                                await refreshProfile();
+                                setTempColor(null);
+                              } catch (err) {
+                                console.error("Failed to update color:", err);
+                              } finally {
+                                setIsSavingColor(false);
+                              }
+                            }}
+                            disabled={isSavingColor}
+                            className="px-3 py-1 bg-burgundy text-parchment font-sans text-[10px] rounded hover:bg-burgundy-dark disabled:opacity-50"
+                          >
+                            Save Color
+                          </button>
+                        )}
+                        <span className="font-sans text-[10px] text-slate-muted">
+                          {isSavingColor ? "Saving..." : (authProfile.profile_color || "Using auto-generated color")}
+                        </span>
+                      </div>
+                      {tempColor && tempColor !== authProfile.profile_color && (
+                        <p className="font-sans text-[9px] text-slate-muted italic">
+                          Click "Save Color" to apply your selection
+                        </p>
+                      )}
                       {authProfile.profile_color && (
                         <button
                           onClick={async () => {
