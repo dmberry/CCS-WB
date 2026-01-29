@@ -286,7 +286,7 @@ export class AnnotationWidget extends WidgetType {
       this.displaySettings.showPillBackground === other.displaySettings.showPillBackground &&
       this.isRemoteNew === other.isRemoteNew &&
       this.expandedAnnotationId === other.expandedAnnotationId &&
-      // Don't check replyInputOpenFor - handle via updateDOM
+      this.replyInputOpenFor === other.replyInputOpenFor &&
       repliesEqual
     );
   }
