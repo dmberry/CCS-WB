@@ -84,6 +84,9 @@ const ccsLightTheme = EditorView.theme(
     ".cm-annotation-widget:hover .cm-annotation-bar": {
       opacity: "1 !important", // Override variable on hover
     },
+    ".cm-annotation-widget:hover .cm-annotation-replies": {
+      opacity: "1 !important", // Brighten replies on hover too
+    },
     ".cm-annotation-type-badge": {
       fontFamily: "system-ui, sans-serif",
       fontSize: "9px",
@@ -353,6 +356,9 @@ const ccsDarkTheme = EditorView.theme(
     },
     ".cm-annotation-widget:hover .cm-annotation-bar": {
       opacity: "1 !important", // Override variable on hover
+    },
+    ".cm-annotation-widget:hover .cm-annotation-replies": {
+      opacity: "1 !important", // Brighten replies on hover too
     },
     ".cm-annotation-type-badge": {
       fontFamily: "system-ui, sans-serif",
