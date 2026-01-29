@@ -129,6 +129,9 @@ export function useAnnotationsSync({
   const channelRef = useRef<RealtimeChannel | null>(null);
   const lastUpdateRef = useRef<number>(0);
 
+  // Track last known state to avoid redundant fetches
+  const lastStateRef = useRef<{ count: number; lastUpdated: string } | null>(null);
+
   // Store callback in ref to prevent infinite loops
   const onRemoteChangeRef = useRef(onRemoteChange);
   onRemoteChangeRef.current = onRemoteChange;
@@ -171,14 +174,40 @@ export function useAnnotationsSync({
 
   // Helper to fetch and update annotations
   const fetchAndUpdate = useCallback(async () => {
-    console.log("fetchAndUpdate: Starting fetch");
     const currentFileIdMap = fileIdMapRef.current;
     if (!supabase || !currentProjectId || Object.keys(currentFileIdMap).length === 0) {
-      console.warn("fetchAndUpdate: Preconditions not met", { supabase: !!supabase, currentProjectId, fileIdMapCount: Object.keys(currentFileIdMap).length });
       return;
     }
 
     const fileIds = Object.values(currentFileIdMap);
+
+    // Quick check: has anything changed since last fetch?
+    try {
+      // Get count and most recent updated_at
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { count, data: recent, error: stateError } = await (supabase as any)
+        .from("annotations")
+        .select("updated_at", { count: "exact", head: false })
+        .in("file_id", fileIds)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+
+      if (!stateError) {
+        const currentCount = count || 0;
+        const currentLastUpdated = recent?.[0]?.updated_at || "";
+        const lastState = lastStateRef.current;
+
+        // If state hasn't changed, skip the full fetch
+        if (lastState && lastState.count === currentCount && lastState.lastUpdated === currentLastUpdated) {
+          return; // No changes, skip fetch
+        }
+      }
+    } catch (err) {
+      // If state check fails, proceed with full fetch anyway
+      console.warn("State check failed, proceeding with full fetch:", err);
+    }
+
+    console.log("fetchAndUpdate: Starting fetch");
     const reverseMap = Object.fromEntries(
       Object.entries(currentFileIdMap).map(([k, v]) => [v, k])
     );
@@ -275,6 +304,16 @@ export function useAnnotationsSync({
         }
         return annotation;
       });
+
+      // Update state ref for next comparison
+      if (annotations.length > 0) {
+        const maxUpdated = annotations.reduce((max: string, row: AnnotationRow) =>
+          row.updated_at > max ? row.updated_at : max, annotations[0].updated_at);
+        lastStateRef.current = { count: annotations.length, lastUpdated: maxUpdated };
+      } else {
+        lastStateRef.current = { count: 0, lastUpdated: "" };
+      }
+
       console.log("fetchAndUpdate: Fetched", remoteAnnotations.length, "annotations, calling onRemoteChange");
       console.log("fetchAndUpdate: Replies by annotation:", Object.keys(repliesMap).map(id => ({ id, count: repliesMap[id].length })));
       onRemoteChangeRef.current(remoteAnnotations);
