@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createSupabaseRouteClient } from "@/lib/supabase/server";
 
 export const runtime = "edge";
 
 export async function POST(request: NextRequest) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json(
-      { error: "Supabase not configured" },
-      { status: 503 }
-    );
-  }
-
   try {
     const { color } = await request.json();
 
@@ -22,9 +15,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabaseClient();
+    const response = new NextResponse();
+    const supabase = createSupabaseRouteClient(request, response);
 
-    // Get current user
+    if (!supabase) {
+      return NextResponse.json(
+        { error: "Supabase not configured" },
+        { status: 503 }
+      );
+    }
+
+    // Get current user with proper cookie-based auth
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: { user }, error: authError } = await (supabase as any).auth.getUser();
 
@@ -50,7 +51,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true });
+    // Return response with auth cookies
+    response.headers.set("Content-Type", "application/json");
+    return new NextResponse(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: response.headers,
+    });
   } catch (error) {
     console.error("Error in update-color API:", error);
     return NextResponse.json(
