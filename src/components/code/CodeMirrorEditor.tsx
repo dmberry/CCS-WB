@@ -352,13 +352,14 @@ export function CodeMirrorEditor({
     }
   }, [value]);
 
-  // Update theme when effectiveTheme changes
+  // Update theme when effectiveTheme or font changes
+  // Font change triggers theme reconfiguration to force CSS variable re-evaluation
   useEffect(() => {
     if (isInitialMount.current) return;
     viewRef.current?.dispatch({
       effects: themeCompartment.current.reconfigure(getCCSTheme(isDark)),
     });
-  }, [isDark]);
+  }, [isDark, codeFontFamily]);
 
   // Update font size
   useEffect(() => {
