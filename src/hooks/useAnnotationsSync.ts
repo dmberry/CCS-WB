@@ -278,11 +278,18 @@ export function useAnnotationsSync({
       console.log("pushAnnotation: upserting row", row);
 
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data, error } = await (supabase as any)
+        // Add timeout protection for upsert operation
+        const upsertPromise = (supabase as any)
           .from("annotations")
           .upsert(row, { onConflict: "id" })
           .select();
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Upsert timeout after 10s")), 10000)
+        );
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await Promise.race([upsertPromise, timeoutPromise]) as any;
 
         if (error) {
           console.error("pushAnnotation: Database error:", error);
@@ -326,18 +333,29 @@ export function useAnnotationsSync({
       // Mark that we're making an update (to skip processing our own changes)
       lastUpdateRef.current = Date.now();
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error, count } = await (supabase as any)
-        .from("annotations")
-        .delete()
-        .eq("id", annotationId);
+      try {
+        // Add timeout protection for delete operation
+        const deletePromise = (supabase as any)
+          .from("annotations")
+          .delete()
+          .eq("id", annotationId);
 
-      if (error) {
-        console.error("Error deleting annotation:", error);
-      } else {
-        console.log("deleteAnnotation: success, count:", count);
-        // Trigger a fetch to update annotations across clients
-        setTimeout(() => fetchAndUpdate(), 200);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Delete timeout after 10s")), 10000)
+        );
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error, count } = await Promise.race([deletePromise, timeoutPromise]) as any;
+
+        if (error) {
+          console.error("deleteAnnotation: Database error:", error);
+        } else {
+          console.log("deleteAnnotation: success, count:", count);
+          // Trigger a fetch to update annotations across clients
+          setTimeout(() => fetchAndUpdate(), 200);
+        }
+      } catch (err) {
+        console.error("deleteAnnotation: Exception caught:", err);
       }
     },
     [supabase, enabled, isAuthenticated, fetchAndUpdate]
@@ -368,11 +386,18 @@ export function useAnnotationsSync({
       console.log("pushReply: Saving reply to database", { annotationId, content, replyId: row.id, userId: user?.id });
 
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data, error } = await (supabase as any)
+        // Add timeout protection for upsert operation
+        const upsertPromise = (supabase as any)
           .from("annotation_replies")
           .upsert(row, { onConflict: "id" })
           .select();
+
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Upsert timeout after 10s")), 10000)
+        );
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await Promise.race([upsertPromise, timeoutPromise]) as any;
 
         if (error) {
           console.error("pushReply: Database error:", error);
@@ -414,27 +439,38 @@ export function useAnnotationsSync({
 
       console.log("deleteReply: Starting deletion", { replyId });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error, data } = await (supabase as any)
-        .from("annotation_replies")
-        .delete()
-        .eq("id", replyId)
-        .select();
+      try {
+        // Add timeout protection for delete operation
+        const deletePromise = (supabase as any)
+          .from("annotation_replies")
+          .delete()
+          .eq("id", replyId)
+          .select();
 
-      if (error) {
-        console.error("deleteReply: Database error:", error);
-        console.error("deleteReply: Error details:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-          replyId,
-        });
-      } else {
-        console.log("deleteReply: Successfully deleted", { replyId, deletedRows: data?.length || 0 });
-        // Trigger a fetch to update replies
-        lastUpdateRef.current = Date.now();
-        setTimeout(() => fetchAndUpdate(), 200);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Delete timeout after 10s")), 10000)
+        );
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error, data } = await Promise.race([deletePromise, timeoutPromise]) as any;
+
+        if (error) {
+          console.error("deleteReply: Database error:", error);
+          console.error("deleteReply: Error details:", {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+            replyId,
+          });
+        } else {
+          console.log("deleteReply: Successfully deleted", { replyId, deletedRows: data?.length || 0 });
+          // Trigger a fetch to update replies
+          lastUpdateRef.current = Date.now();
+          setTimeout(() => fetchAndUpdate(), 200);
+        }
+      } catch (err) {
+        console.error("deleteReply: Exception caught:", err);
       }
     },
     [supabase, enabled, isAuthenticated, fetchAndUpdate]
