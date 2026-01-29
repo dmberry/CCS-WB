@@ -86,6 +86,11 @@ interface CodeEditorPanelProps {
   onClearLineAnnotations?: (codeFileId: string) => void;
   // Remote annotation IDs for animation (yellow flash when collaborator adds annotation)
   newRemoteAnnotationIds?: Set<string>;
+  // Annotation replies
+  expandedAnnotationId?: string | null;
+  onToggleReplies?: (annotationId: string) => void;
+  onAddReply?: (annotationId: string, content: string) => void;
+  onDeleteReply?: (replyId: string) => void;
   // Whether we're in a cloud project (for showing cloud icon on files)
   isInProject?: boolean;
   // Whether the panel is in read-only mode (e.g., viewing library project)
@@ -386,6 +391,10 @@ export function CodeEditorPanel({
   onRemoveLineAnnotation,
   onClearLineAnnotations,
   newRemoteAnnotationIds,
+  expandedAnnotationId,
+  onToggleReplies,
+  onAddReply,
+  onDeleteReply,
   isInProject = false,
   readOnly = false,
   // File trash props
@@ -2492,6 +2501,10 @@ export function CodeEditorPanel({
               onCursorPositionChange={isPunchCardFormat ? handleCursorPositionChange : undefined}
               newRemoteAnnotationIds={newRemoteAnnotationIds}
               userInitials={userInitials}
+              expandedAnnotationId={expandedAnnotationId}
+              onToggleReplies={onToggleReplies}
+              onAddReply={onAddReply}
+              onDeleteReply={onDeleteReply}
               className="flex-1"
             />
           )}

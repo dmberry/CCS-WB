@@ -65,6 +65,14 @@ export interface CodeMirrorEditorProps {
   newRemoteAnnotationIds?: Set<string>;
   /** User initials for "signed as" display in annotation editor */
   userInitials?: string;
+  /** ID of the annotation with expanded replies thread */
+  expandedAnnotationId?: string | null;
+  /** Callback when reply button is clicked to toggle thread view */
+  onToggleReplies?: (annotationId: string) => void;
+  /** Callback to add a reply to an annotation */
+  onAddReply?: (annotationId: string, content: string) => void;
+  /** Callback to delete a reply */
+  onDeleteReply?: (replyId: string) => void;
   /** CSS class for the container */
   className?: string;
 }
@@ -88,6 +96,10 @@ export function CodeMirrorEditor({
   onCursorPositionChange,
   newRemoteAnnotationIds,
   userInitials,
+  expandedAnnotationId,
+  onToggleReplies,
+  onAddReply,
+  onDeleteReply,
   className,
 }: CodeMirrorEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -203,7 +215,11 @@ export function CodeMirrorEditor({
               highlightedAnnotationType,
               annotationDisplaySettings,
               newRemoteAnnotationIds,
-              userInitials
+              userInitials,
+              expandedAnnotationId,
+              onToggleReplies,
+              onAddReply,
+              onDeleteReply
             )
           : []
       ),
@@ -387,12 +403,16 @@ export function CodeMirrorEditor({
               highlightedAnnotationType,
               annotationDisplaySettings,
               newRemoteAnnotationIds,
-              userInitials
+              userInitials,
+              expandedAnnotationId,
+              onToggleReplies,
+              onAddReply,
+              onDeleteReply
             )
           : []
       ),
     });
-  }, [annotations, readOnly, stableOnEdit, stableOnDelete, isDark, inlineEditState, inlineEditCallbacks, highlightedAnnotationType, annotationDisplaySettings, newRemoteAnnotationIds, userInitials]);
+  }, [annotations, readOnly, stableOnEdit, stableOnDelete, isDark, inlineEditState, inlineEditCallbacks, highlightedAnnotationType, annotationDisplaySettings, newRemoteAnnotationIds, userInitials, expandedAnnotationId, onToggleReplies, onAddReply, onDeleteReply]);
 
   // Update highlight annotated lines extension when setting or annotations change
   useEffect(() => {

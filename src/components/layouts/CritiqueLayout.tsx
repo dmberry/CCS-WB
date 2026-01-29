@@ -164,6 +164,8 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     updateLineAnnotation,
     removeLineAnnotation,
     clearLineAnnotations,
+    pushReply,
+    deleteReply,
     // Display settings
     updatePanelLayoutSettings,
     // Collaborative features
@@ -242,6 +244,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [projectName, setProjectName] = useState<string>("");
   const [showExportModal, setShowExportModal] = useState(false);
   const [showSendContextModal, setShowSendContextModal] = useState(false);
+  const [expandedAnnotationId, setExpandedAnnotationId] = useState<string | null>(null);
   const [showFontSizePopover, setShowFontSizePopover] = useState(false);
   const [showHelpPopover, setShowHelpPopover] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -1301,6 +1304,21 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
     setCodeContent(newId, originalContent);
   }, [session.codeFiles, session.codeContents, addCode, setCodeContent]);
+
+  // Annotation reply handlers
+  const handleToggleReplies = useCallback((annotationId: string) => {
+    setExpandedAnnotationId(prev => prev === annotationId ? null : annotationId);
+  }, []);
+
+  const handleAddReply = useCallback(async (annotationId: string, content: string) => {
+    if (!pushReply) return;
+    await pushReply(annotationId, content);
+  }, [pushReply]);
+
+  const handleDeleteReply = useCallback(async (replyId: string) => {
+    if (!deleteReply) return;
+    await deleteReply(replyId);
+  }, [deleteReply]);
 
   // Load session with code contents and mode validation
   const handleLoadSession = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -2409,6 +2427,10 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             onRemoveLineAnnotation={removeLineAnnotation}
             onClearLineAnnotations={clearLineAnnotations}
             newRemoteAnnotationIds={newRemoteAnnotationIds}
+            expandedAnnotationId={expandedAnnotationId}
+            onToggleReplies={handleToggleReplies}
+            onAddReply={handleAddReply}
+            onDeleteReply={handleDeleteReply}
             isInProject={isInProject}
             readOnly={!!viewingLibraryProjectId}
             // File trash props - use cloud trash when in project, local trash otherwise
