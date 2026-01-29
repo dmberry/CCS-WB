@@ -45,6 +45,7 @@ export interface Database {
           affiliation: string | null;
           avatar_url: string | null;
           is_admin: boolean;
+          profile_color: string | null;
           created_at: string;
         };
         Insert: {
@@ -54,6 +55,7 @@ export interface Database {
           affiliation?: string | null;
           avatar_url?: string | null;
           is_admin?: boolean;
+          profile_color?: string | null;
           created_at?: string;
         };
         Update: {
@@ -63,6 +65,7 @@ export interface Database {
           affiliation?: string | null;
           avatar_url?: string | null;
           is_admin?: boolean;
+          profile_color?: string | null;
           created_at?: string;
         };
       };

@@ -211,8 +211,17 @@ export class InlineAnnotationEditor extends WidgetType {
 /**
  * Generate a consistent color for a user based on their initials
  * Uses a hash function to convert initials to a hue value
+ * @param initials - User initials to generate color from
+ * @param isDark - Whether dark mode is active
+ * @param profileColor - User's chosen profile color (takes precedence if provided)
  */
-function getAuthorColor(initials: string, isDark: boolean): string {
+function getAuthorColor(initials: string, isDark: boolean, profileColor?: string): string {
+  // If user has chosen a profile color, use it directly
+  if (profileColor) {
+    return profileColor;
+  }
+
+  // Otherwise, generate color from initials hash
   // Hash the initials to get a consistent hue (0-360)
   let hash = 0;
   for (let i = 0; i < initials.length; i++) {
@@ -421,15 +430,15 @@ export class AnnotationWidget extends WidgetType {
         margin-top: 8px;
         padding-left: 16px;
         border-left: 2px solid ${color};
-        opacity: 0.9;
+        opacity: ${baseOpacity};
       `;
 
       // Render existing replies
       if (this.annotation.replies && this.annotation.replies.length > 0) {
         this.annotation.replies.forEach(reply => {
-          // Generate author-specific color from initials
+          // Generate author-specific color from initials or use their chosen profile color
           const authorColor = reply.addedBy
-            ? getAuthorColor(reply.addedBy, this.isDark)
+            ? getAuthorColor(reply.addedBy, this.isDark, reply.profileColor)
             : color; // Fall back to annotation color if no author
 
           const replyDiv = document.createElement("div");

@@ -240,19 +240,20 @@ export function useAnnotationsSync({
       const annotations = data || [];
       const annotationIds = annotations.map((a: AnnotationRow) => a.id);
 
-      // Fetch replies for all annotations
+      // Fetch replies for all annotations with profile colors
       let repliesMap: Record<string, Array<{
         id: string;
         content: string;
         created_at: string;
         added_by_initials: string | null;
+        profile_color: string | null;
       }>> = {};
 
       if (annotationIds.length > 0) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: repliesData } = await (supabase as any)
           .from("annotation_replies")
-          .select("*")
+          .select("*, profiles!annotation_replies_user_id_fkey(profile_color)")
           .in("annotation_id", annotationIds)
           .order("created_at", { ascending: true });
 
@@ -263,6 +264,7 @@ export function useAnnotationsSync({
             content: string;
             created_at: string;
             added_by_initials: string | null;
+            profiles: { profile_color: string | null } | null;
           }) => {
             if (!repliesMap[reply.annotation_id]) {
               repliesMap[reply.annotation_id] = [];
@@ -272,6 +274,7 @@ export function useAnnotationsSync({
               content: reply.content,
               created_at: reply.created_at,
               added_by_initials: reply.added_by_initials,
+              profile_color: reply.profiles?.profile_color || null,
             });
           });
         }
@@ -287,6 +290,7 @@ export function useAnnotationsSync({
             content: r.content,
             createdAt: r.created_at,
             addedBy: r.added_by_initials || undefined,
+            profileColor: r.profile_color || undefined,
           }));
         }
         return annotation;

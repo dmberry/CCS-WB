@@ -107,6 +107,7 @@ export interface AnnotationReplyData {
   content: string;
   createdAt: string;
   addedBy?: string;         // Initials of the user who added this reply
+  profileColor?: string;    // User's chosen profile color (hex format like #FF5733), falls back to hash-based color if not set
 }
 
 export interface LineAnnotation {

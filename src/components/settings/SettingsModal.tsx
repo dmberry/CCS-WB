@@ -372,6 +372,58 @@ export function SettingsModal({
                 </div>
               </div>
 
+              {/* Profile Color - only show when authenticated with cloud */}
+              {isAuthenticated && authProfile && (
+                <div>
+                  <label className="block font-sans text-[10px] font-medium text-ink mb-1">
+                    Reply Color <span className="text-slate-muted font-normal">(shows on your replies in shared projects)</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={authProfile.profile_color || "#6b7280"}
+                      onChange={async (e) => {
+                        const color = e.target.value;
+                        try {
+                          await fetch("/api/profile/update-color", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ color }),
+                          });
+                          // Refresh profile to show new color
+                          window.location.reload();
+                        } catch (err) {
+                          console.error("Failed to update color:", err);
+                        }
+                      }}
+                      className="w-12 h-8 rounded border border-parchment-dark cursor-pointer"
+                    />
+                    <span className="font-sans text-[10px] text-slate-muted">
+                      {authProfile.profile_color || "Using auto-generated color"}
+                    </span>
+                    {authProfile.profile_color && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await fetch("/api/profile/update-color", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ color: null }),
+                            });
+                            window.location.reload();
+                          } catch (err) {
+                            console.error("Failed to reset color:", err);
+                          }
+                        }}
+                        className="font-sans text-[10px] text-burgundy hover:underline"
+                      >
+                        Reset to auto
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Bio */}
               <div>
                 <label className="block font-sans text-[10px] font-medium text-ink mb-1">

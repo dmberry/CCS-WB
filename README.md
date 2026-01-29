@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 2.9.0** | CCS Methodology v2.5
+**Version 2.9.1** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -307,6 +307,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 2.9.1 | **Reply UI improvements**: Cleaner "+" button UI instead of always-visible input, author-specific coloring (each user gets unique color for their replies), customizable profile colors in Settings → Profile, replies persist in all save formats (cloud, .ccs files, localStorage, PDF exports), replies respect annotation opacity settings |
 | 2.9.0 | **Annotation replies**: Threaded discussions on annotations with real-time sync, click 💬 button to expand/collapse reply threads, add and delete replies with 5s polling sync, reply counts displayed on annotations. **Code refactoring**: Split cm-annotations.ts (969 lines) into focused modules for better maintainability (config, widgets, extensions) |
 | 2.8.4 | **Library versioning**: Approving submissions now creates library copy while preserving user's working copy, auto-replaces duplicate library entries, profiles table RLS policies for admin persistence, sample projects dated (ELIZA 1965b, Apollo 11 1969, Colossal Cave 1977) |
 | 2.8.3 | **Apollo 11 sample projects**: Added Comanche055 (Command Module, 85 AGC files) and Luminary099 (Lunar Module, 90 AGC files) as critique mode samples, dynamic sample loading from Samples.md, AGC language support |

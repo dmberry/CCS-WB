@@ -407,6 +407,50 @@ _Add relevant references, documentation links, or related scholarship:_
         codeContents[row.id] = row.content || "";
       }
 
+      // Fetch replies for all annotations
+      const annotationIds = (annotationsData || []).map((a: { id: string }) => a.id);
+      let repliesData: Array<{
+        annotation_id: string;
+        id: string;
+        content: string;
+        created_at: string;
+        added_by_initials: string | null;
+        profiles: { profile_color: string | null } | null;
+      }> = [];
+
+      if (annotationIds.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data } = await (supabase as any)
+          .from("annotation_replies")
+          .select("*, profiles!annotation_replies_user_id_fkey(profile_color)")
+          .in("annotation_id", annotationIds)
+          .order("created_at", { ascending: true });
+
+        repliesData = data || [];
+      }
+
+      // Build replies map
+      const repliesMap: Record<string, Array<{
+        id: string;
+        content: string;
+        createdAt: string;
+        addedBy?: string;
+        profileColor?: string;
+      }>> = {};
+
+      repliesData.forEach(reply => {
+        if (!repliesMap[reply.annotation_id]) {
+          repliesMap[reply.annotation_id] = [];
+        }
+        repliesMap[reply.annotation_id].push({
+          id: reply.id,
+          content: reply.content,
+          createdAt: reply.created_at,
+          addedBy: reply.added_by_initials || undefined,
+          profileColor: reply.profiles?.profile_color || undefined,
+        });
+      });
+
       // Build lineAnnotations from database
       const lineAnnotations = (annotationsData || []).map((row: {
         id: string;
@@ -418,6 +462,7 @@ _Add relevant references, documentation links, or related scholarship:_
         content: string;
         created_at: string;
         user_id: string | null;
+        added_by_initials: string | null;
       }) => ({
         id: row.id,
         codeFileId: row.file_id,
@@ -427,7 +472,8 @@ _Add relevant references, documentation links, or related scholarship:_
         type: row.type as "observation" | "question" | "metaphor" | "pattern" | "context" | "critique",
         content: row.content,
         createdAt: row.created_at,
-        addedBy: undefined, // Could fetch from profiles if needed
+        addedBy: row.added_by_initials || undefined,
+        replies: repliesMap[row.id] || undefined,
       }));
 
       // Build session: use session_data for other fields, but override files/annotations from tables
