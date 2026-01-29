@@ -164,6 +164,29 @@ export function useCollaborativeSession() {
         }, 1500);
       }
 
+      // Detect reply changes (added or deleted)
+      const replyChanges = annotations
+        .map(remote => {
+          const local = localAnnotations.find(l => l.id === remote.id);
+          if (!local) return null;
+          const localReplyCount = local.replies?.length || 0;
+          const remoteReplyCount = remote.replies?.length || 0;
+          if (localReplyCount !== remoteReplyCount) {
+            return {
+              annotationId: remote.id,
+              localCount: localReplyCount,
+              remoteCount: remoteReplyCount,
+              change: remoteReplyCount > localReplyCount ? 'added' : 'deleted'
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
+
+      if (replyChanges.length > 0) {
+        console.log("handleRemoteAnnotationChange: Reply changes detected:", replyChanges);
+      }
+
       // Mark all remote annotations as synced
       annotations.forEach(a => syncedAnnotationIdsRef.current.add(a.id));
 
