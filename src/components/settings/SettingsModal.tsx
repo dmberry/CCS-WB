@@ -386,17 +386,33 @@ export function SettingsModal({
                   {authProfile ? (
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          value={tempColor || authProfile.profile_color || "#6b7280"}
-                          onChange={(e) => {
-                            // Update local state for live preview
-                            setTempColor(e.target.value);
-                          }}
-                          disabled={isSavingColor}
-                          className="w-12 h-8 rounded border border-parchment-dark cursor-pointer disabled:opacity-50"
+                        {/* Color preview swatch */}
+                        <div
+                          className="w-8 h-8 rounded border-2 border-parchment-dark"
+                          style={{ backgroundColor: tempColor || authProfile.profile_color || "#6b7280" }}
                         />
-                        {tempColor && tempColor !== authProfile.profile_color && (
+
+                        {/* Color dropdown */}
+                        <select
+                          value={tempColor || authProfile.profile_color || ""}
+                          onChange={(e) => setTempColor(e.target.value)}
+                          disabled={isSavingColor}
+                          className="font-sans text-[10px] px-2 py-1 rounded border border-parchment-dark bg-parchment disabled:opacity-50"
+                        >
+                          <option value="">Auto (based on initials)</option>
+                          <option value="#ef4444">Red</option>
+                          <option value="#f97316">Orange</option>
+                          <option value="#eab308">Yellow</option>
+                          <option value="#22c55e">Green</option>
+                          <option value="#06b6d4">Cyan</option>
+                          <option value="#3b82f6">Blue</option>
+                          <option value="#8b5cf6">Purple</option>
+                          <option value="#ec4899">Pink</option>
+                          <option value="#94a3b8">Gray</option>
+                          <option value="#78716c">Brown</option>
+                        </select>
+
+                        {tempColor !== authProfile.profile_color && (
                           <button
                             onClick={async () => {
                               setIsSavingColor(true);
@@ -404,10 +420,9 @@ export function SettingsModal({
                                 await fetch("/api/profile/update-color", {
                                   method: "POST",
                                   headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ color: tempColor }),
+                                  body: JSON.stringify({ color: tempColor || null }),
                                   credentials: "include",
                                 });
-                                // Refresh profile from database
                                 await refreshProfile();
                                 setTempColor(null);
                               } catch (err) {
@@ -419,43 +434,10 @@ export function SettingsModal({
                             disabled={isSavingColor}
                             className="px-3 py-1 bg-burgundy text-parchment font-sans text-[10px] rounded hover:bg-burgundy-dark disabled:opacity-50"
                           >
-                            Save Color
+                            {isSavingColor ? "Saving..." : "Save"}
                           </button>
                         )}
-                        <span className="font-sans text-[10px] text-slate-muted">
-                          {isSavingColor ? "Saving..." : (authProfile.profile_color || "Using auto-generated color")}
-                        </span>
                       </div>
-                      {tempColor && tempColor !== authProfile.profile_color && (
-                        <p className="font-sans text-[9px] text-slate-muted italic">
-                          Click "Save Color" to apply your selection
-                        </p>
-                      )}
-                      {authProfile.profile_color && (
-                        <button
-                          onClick={async () => {
-                            setIsSavingColor(true);
-                            try {
-                              await fetch("/api/profile/update-color", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ color: null }),
-                                credentials: "include",
-                              });
-                              await refreshProfile();
-                              setTempColor(null);
-                            } catch (err) {
-                              console.error("Failed to reset color:", err);
-                            } finally {
-                              setIsSavingColor(false);
-                            }
-                          }}
-                          disabled={isSavingColor}
-                          className="font-sans text-[10px] text-burgundy hover:underline disabled:opacity-50"
-                        >
-                          Reset to auto
-                        </button>
-                      )}
                     </div>
                   ) : (
                     <div className="text-[10px] text-slate-muted italic">
