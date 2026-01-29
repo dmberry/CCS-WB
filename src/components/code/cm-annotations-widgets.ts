@@ -259,7 +259,7 @@ export class AnnotationWidget extends WidgetType {
     readonly onToggleReplies: ((id: string) => void) | undefined = undefined,
     readonly onAddReply: ((annotationId: string, content: string) => void) | undefined = undefined,
     readonly onDeleteReply: ((replyId: string) => void) | undefined = undefined,
-    readonly replyInputOpenFor: string | null = null,
+    readonly hasReplyInputOpen: boolean = false,
     readonly onOpenReplyInput: ((id: string) => void) | undefined = undefined,
     readonly onCloseReplyInput: (() => void) | undefined = undefined
   ) {
@@ -286,7 +286,7 @@ export class AnnotationWidget extends WidgetType {
       this.displaySettings.showPillBackground === other.displaySettings.showPillBackground &&
       this.isRemoteNew === other.isRemoteNew &&
       this.expandedAnnotationId === other.expandedAnnotationId &&
-      this.replyInputOpenFor === other.replyInputOpenFor &&
+      this.hasReplyInputOpen === other.hasReplyInputOpen &&
       repliesEqual
     );
   }
@@ -513,9 +513,7 @@ export class AnnotationWidget extends WidgetType {
 
       // Reply input or "+" button
       if (this.onAddReply) {
-        const isInputOpen = this.replyInputOpenFor === this.annotation.id;
-
-        if (isInputOpen) {
+        if (this.hasReplyInputOpen) {
           // Show reply input form
           const replyForm = document.createElement("div");
           replyForm.style.cssText = `

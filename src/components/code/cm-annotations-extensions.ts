@@ -95,7 +95,7 @@ export function createSimpleAnnotationsExtension(
               onToggleReplies,
               onAddReply,
               onDeleteReply,
-              replyInputOpenFor,
+              replyInputOpenFor === ann.id, // Only this annotation cares if it has input open
               onOpenReplyInput,
               onCloseReplyInput
             ),
