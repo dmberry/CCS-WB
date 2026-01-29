@@ -417,16 +417,25 @@ export function SettingsModal({
                             onClick={async () => {
                               setIsSavingColor(true);
                               try {
-                                await fetch("/api/profile/update-color", {
+                                const response = await fetch("/api/profile/update-color", {
                                   method: "POST",
                                   headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify({ color: tempColor || null }),
                                   credentials: "include",
                                 });
+
+                                if (!response.ok) {
+                                  const error = await response.json();
+                                  console.error("API error:", error);
+                                  alert(`Failed to save color: ${error.error || "Unknown error"}`);
+                                  return;
+                                }
+
                                 await refreshProfile();
                                 setTempColor(null);
                               } catch (err) {
                                 console.error("Failed to update color:", err);
+                                alert("Failed to save color. Please try again.");
                               } finally {
                                 setIsSavingColor(false);
                               }
