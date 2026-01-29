@@ -342,23 +342,36 @@ export function useAnnotationsSync({
         updated_at: new Date().toISOString(),
       };
 
-      console.log("pushReply: Saving reply to database", { annotationId, content, replyId: row.id });
+      console.log("pushReply: Saving reply to database", { annotationId, content, replyId: row.id, userId: user?.id });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
-        .from("annotation_replies")
-        .upsert(row, { onConflict: "id" });
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase as any)
+          .from("annotation_replies")
+          .upsert(row, { onConflict: "id" })
+          .select();
 
-      if (error) {
-        console.error("pushReply: Error pushing reply", error);
-      } else {
-        console.log("pushReply: Reply saved successfully, triggering fetchAndUpdate in 200ms");
-        // Trigger a fetch to update replies
-        lastUpdateRef.current = Date.now();
-        setTimeout(() => {
-          console.log("pushReply: Calling fetchAndUpdate now");
-          fetchAndUpdate();
-        }, 200);
+        if (error) {
+          console.error("pushReply: Database error:", error);
+          console.error("pushReply: Error details:", {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+            row,
+          });
+        } else {
+          console.log("pushReply: Reply saved successfully", data);
+          console.log("pushReply: Triggering fetchAndUpdate in 200ms");
+          // Trigger a fetch to update replies
+          lastUpdateRef.current = Date.now();
+          setTimeout(() => {
+            console.log("pushReply: Calling fetchAndUpdate now");
+            fetchAndUpdate();
+          }, 200);
+        }
+      } catch (err) {
+        console.error("pushReply: Exception caught:", err);
       }
     },
     [supabase, enabled, isAuthenticated, currentProjectId, user, profile, fetchAndUpdate]
