@@ -245,11 +245,19 @@ export function useAnnotationsSync({
         .order("created_at", { ascending: true });
 
       if (error) {
-        console.error("Error fetching annotations:", error);
+        console.error("fetchAndUpdate: Error fetching annotations:", error);
+        console.error("fetchAndUpdate: Error details:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          fileIds,
+        });
         return;
       }
 
       const annotations = data || [];
+      console.log(`fetchAndUpdate: Fetched ${annotations.length} annotations, calling onRemoteChange`);
       const annotationIds = annotations.map((a: AnnotationRow) => a.id);
 
       // Fetch replies for all annotations with profile colors
