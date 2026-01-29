@@ -108,6 +108,7 @@ const ccsLightTheme = EditorView.theme(
     },
     ".cm-annotation-content": {
       flex: "1",
+      fontFamily: "var(--code-font-family, ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace)",
       fontStyle: "italic",
       color: "hsl(var(--slate))",
       transition: "opacity 0.15s",
@@ -381,6 +382,7 @@ const ccsDarkTheme = EditorView.theme(
     },
     ".cm-annotation-content": {
       flex: "1",
+      fontFamily: "var(--code-font-family, ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace)",
       fontStyle: "italic",
       color: "hsl(var(--slate))",
       transition: "opacity 0.15s",
