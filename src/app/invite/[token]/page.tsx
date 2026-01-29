@@ -9,7 +9,7 @@
  * 3. If invalid/expired → shows error message
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useProjects } from "@/context/ProjectsContext";
@@ -32,47 +32,63 @@ export default function InvitePage() {
   const [status, setStatus] = useState<InviteStatus>("loading");
   const [error, setError] = useState<string | null>(null);
   const [projectName, setProjectName] = useState<string | null>(null);
+  const hasAttemptedJoin = useRef(false);
 
   // Handle joining the project
   const handleJoin = useCallback(async () => {
     if (!token) {
+      console.error("InvitePage: No token provided");
       setStatus("error");
       setError("Invalid invite link");
       return;
     }
 
+    console.log("InvitePage: Starting join process");
     setStatus("joining");
     setError(null);
 
+    console.log("InvitePage: Calling joinProjectByInvite");
     const { project, error } = await joinProjectByInvite(token);
 
     if (error) {
+      console.error("InvitePage: joinProjectByInvite failed:", error);
       setStatus("error");
       setError(error.message);
       return;
     }
 
     if (project) {
+      console.log("InvitePage: Successfully joined project:", project.name);
       setProjectName(project.name);
       setStatus("success");
 
       // Load the project and import session data
+      console.log("InvitePage: Setting current project ID");
       setCurrentProjectId(project.id);
-      const { session } = await loadProject(project.id);
+
+      console.log("InvitePage: Loading project data");
+      const { session, error: loadError } = await loadProject(project.id);
+
+      if (loadError) {
+        console.error("InvitePage: loadProject failed:", loadError);
+      }
 
       if (session) {
-        // Import session to load code files into state
+        console.log("InvitePage: Importing session");
         importSession(session);
-        // Small delay to show success state
-        setTimeout(() => {
-          router.push("/conversation");
-        }, 1500);
       } else {
-        // Still redirect even if session load fails
-        setTimeout(() => {
-          router.push("/conversation");
-        }, 1500);
+        console.warn("InvitePage: No session data returned from loadProject");
       }
+
+      // Small delay to show success state, then redirect
+      console.log("InvitePage: Redirecting to /conversation in 1.5s");
+      setTimeout(() => {
+        router.push("/conversation");
+      }, 1500);
+    } else {
+      console.error("InvitePage: joinProjectByInvite returned no project and no error");
+      setStatus("error");
+      setError("Failed to join project");
     }
   }, [token, joinProjectByInvite, loadProject, setCurrentProjectId, importSession, router]);
 
@@ -85,12 +101,21 @@ export default function InvitePage() {
 
     if (!isAuthenticated) {
       setStatus("needs_auth");
+      hasAttemptedJoin.current = false; // Reset on logout
       return;
     }
 
-    // User is authenticated, try to join
-    handleJoin();
-  }, [authLoading, isAuthenticated, handleJoin]);
+    // User is authenticated, try to join (but only once)
+    if (!hasAttemptedJoin.current) {
+      hasAttemptedJoin.current = true;
+      console.log("InvitePage: Attempting to join project with token:", token);
+      handleJoin().catch(err => {
+        console.error("InvitePage: handleJoin failed with error:", err);
+        setStatus("error");
+        setError(err.message || "Failed to join project");
+      });
+    }
+  }, [authLoading, isAuthenticated, handleJoin, token]);
 
   return (
     <div className="min-h-screen bg-parchment flex items-center justify-center p-4">

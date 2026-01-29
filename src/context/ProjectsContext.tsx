@@ -97,10 +97,38 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated } = useAuth();
   const [projects, setProjects] = useState<ProjectWithOwner[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  const [currentProjectId, setCurrentProjectIdState] = useState<string | null>(null);
   const [showProjectsModal, setShowProjectsModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [membersModalProjectId, setMembersModalProjectId] = useState<string | null>(null);
+
+  // Wrapper for setCurrentProjectId that persists to localStorage
+  const setCurrentProjectId = useCallback((id: string | null) => {
+    setCurrentProjectIdState(id);
+    try {
+      if (id) {
+        localStorage.setItem("ccs-current-project-id", id);
+      } else {
+        localStorage.removeItem("ccs-current-project-id");
+      }
+    } catch (err) {
+      console.warn("Failed to persist currentProjectId:", err);
+    }
+  }, []);
+
+  // Restore currentProjectId from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("ccs-current-project-id");
+      if (saved) {
+        setCurrentProjectIdState(saved);
+        // Set flag to show restoration banner
+        localStorage.setItem("ccs-project-just-restored", "true");
+      }
+    } catch (err) {
+      console.warn("Failed to restore currentProjectId:", err);
+    }
+  }, []);
 
   // Library state
   const [libraryProjects, setLibraryProjects] = useState<LibraryProject[]>([]);
@@ -419,10 +447,11 @@ _Add relevant references, documentation links, or related scholarship:_
       }> = [];
 
       if (annotationIds.length > 0) {
+        // Fetch replies without profile join for now (avoids FK constraint errors)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data } = await (supabase as any)
           .from("annotation_replies")
-          .select("*, profiles!annotation_replies_user_id_fkey(profile_color)")
+          .select("*")
           .in("annotation_id", annotationIds)
           .order("created_at", { ascending: true });
 
@@ -447,7 +476,7 @@ _Add relevant references, documentation links, or related scholarship:_
           content: reply.content,
           createdAt: reply.created_at,
           addedBy: reply.added_by_initials || undefined,
-          profileColor: reply.profiles?.profile_color || undefined,
+          profileColor: undefined, // TODO: Fetch from profiles table separately
         });
       });
 

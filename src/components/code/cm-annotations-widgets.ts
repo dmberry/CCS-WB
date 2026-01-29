@@ -573,35 +573,31 @@ export class AnnotationWidget extends WidgetType {
           replyForm.appendChild(submitBtn);
           repliesSection.appendChild(replyForm);
 
-          // Auto-focus the input
-          setTimeout(() => replyInput.focus(), 10);
+          // Auto-focus the input immediately
+          requestAnimationFrame(() => replyInput.focus());
         } else if (this.annotation.replies && this.annotation.replies.length > 0) {
-          // Show small "+" button inline after the last reply
-          const lastReplyDiv = repliesSection.lastElementChild as HTMLElement;
-          if (lastReplyDiv) {
-            const addReplyBtn = document.createElement("button");
-            addReplyBtn.className = "cm-annotation-btn cm-annotation-add-reply-btn";
-            addReplyBtn.innerHTML = "+";
-            addReplyBtn.title = "Add a reply";
-            addReplyBtn.style.cssText = `
-              margin-left: 8px;
-              padding: 0px 6px;
-              background: transparent;
-              border: 1px solid ${color};
-              border-radius: 3px;
-              cursor: pointer;
-              font-size: 0.85em;
-              color: ${color};
-              font-weight: bold;
-              vertical-align: middle;
-            `;
-            addReplyBtn.onclick = (e) => {
-              e.stopPropagation();
-              this.onOpenReplyInput?.(this.annotation.id);
-            };
-            // Insert at the end of the last reply div
-            lastReplyDiv.appendChild(addReplyBtn);
-          }
+          // Show small "+" button after all replies
+          const addReplyBtn = document.createElement("button");
+          addReplyBtn.className = "cm-annotation-btn cm-annotation-add-reply-btn";
+          addReplyBtn.innerHTML = "+";
+          addReplyBtn.title = "Add a reply";
+          addReplyBtn.style.cssText = `
+            margin-top: 4px;
+            padding: 0px 6px;
+            background: transparent;
+            border: 1px solid ${color};
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+            color: ${color};
+            font-weight: bold;
+          `;
+          addReplyBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.onOpenReplyInput?.(this.annotation.id);
+          };
+          // Append to repliesSection after all replies
+          repliesSection.appendChild(addReplyBtn);
         } else {
           // No replies yet - show + button on its own line but smaller
           const addReplyBtn = document.createElement("button");

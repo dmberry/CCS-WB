@@ -73,6 +73,7 @@ export function SettingsModal({
     signInWithProvider,
     signInWithMagicLink,
     signOut,
+    refreshProfile,
   } = useAuth();
 
   const {
@@ -92,6 +93,10 @@ export function SettingsModal({
   const [collabLoading, setCollabLoading] = useState<AuthProvider | "email" | "signout" | null>(null);
   const [collabError, setCollabError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+
+  // Color picker state - track temporary color while user is selecting
+  const [tempColor, setTempColor] = useState<string | null>(null);
+  const [isSavingColor, setIsSavingColor] = useState(false);
 
   // When logged in, use auth profile name; otherwise use local profile name
   const displayName = isAuthenticated && authProfile?.display_name
@@ -373,54 +378,79 @@ export function SettingsModal({
               </div>
 
               {/* Profile Color - only show when authenticated with cloud */}
-              {isAuthenticated && authProfile && (
+              {isAuthenticated && (
                 <div>
                   <label className="block font-sans text-[10px] font-medium text-ink mb-1">
                     Reply Color <span className="text-slate-muted font-normal">(shows on your replies in shared projects)</span>
                   </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={authProfile.profile_color || "#6b7280"}
-                      onChange={async (e) => {
-                        const color = e.target.value;
-                        try {
-                          await fetch("/api/profile/update-color", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ color }),
-                          });
-                          // Refresh profile to show new color
-                          window.location.reload();
-                        } catch (err) {
-                          console.error("Failed to update color:", err);
-                        }
-                      }}
-                      className="w-12 h-8 rounded border border-parchment-dark cursor-pointer"
-                    />
-                    <span className="font-sans text-[10px] text-slate-muted">
-                      {authProfile.profile_color || "Using auto-generated color"}
-                    </span>
-                    {authProfile.profile_color && (
-                      <button
-                        onClick={async () => {
+                  {authProfile ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={tempColor || authProfile.profile_color || "#6b7280"}
+                        onChange={(e) => {
+                          // Update local state for live preview
+                          setTempColor(e.target.value);
+                        }}
+                        onBlur={async (e) => {
+                          // Save to database when user finishes selecting
+                          const color = e.target.value;
+                          if (color === authProfile.profile_color) {
+                            setTempColor(null);
+                            return;
+                          }
+                          setIsSavingColor(true);
                           try {
                             await fetch("/api/profile/update-color", {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ color: null }),
+                              body: JSON.stringify({ color }),
                             });
-                            window.location.reload();
+                            // Refresh profile from database
+                            await refreshProfile();
+                            setTempColor(null);
                           } catch (err) {
-                            console.error("Failed to reset color:", err);
+                            console.error("Failed to update color:", err);
+                          } finally {
+                            setIsSavingColor(false);
                           }
                         }}
-                        className="font-sans text-[10px] text-burgundy hover:underline"
-                      >
-                        Reset to auto
-                      </button>
-                    )}
-                  </div>
+                        disabled={isSavingColor}
+                        className="w-12 h-8 rounded border border-parchment-dark cursor-pointer disabled:opacity-50"
+                      />
+                      <span className="font-sans text-[10px] text-slate-muted">
+                        {isSavingColor ? "Saving..." : (authProfile.profile_color || "Using auto-generated color")}
+                      </span>
+                      {authProfile.profile_color && (
+                        <button
+                          onClick={async () => {
+                            setIsSavingColor(true);
+                            try {
+                              await fetch("/api/profile/update-color", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ color: null }),
+                              });
+                              await refreshProfile();
+                              setTempColor(null);
+                            } catch (err) {
+                              console.error("Failed to reset color:", err);
+                            } finally {
+                              setIsSavingColor(false);
+                            }
+                          }}
+                          disabled={isSavingColor}
+                          className="font-sans text-[10px] text-burgundy hover:underline disabled:opacity-50"
+                        >
+                          Reset to auto
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-slate-muted italic">
+                      Loading profile...
+                    </div>
+                  )}
                 </div>
               )}
 

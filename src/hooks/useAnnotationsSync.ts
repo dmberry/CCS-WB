@@ -213,8 +213,10 @@ export function useAnnotationsSync({
 
   // Helper to fetch and update annotations
   const fetchAndUpdate = useCallback(async () => {
+    console.log("fetchAndUpdate: Starting fetch");
     const currentFileIdMap = fileIdMapRef.current;
     if (!supabase || !currentProjectId || Object.keys(currentFileIdMap).length === 0) {
+      console.warn("fetchAndUpdate: Preconditions not met", { supabase: !!supabase, currentProjectId, fileIdMapCount: Object.keys(currentFileIdMap).length });
       return;
     }
 
@@ -250,12 +252,18 @@ export function useAnnotationsSync({
       }>> = {};
 
       if (annotationIds.length > 0) {
+        // Fetch replies - try simplest syntax first (no join)
+        // We'll fetch profile colors separately if needed
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: repliesData } = await (supabase as any)
+        const { data: repliesData, error: repliesError } = await (supabase as any)
           .from("annotation_replies")
-          .select("*, profiles!annotation_replies_user_id_fkey(profile_color)")
+          .select("*")
           .in("annotation_id", annotationIds)
           .order("created_at", { ascending: true });
+
+        if (repliesError) {
+          console.error("Error fetching replies:", repliesError);
+        }
 
         if (repliesData) {
           repliesData.forEach((reply: {
@@ -264,7 +272,7 @@ export function useAnnotationsSync({
             content: string;
             created_at: string;
             added_by_initials: string | null;
-            profiles: { profile_color: string | null } | null;
+            user_id: string | null;
           }) => {
             if (!repliesMap[reply.annotation_id]) {
               repliesMap[reply.annotation_id] = [];
@@ -274,7 +282,7 @@ export function useAnnotationsSync({
               content: reply.content,
               created_at: reply.created_at,
               added_by_initials: reply.added_by_initials,
-              profile_color: reply.profiles?.profile_color || null,
+              profile_color: null, // TODO: Fetch from profiles table separately
             });
           });
         }
@@ -295,6 +303,8 @@ export function useAnnotationsSync({
         }
         return annotation;
       });
+      console.log("fetchAndUpdate: Fetched", remoteAnnotations.length, "annotations, calling onRemoteChange");
+      console.log("fetchAndUpdate: Replies by annotation:", Object.keys(repliesMap).map(id => ({ id, count: repliesMap[id].length })));
       onRemoteChangeRef.current(remoteAnnotations);
     } catch (err) {
       console.error("Error in fetchAndUpdate:", err);
@@ -305,6 +315,7 @@ export function useAnnotationsSync({
   const pushReply = useCallback(
     async (annotationId: string, content: string, replyId?: string) => {
       if (!supabase || !enabled || !isAuthenticated || !currentProjectId) {
+        console.warn("pushReply: Preconditions not met", { supabase: !!supabase, enabled, isAuthenticated, currentProjectId });
         return;
       }
 
@@ -321,20 +332,26 @@ export function useAnnotationsSync({
         updated_at: new Date().toISOString(),
       };
 
+      console.log("pushReply: Saving reply to database", { annotationId, content, replyId: row.id });
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (supabase as any)
         .from("annotation_replies")
         .upsert(row, { onConflict: "id" });
 
       if (error) {
-        console.error("Error pushing reply:", error);
+        console.error("pushReply: Error pushing reply", error);
       } else {
+        console.log("pushReply: Reply saved successfully, triggering fetchAndUpdate in 200ms");
         // Trigger a fetch to update replies
         lastUpdateRef.current = Date.now();
-        setTimeout(() => fetchAndUpdate(), 200);
+        setTimeout(() => {
+          console.log("pushReply: Calling fetchAndUpdate now");
+          fetchAndUpdate();
+        }, 200);
       }
     },
-    [supabase, enabled, isAuthenticated, currentProjectId, user]
+    [supabase, enabled, isAuthenticated, currentProjectId, user, fetchAndUpdate]
   );
 
   // Delete a reply from an annotation
@@ -358,7 +375,7 @@ export function useAnnotationsSync({
         setTimeout(() => fetchAndUpdate(), 200);
       }
     },
-    [supabase, enabled, isAuthenticated]
+    [supabase, enabled, isAuthenticated, fetchAndUpdate]
   );
 
   // Polling interval (5 seconds) - reliable baseline for sync

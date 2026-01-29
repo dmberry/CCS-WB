@@ -251,6 +251,22 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveModalName, setSaveModalName] = useState("");
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [showProjectRestoredBanner, setShowProjectRestoredBanner] = useState(false);
+
+  // Check if cloud project was restored on page load
+  useEffect(() => {
+    if (currentProjectId && currentProject) {
+      // Check if this was a page reload by seeing if there's no session data yet
+      const wasRestored = localStorage.getItem("ccs-project-just-restored") === "true";
+      if (wasRestored) {
+        setShowProjectRestoredBanner(true);
+        localStorage.removeItem("ccs-project-just-restored");
+        // Auto-hide banner after 10 seconds
+        const timer = setTimeout(() => setShowProjectRestoredBanner(false), 10000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [currentProjectId, currentProject]);
 
   // Local file trash (for when not in cloud mode)
   // Persisted to localStorage so it survives page refreshes and project switches
@@ -1320,6 +1336,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   }, []);
 
   const handleOpenReplyInput = useCallback((annotationId: string) => {
+    console.log("handleOpenReplyInput called for:", annotationId);
     setReplyInputOpenFor(annotationId);
   }, []);
 
@@ -2336,6 +2353,24 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           />
         </div>
       </header>
+
+      {/* Cloud project restored banner */}
+      {showProjectRestoredBanner && currentProject && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-4 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CloudCog className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <span className="font-sans text-[11px] text-blue-800 dark:text-blue-200">
+              Reconnected to cloud project: <strong>{currentProject.name}</strong>
+            </span>
+          </div>
+          <button
+            onClick={() => setShowProjectRestoredBanner(false)}
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Read-only library project banner */}
       {viewingLibraryProjectId && (
