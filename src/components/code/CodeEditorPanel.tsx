@@ -1563,7 +1563,11 @@ export function CodeEditorPanel({
                           <HardDrive className="h-2.5 w-2.5 text-slate-muted flex-shrink-0" strokeWidth={1.5} />
                         )}
                         <span
-                          className={cn("font-mono truncate flex-1", getFileColourClass(file.language))}
+                          className={cn(
+                            "font-mono truncate flex-1",
+                            getFileColourClass(file.language),
+                            !isInProject && "italic"
+                          )}
                           style={{ fontSize: "var(--files-pane-font-size, 10px)" }}
                         >
                           {file.name}

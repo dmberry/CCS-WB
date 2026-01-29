@@ -57,6 +57,7 @@ import {
   Info,
   Library,
   Pencil,
+  HardDrive,
 } from "lucide-react";
 import { CodeEditorPanel, generateAnnotatedCode, parseAnnotatedMarkdown } from "@/components/code";
 import { ContextPreview } from "@/components/chat";
@@ -1762,7 +1763,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             )}
           </div>
         ) : (
-          // Local session: editable name with .ccs extension
+          // Local session: editable name with .ccs extension and local indicator
           <button
             onClick={() => {
               const newName = prompt("Rename project:", projectName || "Untitled");
@@ -1770,9 +1771,10 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                 setProjectName(newName.trim());
               }
             }}
-            className="hidden sm:block absolute left-1/2 transform -translate-x-1/2 hover:bg-cream px-2 py-0.5 rounded-sm transition-colors max-w-[200px] truncate"
-            title="Click to rename"
+            className="hidden sm:block absolute left-1/2 transform -translate-x-1/2 hover:bg-cream px-2 py-0.5 rounded-sm transition-colors max-w-[200px] truncate flex items-center gap-1"
+            title="Local session (click to rename)"
           >
+            <HardDrive className="h-2.5 w-2.5 text-slate-muted flex-shrink-0" strokeWidth={1.5} />
             {projectName ? (
               <span className="font-mono text-[10px] text-ink">
                 {projectName.replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase()}-{MODE_CODES[session.mode] || "XX"}.ccs
@@ -2305,6 +2307,11 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                         <span><strong>Ctx</strong> - Context</span>
                         <span><strong>Crit</strong> - Critique</span>
                       </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-ink text-[11px] uppercase tracking-wide mb-1">Local vs Cloud Mode</h4>
+                      <p className="mb-1.5"><strong>Local mode</strong> (💾 icon, italic filenames): Working on your device only. Changes saved locally as .ccs files. No internet required.</p>
+                      <p><strong>Cloud mode</strong> (☁️ icon, normal filenames): Connected to a shared project. Changes sync automatically. Collaborate with others in real-time.</p>
                     </div>
                     <div>
                       <h4 className="font-medium text-ink text-[11px] uppercase tracking-wide mb-1">Shortcuts</h4>
