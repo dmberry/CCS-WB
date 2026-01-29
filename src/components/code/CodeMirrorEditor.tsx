@@ -73,6 +73,12 @@ export interface CodeMirrorEditorProps {
   onAddReply?: (annotationId: string, content: string) => void;
   /** Callback to delete a reply */
   onDeleteReply?: (replyId: string) => void;
+  /** ID of annotation that has reply input open */
+  replyInputOpenFor?: string | null;
+  /** Callback to open reply input for an annotation */
+  onOpenReplyInput?: (annotationId: string) => void;
+  /** Callback to close reply input */
+  onCloseReplyInput?: () => void;
   /** CSS class for the container */
   className?: string;
 }
@@ -100,6 +106,9 @@ export function CodeMirrorEditor({
   onToggleReplies,
   onAddReply,
   onDeleteReply,
+  replyInputOpenFor,
+  onOpenReplyInput,
+  onCloseReplyInput,
   className,
 }: CodeMirrorEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -219,7 +228,10 @@ export function CodeMirrorEditor({
               expandedAnnotationId,
               onToggleReplies,
               onAddReply,
-              onDeleteReply
+              onDeleteReply,
+              replyInputOpenFor,
+              onOpenReplyInput,
+              onCloseReplyInput
             )
           : []
       ),
@@ -407,7 +419,10 @@ export function CodeMirrorEditor({
               expandedAnnotationId,
               onToggleReplies,
               onAddReply,
-              onDeleteReply
+              onDeleteReply,
+              replyInputOpenFor,
+              onOpenReplyInput,
+              onCloseReplyInput
             )
           : []
       ),

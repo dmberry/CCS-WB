@@ -91,6 +91,9 @@ interface CodeEditorPanelProps {
   onToggleReplies?: (annotationId: string) => void;
   onAddReply?: (annotationId: string, content: string) => void;
   onDeleteReply?: (replyId: string) => void;
+  replyInputOpenFor?: string | null;
+  onOpenReplyInput?: (annotationId: string) => void;
+  onCloseReplyInput?: () => void;
   // Whether we're in a cloud project (for showing cloud icon on files)
   isInProject?: boolean;
   // Whether the panel is in read-only mode (e.g., viewing library project)
@@ -395,6 +398,9 @@ export function CodeEditorPanel({
   onToggleReplies,
   onAddReply,
   onDeleteReply,
+  replyInputOpenFor,
+  onOpenReplyInput,
+  onCloseReplyInput,
   isInProject = false,
   readOnly = false,
   // File trash props
@@ -2505,6 +2511,9 @@ export function CodeEditorPanel({
               onToggleReplies={onToggleReplies}
               onAddReply={onAddReply}
               onDeleteReply={onDeleteReply}
+              replyInputOpenFor={replyInputOpenFor}
+              onOpenReplyInput={onOpenReplyInput}
+              onCloseReplyInput={onCloseReplyInput}
               className="flex-1"
             />
           )}

@@ -245,6 +245,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const [showExportModal, setShowExportModal] = useState(false);
   const [showSendContextModal, setShowSendContextModal] = useState(false);
   const [expandedAnnotationId, setExpandedAnnotationId] = useState<string | null>(null);
+  const [replyInputOpenFor, setReplyInputOpenFor] = useState<string | null>(null);
   const [showFontSizePopover, setShowFontSizePopover] = useState(false);
   const [showHelpPopover, setShowHelpPopover] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -1308,21 +1309,29 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   // Annotation reply handlers
   const handleToggleReplies = useCallback((annotationId: string) => {
     setExpandedAnnotationId(prev => {
-      // If already expanded, try to focus the reply input instead of collapsing
       if (prev === annotationId) {
-        setTimeout(() => {
-          const replyInput = document.querySelector<HTMLInputElement>('.cm-annotation-reply-input');
-          replyInput?.focus();
-        }, 10);
-        return prev; // Keep expanded
+        // Already expanded - collapse
+        setReplyInputOpenFor(null);
+        return null;
       }
-      return annotationId; // Expand
+      // Expand
+      return annotationId;
     });
+  }, []);
+
+  const handleOpenReplyInput = useCallback((annotationId: string) => {
+    setReplyInputOpenFor(annotationId);
+  }, []);
+
+  const handleCloseReplyInput = useCallback(() => {
+    setReplyInputOpenFor(null);
   }, []);
 
   const handleAddReply = useCallback(async (annotationId: string, content: string) => {
     if (!pushReply) return;
     await pushReply(annotationId, content);
+    // Close the reply input after submitting
+    setReplyInputOpenFor(null);
   }, [pushReply]);
 
   const handleDeleteReply = useCallback(async (replyId: string) => {
@@ -2441,6 +2450,9 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             onToggleReplies={handleToggleReplies}
             onAddReply={handleAddReply}
             onDeleteReply={handleDeleteReply}
+            replyInputOpenFor={replyInputOpenFor}
+            onOpenReplyInput={handleOpenReplyInput}
+            onCloseReplyInput={handleCloseReplyInput}
             isInProject={isInProject}
             readOnly={!!viewingLibraryProjectId}
             // File trash props - use cloud trash when in project, local trash otherwise

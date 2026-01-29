@@ -41,7 +41,10 @@ export function createSimpleAnnotationsExtension(
   expandedAnnotationId?: string | null,
   onToggleReplies?: (id: string) => void,
   onAddReply?: (annotationId: string, content: string) => void,
-  onDeleteReply?: (replyId: string) => void
+  onDeleteReply?: (replyId: string) => void,
+  replyInputOpenFor?: string | null,
+  onOpenReplyInput?: (id: string) => void,
+  onCloseReplyInput?: () => void
 ): Extension {
   const settings = displaySettings || DEFAULT_ANNOTATION_DISPLAY_SETTINGS;
 
@@ -91,7 +94,10 @@ export function createSimpleAnnotationsExtension(
               expandedAnnotationId,
               onToggleReplies,
               onAddReply,
-              onDeleteReply
+              onDeleteReply,
+              replyInputOpenFor,
+              onOpenReplyInput,
+              onCloseReplyInput
             ),
             block: true,
             side: 1,

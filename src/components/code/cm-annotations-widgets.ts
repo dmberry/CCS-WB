@@ -223,7 +223,10 @@ export class AnnotationWidget extends WidgetType {
     readonly expandedAnnotationId: string | null = null,
     readonly onToggleReplies: ((id: string) => void) | undefined = undefined,
     readonly onAddReply: ((annotationId: string, content: string) => void) | undefined = undefined,
-    readonly onDeleteReply: ((replyId: string) => void) | undefined = undefined
+    readonly onDeleteReply: ((replyId: string) => void) | undefined = undefined,
+    readonly replyInputOpenFor: string | null = null,
+    readonly onOpenReplyInput: ((id: string) => void) | undefined = undefined,
+    readonly onCloseReplyInput: (() => void) | undefined = undefined
   ) {
     super();
   }
@@ -248,6 +251,7 @@ export class AnnotationWidget extends WidgetType {
       this.displaySettings.showPillBackground === other.displaySettings.showPillBackground &&
       this.isRemoteNew === other.isRemoteNew &&
       this.expandedAnnotationId === other.expandedAnnotationId &&
+      this.replyInputOpenFor === other.replyInputOpenFor &&
       repliesEqual
     );
   }
@@ -459,72 +463,100 @@ export class AnnotationWidget extends WidgetType {
         });
       }
 
-      // Reply input field
+      // Reply input or "+" button
       if (this.onAddReply) {
-        const replyForm = document.createElement("div");
-        replyForm.style.cssText = `
-          display: flex;
-          gap: 4px;
-          margin-top: 8px;
-        `;
+        const isInputOpen = this.replyInputOpenFor === this.annotation.id;
 
-        const replyInput = document.createElement("input");
-        replyInput.type = "text";
-        replyInput.placeholder = "Add a reply...";
-        replyInput.className = "cm-annotation-reply-input";
-        replyInput.style.cssText = `
-          flex: 1;
-          padding: 6px 8px;
-          border: 1px solid ${this.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'};
-          border-radius: 4px;
-          background: ${this.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.9)'};
-          color: inherit;
-          font-size: 0.9em;
-        `;
+        if (isInputOpen) {
+          // Show reply input form
+          const replyForm = document.createElement("div");
+          replyForm.style.cssText = `
+            display: flex;
+            gap: 4px;
+            margin-top: 8px;
+          `;
 
-        const submitBtn = document.createElement("button");
-        submitBtn.textContent = "Reply";
-        submitBtn.className = "cm-annotation-btn";
-        submitBtn.style.cssText = `
-          padding: 6px 12px;
-          background: ${color};
-          color: white;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 0.9em;
-        `;
+          const replyInput = document.createElement("input");
+          replyInput.type = "text";
+          replyInput.placeholder = "Add a reply...";
+          replyInput.className = "cm-annotation-reply-input";
+          replyInput.style.cssText = `
+            flex: 1;
+            padding: 6px 8px;
+            border: 1px solid ${this.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'};
+            border-radius: 4px;
+            background: ${this.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.9)'};
+            color: inherit;
+            font-size: 0.9em;
+          `;
 
-        const handleSubmit = () => {
-          const content = replyInput.value.trim();
-          if (content) {
-            this.onAddReply?.(this.annotation.id, content);
-            replyInput.value = "";
-          }
-        };
+          const submitBtn = document.createElement("button");
+          submitBtn.textContent = "Reply";
+          submitBtn.className = "cm-annotation-btn";
+          submitBtn.style.cssText = `
+            padding: 6px 12px;
+            background: ${color};
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+          `;
 
-        submitBtn.onclick = (e) => {
-          e.stopPropagation();
-          handleSubmit();
-        };
+          const handleSubmit = () => {
+            const content = replyInput.value.trim();
+            if (content) {
+              this.onAddReply?.(this.annotation.id, content);
+              replyInput.value = "";
+              this.onCloseReplyInput?.();
+            }
+          };
 
-        replyInput.onkeydown = (e) => {
-          // Always stop propagation to prevent CodeMirror from intercepting input
-          e.stopPropagation();
-
-          if (e.key === "Enter") {
+          submitBtn.onclick = (e) => {
+            e.stopPropagation();
             handleSubmit();
-          } else if (e.key === "Escape") {
-            this.onToggleReplies?.(this.annotation.id);
-          }
-        };
+          };
 
-        replyForm.appendChild(replyInput);
-        replyForm.appendChild(submitBtn);
-        repliesSection.appendChild(replyForm);
+          replyInput.onkeydown = (e) => {
+            // Always stop propagation to prevent CodeMirror from intercepting input
+            e.stopPropagation();
 
-        // Auto-focus the input
-        setTimeout(() => replyInput.focus(), 10);
+            if (e.key === "Enter") {
+              handleSubmit();
+            } else if (e.key === "Escape") {
+              this.onCloseReplyInput?.();
+            }
+          };
+
+          replyForm.appendChild(replyInput);
+          replyForm.appendChild(submitBtn);
+          repliesSection.appendChild(replyForm);
+
+          // Auto-focus the input
+          setTimeout(() => replyInput.focus(), 10);
+        } else {
+          // Show "+" button to open reply input
+          const addReplyBtn = document.createElement("button");
+          addReplyBtn.className = "cm-annotation-btn cm-annotation-add-reply-btn";
+          addReplyBtn.innerHTML = "+";
+          addReplyBtn.title = "Add a reply";
+          addReplyBtn.style.cssText = `
+            margin-top: 8px;
+            padding: 4px 12px;
+            background: ${this.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
+            border: 1px solid ${this.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'};
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.1em;
+            color: ${color};
+            font-weight: bold;
+          `;
+          addReplyBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.onOpenReplyInput?.(this.annotation.id);
+          };
+          repliesSection.appendChild(addReplyBtn);
+        }
       }
 
       wrapper.appendChild(repliesSection);
