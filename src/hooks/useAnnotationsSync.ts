@@ -264,21 +264,22 @@ export function useAnnotationsSync({
       console.log(`fetchAndUpdate: Fetched ${annotations.length} annotations, calling onRemoteChange`);
       const annotationIds = annotations.map((a: AnnotationRow) => a.id);
 
-      // Fetch replies for all annotations with profile colors
+      // Fetch replies for all annotations with profile colors and updated_at
       let repliesMap: Record<string, Array<{
         id: string;
         content: string;
         created_at: string;
+        updated_at: string;
         added_by_initials: string | null;
         profile_color: string | null;
       }>> = {};
 
       if (annotationIds.length > 0) {
-        // Fetch replies with profile_color stored in the table
+        // Fetch replies with profile_color and updated_at for state tracking
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: repliesData, error: repliesError } = await (supabase as any)
           .from("annotation_replies")
-          .select("id, annotation_id, content, created_at, added_by_initials, profile_color")
+          .select("id, annotation_id, content, created_at, updated_at, added_by_initials, profile_color")
           .in("annotation_id", annotationIds)
           .order("created_at", { ascending: true });
 
@@ -292,6 +293,7 @@ export function useAnnotationsSync({
             id: string;
             content: string;
             created_at: string;
+            updated_at: string;
             added_by_initials: string | null;
             profile_color: string | null;
           }) => {
@@ -302,6 +304,7 @@ export function useAnnotationsSync({
               id: reply.id,
               content: reply.content,
               created_at: reply.created_at,
+              updated_at: reply.updated_at,
               added_by_initials: reply.added_by_initials,
               profile_color: reply.profile_color,
             });
@@ -333,8 +336,8 @@ export function useAnnotationsSync({
 
       const allReplies = Object.values(repliesMap).flat();
       const repliesMaxUpdated = allReplies.length > 0
-        ? allReplies.reduce((max: string, reply: { created_at: string }) =>
-            reply.created_at > max ? reply.created_at : max, allReplies[0].created_at)
+        ? allReplies.reduce((max: string, reply: { updated_at: string }) =>
+            reply.updated_at > max ? reply.updated_at : max, allReplies[0].updated_at)
         : "";
 
       lastStateRef.current = {
