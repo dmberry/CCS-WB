@@ -1421,6 +1421,42 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     }
   }, [deleteReply, session.lineAnnotations, user, projects, currentProjectId]);
 
+  const handleDeleteAnnotation = useCallback(async (annotationId: string) => {
+    if (!removeLineAnnotation) return;
+
+    // Check if user is deleting someone else's annotation (project owner deleting member's annotation)
+    let needsConfirmation = false;
+    let annotationAuthor: string | undefined;
+
+    // Find the annotation to check ownership
+    const annotation = session.lineAnnotations?.find(a => a.id === annotationId);
+    if (annotation) {
+      annotationAuthor = annotation.addedBy;
+      // Need confirmation if:
+      // 1. Annotation has an author (not the current user's initials)
+      // 2. Current user is project owner (can delete anyone's annotation via RLS)
+      // 3. Annotation author doesn't match current user's initials
+      const currentUserInitials = user?.user_metadata?.initials || user?.email?.substring(0, 3).toUpperCase();
+      const currentProject = projects.find(p => p.id === currentProjectId);
+      const isOwner = currentProject?.owner_id === user?.id;
+
+      if (isOwner && annotation.addedBy && annotation.addedBy !== currentUserInitials) {
+        needsConfirmation = true;
+      }
+    }
+
+    // Show confirmation if project owner is deleting someone else's annotation
+    if (needsConfirmation) {
+      const confirmed = window.confirm(
+        `Delete annotation by ${annotationAuthor}?\n\nThis will permanently delete this annotation and all its replies.`
+      );
+      if (!confirmed) return;
+    }
+
+    // Call the wrapped removeLineAnnotation
+    await removeLineAnnotation(annotationId);
+  }, [removeLineAnnotation, session.lineAnnotations, user, projects, currentProjectId]);
+
   // Load session with code contents and mode validation
   const handleLoadSession = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -2549,7 +2585,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             userInitials={profile.initials}
             onAddLineAnnotation={addLineAnnotation}
             onUpdateLineAnnotation={updateLineAnnotation}
-            onRemoveLineAnnotation={removeLineAnnotation}
+            onRemoveLineAnnotation={handleDeleteAnnotation}
             onClearLineAnnotations={clearLineAnnotations}
             newRemoteAnnotationIds={newRemoteAnnotationIds}
             expandedAnnotationId={expandedAnnotationId}
