@@ -130,7 +130,12 @@ export function useAnnotationsSync({
   const lastUpdateRef = useRef<number>(0);
 
   // Track last known state to avoid redundant fetches
-  const lastStateRef = useRef<{ count: number; lastUpdated: string } | null>(null);
+  const lastStateRef = useRef<{
+    annotationsCount: number;
+    annotationsLastUpdated: string;
+    repliesCount: number;
+    repliesLastUpdated: string;
+  } | null>(null);
 
   // Store callback in ref to prevent infinite loops
   const onRemoteChangeRef = useRef(onRemoteChange);
@@ -183,22 +188,37 @@ export function useAnnotationsSync({
 
     // Quick check: has anything changed since last fetch?
     try {
-      // Get count and most recent updated_at
+      // Check annotations
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { count, data: recent, error: stateError } = await (supabase as any)
+      const { count: annotationsCount, data: recentAnnotation, error: annotationsError } = await (supabase as any)
         .from("annotations")
         .select("updated_at", { count: "exact", head: false })
         .in("file_id", fileIds)
         .order("updated_at", { ascending: false })
         .limit(1);
 
-      if (!stateError) {
-        const currentCount = count || 0;
-        const currentLastUpdated = recent?.[0]?.updated_at || "";
+      // Check replies (for annotations in this project)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { count: repliesCount, data: recentReply, error: repliesError } = await (supabase as any)
+        .from("annotation_replies")
+        .select("updated_at", { count: "exact", head: false })
+        .eq("project_id", currentProjectId)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+
+      if (!annotationsError && !repliesError) {
+        const currentAnnotationsCount = annotationsCount || 0;
+        const currentAnnotationsLastUpdated = recentAnnotation?.[0]?.updated_at || "";
+        const currentRepliesCount = repliesCount || 0;
+        const currentRepliesLastUpdated = recentReply?.[0]?.updated_at || "";
         const lastState = lastStateRef.current;
 
-        // If state hasn't changed, skip the full fetch
-        if (lastState && lastState.count === currentCount && lastState.lastUpdated === currentLastUpdated) {
+        // If neither annotations nor replies changed, skip the full fetch
+        if (lastState &&
+            lastState.annotationsCount === currentAnnotationsCount &&
+            lastState.annotationsLastUpdated === currentAnnotationsLastUpdated &&
+            lastState.repliesCount === currentRepliesCount &&
+            lastState.repliesLastUpdated === currentRepliesLastUpdated) {
           return; // No changes, skip fetch
         }
       }
@@ -306,13 +326,23 @@ export function useAnnotationsSync({
       });
 
       // Update state ref for next comparison
-      if (annotations.length > 0) {
-        const maxUpdated = annotations.reduce((max: string, row: AnnotationRow) =>
-          row.updated_at > max ? row.updated_at : max, annotations[0].updated_at);
-        lastStateRef.current = { count: annotations.length, lastUpdated: maxUpdated };
-      } else {
-        lastStateRef.current = { count: 0, lastUpdated: "" };
-      }
+      const annotationsMaxUpdated = annotations.length > 0
+        ? annotations.reduce((max: string, row: AnnotationRow) =>
+            row.updated_at > max ? row.updated_at : max, annotations[0].updated_at)
+        : "";
+
+      const allReplies = Object.values(repliesMap).flat();
+      const repliesMaxUpdated = allReplies.length > 0
+        ? allReplies.reduce((max: string, reply: { created_at: string }) =>
+            reply.created_at > max ? reply.created_at : max, allReplies[0].created_at)
+        : "";
+
+      lastStateRef.current = {
+        annotationsCount: annotations.length,
+        annotationsLastUpdated: annotationsMaxUpdated,
+        repliesCount: allReplies.length,
+        repliesLastUpdated: repliesMaxUpdated,
+      };
 
       console.log("fetchAndUpdate: Fetched", remoteAnnotations.length, "annotations, calling onRemoteChange");
       console.log("fetchAndUpdate: Replies by annotation:", Object.keys(repliesMap).map(id => ({ id, count: repliesMap[id].length })));
