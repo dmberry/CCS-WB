@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 2.9.3** | CCS Methodology v2.5
+**Version 2.9.4** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -307,6 +307,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 2.9.4 | **Shared project indicator**: Clickable toolbar badge showing member count (icon + number), opens dropdown with member list (avatars, names, roles). **Permission handling**: Annotation/reply deletion now checks RLS permissions and prevents "phantom deletions" - items remain visible if user lacks permission, shows error alert. Badge positioned in right toolbar before help button with subtle styling matching other toolbar icons. |
 | 2.9.3 | **Collaboration fixes**: Fixed annotation edit history nesting (strips previous brackets before wrapping), added RLS policy for project owners to delete member replies, replaced color picker with simple dropdown (10 preset colors + auto), direct Supabase profile updates bypass auth issues. **Polling optimization**: Fixed state check field mismatch that prevented annotation syncing between users. **UX improvements**: Reply input auto-closes when clicking away, auto-fork protection creates copies for collaborators when owner deletes shared project. **Code cleanup**: Reduced verbose console logging in useAnnotationsSync |
 | 2.9.2 | **Critical fixes**: Fixed replies vanishing after submit (dependency array issue in useAnnotationsSync), fixed reply input delay (immediate focus), fixed "+" button breaking reply structure (append to correct parent), fixed color picker infinite reload loop (use onBlur + refreshProfile instead of onChange + window.reload), added cloud project reconnection on page reload with blue banner notification, improved profile color loading state |
 | 2.9.1 | **Reply UI improvements**: Cleaner "+" button UI instead of always-visible input, author-specific coloring (each user gets unique color for their replies), customizable profile colors in Settings → Profile, replies persist in all save formats (cloud, .ccs files, localStorage, PDF exports), replies respect annotation opacity settings |
