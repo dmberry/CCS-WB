@@ -402,7 +402,7 @@ export function useAnnotationsSync({
           .from("annotations")
           .select("user_id, added_by_initials")
           .eq("id", annotation.id)
-          .single();
+          .maybeSingle();
 
         if (!fetchError && existing && existing.user_id !== user?.id) {
           // Annotation exists and was created by someone else
