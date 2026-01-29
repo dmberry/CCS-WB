@@ -54,13 +54,20 @@ WITH CHECK (
   AND user_id = auth.uid()
 );
 
--- DELETE: Users can only delete their own replies
+-- DELETE: Users can delete their own replies OR project owners can delete any reply
 CREATE POLICY "Users can delete their own replies"
 ON public.annotation_replies
 FOR DELETE
 TO authenticated
 USING (
+  -- User can delete their own reply
   user_id = auth.uid()
+  -- OR project owner can delete any reply in their project
+  OR project_id IN (
+    SELECT id
+    FROM public.projects
+    WHERE owner_id = auth.uid()
+  )
 );
 
 -- UPDATE: Users can only update their own replies (for content edits)

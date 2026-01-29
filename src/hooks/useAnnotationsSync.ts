@@ -87,7 +87,7 @@ export function useAnnotationsSync({
   fileIdMap,
   enabled = true,
 }: UseAnnotationsSyncOptions) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, profile } = useAuth();
   const { currentProjectId } = useProjects();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const lastUpdateRef = useRef<number>(0);
@@ -252,11 +252,11 @@ export function useAnnotationsSync({
       }>> = {};
 
       if (annotationIds.length > 0) {
-        // Fetch replies
+        // Fetch replies with profile_color stored in the table
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: repliesData, error: repliesError } = await (supabase as any)
           .from("annotation_replies")
-          .select("*")
+          .select("id, annotation_id, content, created_at, added_by_initials, profile_color")
           .in("annotation_id", annotationIds)
           .order("created_at", { ascending: true });
 
@@ -265,32 +265,13 @@ export function useAnnotationsSync({
         }
 
         if (repliesData) {
-          // Collect unique user IDs from replies to fetch their profile colors
-          const userIds = [...new Set(repliesData.map((r: { user_id: string | null }) => r.user_id).filter(Boolean))];
-
-          // Fetch profile colors for these users
-          let profileColors: Record<string, string> = {};
-          if (userIds.length > 0) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { data: profilesData } = await (supabase as any)
-              .from("profiles")
-              .select("user_id, profile_color")
-              .in("user_id", userIds);
-
-            if (profilesData) {
-              profileColors = Object.fromEntries(
-                profilesData.map((p: { user_id: string; profile_color: string | null }) => [p.user_id, p.profile_color])
-              );
-            }
-          }
-
           repliesData.forEach((reply: {
             annotation_id: string;
             id: string;
             content: string;
             created_at: string;
             added_by_initials: string | null;
-            user_id: string | null;
+            profile_color: string | null;
           }) => {
             if (!repliesMap[reply.annotation_id]) {
               repliesMap[reply.annotation_id] = [];
@@ -300,7 +281,7 @@ export function useAnnotationsSync({
               content: reply.content,
               created_at: reply.created_at,
               added_by_initials: reply.added_by_initials,
-              profile_color: reply.user_id ? profileColors[reply.user_id] || null : null,
+              profile_color: reply.profile_color,
             });
           });
         }
@@ -345,6 +326,7 @@ export function useAnnotationsSync({
         project_id: currentProjectId,
         user_id: user?.id || null,
         added_by_initials: userInitials || null,
+        profile_color: profile?.profile_color || null,
         content,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -369,7 +351,7 @@ export function useAnnotationsSync({
         }, 200);
       }
     },
-    [supabase, enabled, isAuthenticated, currentProjectId, user, fetchAndUpdate]
+    [supabase, enabled, isAuthenticated, currentProjectId, user, profile, fetchAndUpdate]
   );
 
   // Delete a reply from an annotation
