@@ -1360,7 +1360,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     let replyAuthor: string | undefined;
 
     // Find the reply in annotations to check ownership
-    for (const annotation of lineAnnotations) {
+    for (const annotation of session.lineAnnotations || []) {
       const reply = annotation.replies?.find(r => r.id === replyId);
       if (reply) {
         replyAuthor = reply.addedBy;
@@ -1388,7 +1388,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
     }
 
     await deleteReply(replyId);
-  }, [deleteReply, lineAnnotations, user, projects, currentProjectId]);
+  }, [deleteReply, session.lineAnnotations, user, projects, currentProjectId]);
 
   // Load session with code contents and mode validation
   const handleLoadSession = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {

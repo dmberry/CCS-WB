@@ -163,16 +163,26 @@ export function useAnnotationsSync({
       const row = annotationToRow(annotation, fileId, currentProjectId, user?.id ?? null);
       console.log("pushAnnotation: upserting row", row);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
-        .from("annotations")
-        .upsert(row, { onConflict: "id" })
-        .select();
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase as any)
+          .from("annotations")
+          .upsert(row, { onConflict: "id" })
+          .select();
 
-      if (error) {
-        console.error("Error pushing annotation:", error.message);
-      } else {
-        console.log("pushAnnotation: success", data);
+        if (error) {
+          console.error("pushAnnotation: Database error:", error);
+          console.error("pushAnnotation: Error details:", {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+          });
+        } else {
+          console.log("pushAnnotation: Successfully saved", data);
+        }
+      } catch (err) {
+        console.error("pushAnnotation: Exception caught:", err);
       }
     },
     [supabase, enabled, isAuthenticated, currentProjectId, user?.id]
