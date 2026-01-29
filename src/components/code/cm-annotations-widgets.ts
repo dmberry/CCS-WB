@@ -426,10 +426,12 @@ export class AnnotationWidget extends WidgetType {
     if (isExpanded && (this.annotation.replies?.length || this.onAddReply)) {
       const repliesSection = document.createElement("div");
       repliesSection.className = "cm-annotation-replies";
+      const repliesOpacity = this.isHighlighted ? 1 : baseOpacity;
       repliesSection.style.cssText = `
         margin-top: 8px;
         padding-left: 16px;
         border-left: 2px solid ${color};
+        opacity: ${repliesOpacity};
       `;
 
       // Render existing replies
