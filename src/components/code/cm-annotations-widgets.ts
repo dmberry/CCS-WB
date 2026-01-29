@@ -322,8 +322,7 @@ export class AnnotationWidget extends WidgetType {
         margin-top: 8px;
       `;
 
-      const color = this.annotation.type === 'interpretation' ? '#d97706' :
-                    this.annotation.type === 'question' ? '#0891b2' : '#059669';
+      const color = getAnnotationColor(this.annotation.type, this.isDark);
 
       const replyInput = document.createElement("input");
       replyInput.type = "text";
@@ -391,8 +390,7 @@ export class AnnotationWidget extends WidgetType {
         formParent.parentNode.removeChild(formParent);
 
         // Re-add the + button
-        const color = this.annotation.type === 'interpretation' ? '#d97706' :
-                      this.annotation.type === 'question' ? '#0891b2' : '#059669';
+        const color = getAnnotationColor(this.annotation.type, this.isDark);
 
         if (this.annotation.replies && this.annotation.replies.length > 0) {
           const addReplyBtn = document.createElement("button");
