@@ -482,21 +482,16 @@ export class AnnotationWidget extends WidgetType {
       actions.appendChild(replyBtn);
     }
 
-    // Edit button (disabled for annotations with edit history)
+    // Edit button
     if (this.onEdit) {
-      // Check if this annotation has edit history (starts with [original text])
-      const hasEditHistory = /^\[.*?\]/.test(this.annotation.content);
-
-      if (!hasEditHistory) {
-        const editBtn = document.createElement("button");
-        editBtn.className = "cm-annotation-btn";
-        editBtn.textContent = "edit";
-        editBtn.onclick = (e) => {
-          e.stopPropagation();
-          this.onEdit?.(this.annotation.id);
-        };
-        actions.appendChild(editBtn);
-      }
+      const editBtn = document.createElement("button");
+      editBtn.className = "cm-annotation-btn";
+      editBtn.textContent = "edit";
+      editBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.onEdit?.(this.annotation.id);
+      };
+      actions.appendChild(editBtn);
     }
 
     // Delete button
