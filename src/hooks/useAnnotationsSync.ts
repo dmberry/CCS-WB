@@ -188,39 +188,6 @@ export function useAnnotationsSync({
     [supabase, enabled, isAuthenticated, currentProjectId, user?.id]
   );
 
-  // Delete an annotation from Supabase
-  const deleteAnnotation = useCallback(
-    async (annotationId: string) => {
-      console.log("deleteAnnotation called:", {
-        annotationId,
-        hasSupabase: !!supabase,
-        enabled,
-        isAuthenticated,
-      });
-
-      if (!supabase || !enabled || !isAuthenticated) {
-        console.log("deleteAnnotation: skipped due to missing conditions");
-        return;
-      }
-
-      // Mark that we're making an update (to skip processing our own changes)
-      lastUpdateRef.current = Date.now();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error, count } = await (supabase as any)
-        .from("annotations")
-        .delete()
-        .eq("id", annotationId);
-
-      if (error) {
-        console.error("Error deleting annotation:", error);
-      } else {
-        console.log("deleteAnnotation: success, count:", count);
-      }
-    },
-    [supabase, enabled, isAuthenticated]
-  );
-
   // Helper to fetch and update annotations
   const fetchAndUpdate = useCallback(async () => {
     console.log("fetchAndUpdate: Starting fetch");
@@ -335,6 +302,41 @@ export function useAnnotationsSync({
     }
   }, [supabase, currentProjectId]);
 
+  // Delete an annotation from Supabase
+  const deleteAnnotation = useCallback(
+    async (annotationId: string) => {
+      console.log("deleteAnnotation called:", {
+        annotationId,
+        hasSupabase: !!supabase,
+        enabled,
+        isAuthenticated,
+      });
+
+      if (!supabase || !enabled || !isAuthenticated) {
+        console.log("deleteAnnotation: skipped due to missing conditions");
+        return;
+      }
+
+      // Mark that we're making an update (to skip processing our own changes)
+      lastUpdateRef.current = Date.now();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error, count } = await (supabase as any)
+        .from("annotations")
+        .delete()
+        .eq("id", annotationId);
+
+      if (error) {
+        console.error("Error deleting annotation:", error);
+      } else {
+        console.log("deleteAnnotation: success, count:", count);
+        // Trigger a fetch to update annotations across clients
+        setTimeout(() => fetchAndUpdate(), 200);
+      }
+    },
+    [supabase, enabled, isAuthenticated, fetchAndUpdate]
+  );
+
   // Push a new reply to an annotation
   const pushReply = useCallback(
     async (annotationId: string, content: string, replyId?: string) => {
@@ -396,18 +398,34 @@ export function useAnnotationsSync({
   const deleteReply = useCallback(
     async (replyId: string) => {
       if (!supabase || !enabled || !isAuthenticated) {
+        console.log("deleteReply: Skipped - not ready", {
+          hasSupabase: !!supabase,
+          enabled,
+          isAuthenticated
+        });
         return;
       }
 
+      console.log("deleteReply: Starting deletion", { replyId });
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
+      const { error, data } = await (supabase as any)
         .from("annotation_replies")
         .delete()
-        .eq("id", replyId);
+        .eq("id", replyId)
+        .select();
 
       if (error) {
-        console.error("Error deleting reply:", error);
+        console.error("deleteReply: Database error:", error);
+        console.error("deleteReply: Error details:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+          replyId,
+        });
       } else {
+        console.log("deleteReply: Successfully deleted", { replyId, deletedRows: data?.length || 0 });
         // Trigger a fetch to update replies
         lastUpdateRef.current = Date.now();
         setTimeout(() => fetchAndUpdate(), 200);
