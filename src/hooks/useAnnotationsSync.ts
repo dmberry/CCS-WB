@@ -97,20 +97,17 @@ async function retryWithBackoff<T>(
       );
 
       const result = await Promise.race([operation(), timeoutPromise]);
-      console.log(`${operationName}: Success on attempt ${attempt}`);
       return result;
     } catch (error) {
       const isLastAttempt = attempt === maxRetries;
-      console.warn(`${operationName}: Attempt ${attempt}/${maxRetries} failed:`, error);
 
       if (isLastAttempt) {
-        console.error(`${operationName}: All ${maxRetries} attempts failed`);
+        console.error(`${operationName}: All ${maxRetries} attempts failed`, error);
         throw error;
       }
 
       // Exponential backoff: 2s, 4s
       const delayMs = Math.pow(2, attempt) * 1000;
-      console.log(`${operationName}: Retrying in ${delayMs}ms...`);
       await new Promise(resolve => setTimeout(resolve, delayMs));
     }
   }
@@ -227,14 +224,12 @@ export function useAnnotationsSync({
       console.warn("State check failed, proceeding with full fetch:", err);
     }
 
-    console.log("fetchAndUpdate: Starting fetch");
     const reverseMap = Object.fromEntries(
       Object.entries(currentFileIdMap).map(([k, v]) => [v, k])
     );
 
     try {
       // Fetch annotations with timeout
-      console.log("fetchAndUpdate: Starting annotations query");
       const annotationsPromise = (supabase as any)
         .from("annotations")
         .select("*")
@@ -261,7 +256,6 @@ export function useAnnotationsSync({
       }
 
       const annotations = data || [];
-      console.log(`fetchAndUpdate: Fetched ${annotations.length} annotations, calling onRemoteChange`);
       const annotationIds = annotations.map((a: AnnotationRow) => a.id);
 
       // Fetch replies for all annotations with profile colors and updated_at
@@ -347,8 +341,6 @@ export function useAnnotationsSync({
         repliesLastUpdated: repliesMaxUpdated,
       };
 
-      console.log("fetchAndUpdate: Fetched", remoteAnnotations.length, "annotations, calling onRemoteChange");
-      console.log("fetchAndUpdate: Replies by annotation:", Object.keys(repliesMap).map(id => ({ id, count: repliesMap[id].length })));
       onRemoteChangeRef.current(remoteAnnotations);
     } catch (err) {
       console.error("Error in fetchAndUpdate:", err);
@@ -358,23 +350,12 @@ export function useAnnotationsSync({
   // Push a new or updated annotation to Supabase
   const pushAnnotation = useCallback(
     async (annotation: LineAnnotation) => {
-      console.log("pushAnnotation called:", {
-        hasSupabase: !!supabase,
-        enabled,
-        isAuthenticated,
-        currentProjectId,
-        annotationId: annotation.id,
-        addedBy: annotation.addedBy,
-      });
-
       if (!supabase || !enabled || !isAuthenticated || !currentProjectId) {
-        console.log("pushAnnotation: skipped due to missing conditions");
         return;
       }
 
       const currentFileIdMap = fileIdMapRef.current;
       const fileId = currentFileIdMap[annotation.codeFileId];
-      console.log("pushAnnotation: fileId lookup", { codeFileId: annotation.codeFileId, fileId, fileIdMap: currentFileIdMap });
       if (!fileId) {
         console.warn("No Supabase file_id for annotation:", annotation.codeFileId);
         return;
@@ -397,10 +378,6 @@ export function useAnnotationsSync({
         if (!fetchError && existing && existing.user_id !== user?.id) {
           // Annotation exists and was created by someone else
           // Create a new annotation instead of updating
-          console.log("pushAnnotation: Annotation created by another user, creating new annotation instead", {
-            originalCreator: existing.added_by_initials,
-            currentUser: profile?.initials || user?.user_metadata?.initials,
-          });
 
           // Fetch the original content to include in the new annotation
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -428,16 +405,14 @@ export function useAnnotationsSync({
           };
         }
       } catch (err) {
-        console.log("pushAnnotation: Could not check existing annotation (may be new):", err);
         // Continue with original annotation if check fails
       }
 
       const row = annotationToRow(annotationToSave, fileId, currentProjectId, user?.id ?? null);
-      console.log("pushAnnotation: upserting row", row);
 
       try {
         // Retry with exponential backoff
-        const result = await retryWithBackoff(
+        await retryWithBackoff(
           async () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const { data, error } = await (supabase as any)
@@ -455,11 +430,8 @@ export function useAnnotationsSync({
           "pushAnnotation"
         );
 
-        console.log("pushAnnotation: Successfully saved", result);
-        console.log("pushAnnotation: Triggering fetchAndUpdate in 200ms");
         // Trigger a fetch to update annotations across clients
         setTimeout(() => {
-          console.log("pushAnnotation: Calling fetchAndUpdate now");
           fetchAndUpdate();
         }, 200);
       } catch (err) {
@@ -472,15 +444,7 @@ export function useAnnotationsSync({
   // Delete an annotation from Supabase
   const deleteAnnotation = useCallback(
     async (annotationId: string) => {
-      console.log("deleteAnnotation called:", {
-        annotationId,
-        hasSupabase: !!supabase,
-        enabled,
-        isAuthenticated,
-      });
-
       if (!supabase || !enabled || !isAuthenticated) {
-        console.log("deleteAnnotation: skipped due to missing conditions");
         return;
       }
 
@@ -489,7 +453,7 @@ export function useAnnotationsSync({
 
       try {
         // Retry with exponential backoff
-        const result = await retryWithBackoff(
+        await retryWithBackoff(
           async () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const { error, count } = await (supabase as any)
@@ -507,7 +471,6 @@ export function useAnnotationsSync({
           "deleteAnnotation"
         );
 
-        console.log("deleteAnnotation: success, count:", result);
         // Trigger a fetch to update annotations across clients
         setTimeout(() => fetchAndUpdate(), 200);
       } catch (err) {
@@ -539,11 +502,9 @@ export function useAnnotationsSync({
         updated_at: new Date().toISOString(),
       };
 
-      console.log("pushReply: Saving reply to database", { annotationId, content, replyId: row.id, userId: user?.id });
-
       try {
         // Retry with exponential backoff
-        const result = await retryWithBackoff(
+        await retryWithBackoff(
           async () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const { data, error } = await (supabase as any)
@@ -561,12 +522,9 @@ export function useAnnotationsSync({
           "pushReply"
         );
 
-        console.log("pushReply: Reply saved successfully", result);
-        console.log("pushReply: Triggering fetchAndUpdate in 200ms");
         // Trigger a fetch to update replies
         lastUpdateRef.current = Date.now();
         setTimeout(() => {
-          console.log("pushReply: Calling fetchAndUpdate now");
           fetchAndUpdate();
         }, 200);
       } catch (err) {
@@ -580,19 +538,12 @@ export function useAnnotationsSync({
   const deleteReply = useCallback(
     async (replyId: string) => {
       if (!supabase || !enabled || !isAuthenticated) {
-        console.log("deleteReply: Skipped - not ready", {
-          hasSupabase: !!supabase,
-          enabled,
-          isAuthenticated
-        });
         return;
       }
 
-      console.log("deleteReply: Starting deletion", { replyId });
-
       try {
         // Retry with exponential backoff
-        const result = await retryWithBackoff(
+        await retryWithBackoff(
           async () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const { error, data } = await (supabase as any)
@@ -611,7 +562,6 @@ export function useAnnotationsSync({
           "deleteReply"
         );
 
-        console.log("deleteReply: Successfully deleted", { replyId, deletedRows: result?.length || 0 });
         // Trigger a fetch to update replies
         lastUpdateRef.current = Date.now();
         setTimeout(() => fetchAndUpdate(), 200);
