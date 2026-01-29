@@ -34,6 +34,7 @@ import {
   BookOpen,
   Cloud,
   FilePlus,
+  HardDrive,
 } from "lucide-react";
 import { fetchSampleProject, fetchSampleProjectsManifest, type SampleProject } from "@/data/sample-projects";
 import type {
@@ -1555,9 +1556,11 @@ export function CodeEditorPanel({
                         className="flex-1 min-w-0 py-1 pr-2 text-left overflow-hidden flex items-center gap-0.5"
                         title={file.name}
                       >
-                        {/* Cloud icon when file is in a cloud project */}
-                        {isInProject && (
+                        {/* Cloud icon when file is in a cloud project, HardDrive when local */}
+                        {isInProject ? (
                           <Cloud className="h-2.5 w-2.5 text-slate-muted flex-shrink-0" strokeWidth={1.5} />
+                        ) : (
+                          <HardDrive className="h-2.5 w-2.5 text-slate-muted flex-shrink-0" strokeWidth={1.5} />
                         )}
                         <span
                           className={cn("font-mono truncate flex-1", getFileColourClass(file.language))}
