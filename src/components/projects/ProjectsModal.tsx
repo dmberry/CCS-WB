@@ -34,7 +34,7 @@ import {
   RotateCcw,
   AlertTriangle,
 } from "lucide-react";
-import type { ProjectWithOwner } from "@/lib/supabase/types";
+import type { ProjectWithOwner, MemberWithProfile } from "@/lib/supabase/types";
 import type { EntryMode, Session } from "@/types/session";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
 
@@ -70,6 +70,7 @@ export function ProjectsModal() {
     setCurrentProjectId,
     setShowMembersModal,
     setMembersModalProjectId,
+    getProjectMembers,
     refreshProjects,
     // Trash
     trashedProjects,
@@ -106,6 +107,7 @@ export function ProjectsModal() {
   const [error, setError] = useState<string | null>(null);
   const [showNewProjectMenu, setShowNewProjectMenu] = useState(false);
   const [deleteConfirmProject, setDeleteConfirmProject] = useState<ProjectWithOwner | null>(null);
+  const [deleteConfirmMembers, setDeleteConfirmMembers] = useState<MemberWithProfile[]>([]);
   const [permanentDeleteConfirmProject, setPermanentDeleteConfirmProject] = useState<ProjectWithOwner | null>(null);
   const [emptyTrashConfirm, setEmptyTrashConfirm] = useState(false);
   const [renamingProjectId, setRenamingProjectId] = useState<string | null>(null);
@@ -213,18 +215,30 @@ export function ProjectsModal() {
     setActionLoading(null);
   };
 
-  const handleDeleteClick = (project: ProjectWithOwner) => {
+  const handleDeleteClick = async (project: ProjectWithOwner) => {
+    // Check if project has members before showing delete confirmation
+    const { members, error } = await getProjectMembers(project.id);
+
+    if (error) {
+      console.error("Error fetching members:", error);
+    }
+
     setDeleteConfirmProject(project);
+    setDeleteConfirmMembers(members || []);
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteConfirmProject) return;
 
+    const projectId = deleteConfirmProject.id;
+    const membersToFork = deleteConfirmMembers.length > 0 ? deleteConfirmMembers : undefined;
+
     setDeleteConfirmProject(null);
-    setActionLoading(`delete-${deleteConfirmProject.id}`);
+    setDeleteConfirmMembers([]);
+    setActionLoading(`delete-${projectId}`);
     setError(null);
 
-    const { error } = await deleteProject(deleteConfirmProject.id);
+    const { error } = await deleteProject(projectId, membersToFork);
 
     if (error) {
       setError(error.message);
@@ -900,11 +914,18 @@ export function ProjectsModal() {
       <ConfirmDialog
         isOpen={deleteConfirmProject !== null}
         title={`Move "${deleteConfirmProject?.name}" to trash?`}
-        message="You can restore it from the Trash tab."
+        message={
+          deleteConfirmMembers.length > 0
+            ? `This project is shared with ${deleteConfirmMembers.length} ${deleteConfirmMembers.length === 1 ? "collaborator" : "collaborators"}. Each will automatically receive their own copy:\n\n${deleteConfirmMembers.map(m => `• ${m.profile?.display_name || "Unknown"} (${m.profile?.initials || "?"})`).join("\n")}\n\nYour copy will be moved to the Trash tab where you can restore it.`
+            : "You can restore it from the Trash tab."
+        }
         variant="danger"
         confirmLabel="Move to Trash"
         onConfirm={handleDeleteConfirm}
-        onCancel={() => setDeleteConfirmProject(null)}
+        onCancel={() => {
+          setDeleteConfirmProject(null);
+          setDeleteConfirmMembers([]);
+        }}
       />
 
       {/* Permanent delete confirmation dialog */}
