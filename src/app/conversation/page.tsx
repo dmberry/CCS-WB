@@ -1344,7 +1344,8 @@ export default function ConversationPage() {
   const handleExportSessionLogPDF = useCallback(() => {
     const log = generateSessionLog(session, projectName, undefined, undefined, profile);
     const modeCode = MODE_CODES[session.mode] || "XX";
-    exportSessionLogPDF(log, projectName, modeCode);
+    const annotationIndent = session.displaySettings?.annotations?.indent ?? 56;  // Use user's indent setting
+    exportSessionLogPDF(log, projectName, modeCode, annotationIndent);
     setShowExportModal(false);
     setSuccessMessage("Session log exported as PDF!");
   }, [session, projectName, profile]);

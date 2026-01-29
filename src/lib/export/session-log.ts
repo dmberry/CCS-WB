@@ -39,14 +39,14 @@ export const LINE_ANNOTATION_TYPES = [
 ] as const;
 
 // Annotation type colors for PDF export (RGB values)
-// Full saturation for pills, subtle for line backgrounds
+// Less saturated for better readability in print
 export const ANNOTATION_COLORS: Record<string, { r: number; g: number; b: number }> = {
-  observation: { r: 59, g: 130, b: 246 },   // Blue
-  question: { r: 245, g: 158, b: 11 },      // Amber
-  metaphor: { r: 168, g: 85, b: 247 },      // Purple
-  pattern: { r: 34, g: 197, b: 94 },        // Green
-  context: { r: 100, g: 116, b: 139 },      // Slate
-  critique: { r: 124, g: 45, b: 54 },       // Burgundy
+  observation: { r: 96, g: 165, b: 250 },   // Lighter blue
+  question: { r: 251, g: 191, b: 36 },      // Lighter amber
+  metaphor: { r: 192, g: 132, b: 252 },     // Lighter purple
+  pattern: { r: 74, g: 222, b: 128 },       // Lighter green
+  context: { r: 148, g: 163, b: 184 },      // Lighter slate
+  critique: { r: 157, g: 78, b: 89 },       // Lighter burgundy
 };
 
 // Lighter versions for line backgrounds (higher values = lighter)
@@ -484,7 +484,8 @@ function sanitiseForPDF(text: string): string {
 export function exportSessionLogPDF(
   log: SessionLogData,
   projectName: string,
-  modeCode: string
+  modeCode: string,
+  annotationIndent: number = 0  // Left indent for annotations in pixels (from display settings)
 ): void {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
@@ -494,21 +495,21 @@ export function exportSessionLogPDF(
   const contentWidth = pageWidth - 2 * margin;
   let yPos = margin;
 
-  // Helper to draw a colored pill badge
+  // Helper to draw a colored pill badge (smaller, less bright for better readability)
   const drawPill = (text: string, x: number, y: number, color: { r: number; g: number; b: number }) => {
-    const pillWidth = doc.getTextWidth(text) + 4;
-    const pillHeight = 4;
-    const radius = 2;
+    const pillWidth = doc.getTextWidth(text) + 3;  // Reduced padding
+    const pillHeight = 3.5;  // Slightly smaller height
+    const radius = 1.5;      // Smaller radius to match
 
     // Draw rounded rectangle background
     doc.setFillColor(color.r, color.g, color.b);
-    doc.roundedRect(x, y - 3, pillWidth, pillHeight, radius, radius, "F");
+    doc.roundedRect(x, y - 2.8, pillWidth, pillHeight, radius, radius, "F");
 
     // Draw white text
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(7);
+    doc.setFontSize(6);  // Smaller font
     doc.setFont("helvetica", "bold");
-    doc.text(text, x + 2, y - 0.5);
+    doc.text(text, x + 1.5, y - 0.5);
 
     // Reset text color
     doc.setTextColor(0, 0, 0);
@@ -762,11 +763,12 @@ export function exportSessionLogPDF(
             doc.setFillColor(color.r, color.g, color.b);
             doc.rect(margin + contentWidth - 0.5, yPos - 2.5, 0.75, 3.5, "F");
 
-            // Calculate indent width
+            // Calculate indent width (code indentation + user's annotation indent setting)
             const indentWidth = indent ? doc.getTextWidth(indent) : 0;
-            let xPos = margin + indentWidth;
+            const userIndentMM = annotationIndent / 3.78;  // Convert pixels to mm (roughly 96 DPI to 72 DPI)
+            let xPos = margin + indentWidth + userIndentMM;
 
-            // Draw the pill (smaller for annotation content)
+            // Draw the pill (smaller and less bright for better readability)
             doc.setFontSize(6);
             const pillWidth = drawPill(prefix, xPos, yPos, color);
             xPos += pillWidth + 2;
