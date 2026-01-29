@@ -467,8 +467,7 @@ _Add relevant references, documentation links, or related scholarship:_
         content: string;
         created_at: string;
         added_by_initials: string | null;
-        user_id: string | null;
-        profiles: { profile_color: string | null } | null;
+        profile_color: string | null;
       }> = [];
 
       // Build replies map with profile colors
