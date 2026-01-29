@@ -48,7 +48,7 @@ function hashContentSimple(content: string): string {
 export function useCollaborativeSession() {
   const sessionContext = useSession();
   const { currentProjectId } = useProjects();
-  const { profile: authProfile } = useAuth();
+  const { user, profile: authProfile } = useAuth();
   const { profile: appProfile, getDisplayName } = useAppSettings();
   const [pendingFileDeletions, setPendingFileDeletions] = useState<PendingDeletion[]>([]);
   // Track annotation IDs that just arrived from remote (for animation)
@@ -58,9 +58,18 @@ export function useCollaborativeSession() {
   const [isLoadingFileTrash, setIsLoadingFileTrash] = useState(false);
 
   // Get user initials - prefer manually-set app profile initials (from Settings), fall back to auth profile (auto-generated)
+  // If profile hasn't loaded yet, generate fallback initials from user metadata or email
   // getDisplayName() returns initials > name from AppSettings, with proper empty string handling
   const appInitials = getDisplayName();
-  const userInitials = appInitials || authProfile?.initials || undefined;
+  const fallbackInitials = user
+    ? (user.user_metadata?.full_name || user.email?.split("@")[0] || "User")
+        .split(" ")
+        .map((n: string) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 3)
+    : undefined;
+  const userInitials = appInitials || authProfile?.initials || fallbackInitials;
 
   // Track annotation IDs we know are synced (from remote or pushed by us)
   const syncedAnnotationIdsRef = useRef<Set<string>>(new Set());

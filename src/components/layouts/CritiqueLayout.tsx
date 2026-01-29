@@ -1307,7 +1307,17 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
   // Annotation reply handlers
   const handleToggleReplies = useCallback((annotationId: string) => {
-    setExpandedAnnotationId(prev => prev === annotationId ? null : annotationId);
+    setExpandedAnnotationId(prev => {
+      // If already expanded, try to focus the reply input instead of collapsing
+      if (prev === annotationId) {
+        setTimeout(() => {
+          const replyInput = document.querySelector<HTMLInputElement>('.cm-annotation-reply-input');
+          replyInput?.focus();
+        }, 10);
+        return prev; // Keep expanded
+      }
+      return annotationId; // Expand
+    });
   }, []);
 
   const handleAddReply = useCallback(async (annotationId: string, content: string) => {
