@@ -132,62 +132,6 @@ export function useAnnotationsSync({
     );
   }, [supabase, currentProjectId]);
 
-  // Push a new or updated annotation to Supabase
-  const pushAnnotation = useCallback(
-    async (annotation: LineAnnotation) => {
-      console.log("pushAnnotation called:", {
-        hasSupabase: !!supabase,
-        enabled,
-        isAuthenticated,
-        currentProjectId,
-        annotationId: annotation.id,
-        addedBy: annotation.addedBy,
-      });
-
-      if (!supabase || !enabled || !isAuthenticated || !currentProjectId) {
-        console.log("pushAnnotation: skipped due to missing conditions");
-        return;
-      }
-
-      const currentFileIdMap = fileIdMapRef.current;
-      const fileId = currentFileIdMap[annotation.codeFileId];
-      console.log("pushAnnotation: fileId lookup", { codeFileId: annotation.codeFileId, fileId, fileIdMap: currentFileIdMap });
-      if (!fileId) {
-        console.warn("No Supabase file_id for annotation:", annotation.codeFileId);
-        return;
-      }
-
-      // Mark that we're making an update (to skip processing our own changes)
-      lastUpdateRef.current = Date.now();
-
-      const row = annotationToRow(annotation, fileId, currentProjectId, user?.id ?? null);
-      console.log("pushAnnotation: upserting row", row);
-
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data, error } = await (supabase as any)
-          .from("annotations")
-          .upsert(row, { onConflict: "id" })
-          .select();
-
-        if (error) {
-          console.error("pushAnnotation: Database error:", error);
-          console.error("pushAnnotation: Error details:", {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code,
-          });
-        } else {
-          console.log("pushAnnotation: Successfully saved", data);
-        }
-      } catch (err) {
-        console.error("pushAnnotation: Exception caught:", err);
-      }
-    },
-    [supabase, enabled, isAuthenticated, currentProjectId, user?.id]
-  );
-
   // Helper to fetch and update annotations
   const fetchAndUpdate = useCallback(async () => {
     console.log("fetchAndUpdate: Starting fetch");
@@ -301,6 +245,68 @@ export function useAnnotationsSync({
       console.error("Error in fetchAndUpdate:", err);
     }
   }, [supabase, currentProjectId]);
+
+  // Push a new or updated annotation to Supabase
+  const pushAnnotation = useCallback(
+    async (annotation: LineAnnotation) => {
+      console.log("pushAnnotation called:", {
+        hasSupabase: !!supabase,
+        enabled,
+        isAuthenticated,
+        currentProjectId,
+        annotationId: annotation.id,
+        addedBy: annotation.addedBy,
+      });
+
+      if (!supabase || !enabled || !isAuthenticated || !currentProjectId) {
+        console.log("pushAnnotation: skipped due to missing conditions");
+        return;
+      }
+
+      const currentFileIdMap = fileIdMapRef.current;
+      const fileId = currentFileIdMap[annotation.codeFileId];
+      console.log("pushAnnotation: fileId lookup", { codeFileId: annotation.codeFileId, fileId, fileIdMap: currentFileIdMap });
+      if (!fileId) {
+        console.warn("No Supabase file_id for annotation:", annotation.codeFileId);
+        return;
+      }
+
+      // Mark that we're making an update (to skip processing our own changes)
+      lastUpdateRef.current = Date.now();
+
+      const row = annotationToRow(annotation, fileId, currentProjectId, user?.id ?? null);
+      console.log("pushAnnotation: upserting row", row);
+
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data, error } = await (supabase as any)
+          .from("annotations")
+          .upsert(row, { onConflict: "id" })
+          .select();
+
+        if (error) {
+          console.error("pushAnnotation: Database error:", error);
+          console.error("pushAnnotation: Error details:", {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+          });
+        } else {
+          console.log("pushAnnotation: Successfully saved", data);
+          console.log("pushAnnotation: Triggering fetchAndUpdate in 200ms");
+          // Trigger a fetch to update annotations across clients
+          setTimeout(() => {
+            console.log("pushAnnotation: Calling fetchAndUpdate now");
+            fetchAndUpdate();
+          }, 200);
+        }
+      } catch (err) {
+        console.error("pushAnnotation: Exception caught:", err);
+      }
+    },
+    [supabase, enabled, isAuthenticated, currentProjectId, user?.id, fetchAndUpdate]
+  );
 
   // Delete an annotation from Supabase
   const deleteAnnotation = useCallback(
