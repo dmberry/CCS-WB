@@ -311,7 +311,50 @@ export function useAnnotationsSync({
       // Mark that we're making an update (to skip processing our own changes)
       lastUpdateRef.current = Date.now();
 
-      const row = annotationToRow(annotation, fileId, currentProjectId, user?.id ?? null);
+      // Check if this annotation exists and was created by someone else
+      // If so, create a new annotation instead of updating (preserves original)
+      let annotationToSave = annotation;
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: existing, error: fetchError } = await (supabase as any)
+          .from("annotations")
+          .select("user_id, added_by_initials")
+          .eq("id", annotation.id)
+          .single();
+
+        if (!fetchError && existing && existing.user_id !== user?.id) {
+          // Annotation exists and was created by someone else
+          // Create a new annotation instead of updating
+          console.log("pushAnnotation: Annotation created by another user, creating new annotation instead", {
+            originalCreator: existing.added_by_initials,
+            currentUser: profile?.initials || user?.user_metadata?.initials,
+          });
+
+          // Fetch the original content to include in the new annotation
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: originalAnnotation } = await (supabase as any)
+            .from("annotations")
+            .select("content")
+            .eq("id", annotation.id)
+            .single();
+
+          const originalContent = originalAnnotation?.content || "";
+          const newContent = annotation.content;
+
+          // Generate new UUID for the new annotation with original text in square brackets
+          annotationToSave = {
+            ...annotation,
+            id: crypto.randomUUID(),
+            addedBy: profile?.initials || user?.user_metadata?.initials || undefined,
+            content: `[${originalContent}] ${newContent}`,
+          };
+        }
+      } catch (err) {
+        console.log("pushAnnotation: Could not check existing annotation (may be new):", err);
+        // Continue with original annotation if check fails
+      }
+
+      const row = annotationToRow(annotationToSave, fileId, currentProjectId, user?.id ?? null);
       console.log("pushAnnotation: upserting row", row);
 
       try {
