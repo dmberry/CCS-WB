@@ -16,7 +16,7 @@ import React, {
 } from "react";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { useAuth } from "./AuthContext";
-import type { Project, ProjectWithOwner, Profile, MemberWithProfile, MemberRole, LibraryProject, AccessionStatus, CodeFile, Annotation } from "@/lib/supabase/types";
+import type { Project, ProjectWithOwner, Profile, MemberWithProfile, MemberRole, LibraryProject, AccessionStatus, CodeFile, Annotation, AnnotationType } from "@/lib/supabase/types";
 import type { Session, EntryMode } from "@/types/session";
 import { DEFAULT_DISPLAY_SETTINGS } from "@/types/session";
 
@@ -1433,35 +1433,185 @@ _Add relevant references, documentation links, or related scholarship:_
     }
 
     try {
-      // Get current project to check name
+      // Fetch the submitted project with all data
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: project } = await (supabase as any)
+      const { data: sourceProject, error: projectError } = await (supabase as any)
         .from("projects")
-        .select("name")
+        .select("*")
         .eq("id", projectId)
+        .eq("accession_status", "submitted")
         .single();
 
-      // Add $ prefix if not already present (library namespace)
-      const libraryName = project?.name?.startsWith("$")
-        ? project.name
-        : `$${project?.name || "Untitled"}`;
+      if (projectError || !sourceProject) {
+        return { error: new Error("Project not found or not in submitted status") };
+      }
 
+      const baseName = sourceProject.name.replace(/^\$+/, "");
+      const libraryName = `$${baseName}`;
+
+      // Check for existing approved library project with same name
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
+      const { data: existingProjects } = await (supabase as any)
+        .from("projects")
+        .select("id, name")
+        .eq("accession_status", "approved")
+        .is("deleted_at", null);
+
+      // Find duplicate by comparing base names (strip $ prefix)
+      const duplicate = existingProjects?.find((p: { name: string }) => {
+        const existingBaseName = p.name.replace(/^\$+/, "");
+        return existingBaseName === baseName;
+      });
+
+      // If duplicate exists, soft-delete the old version (replace workflow)
+      if (duplicate) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any)
+          .from("projects")
+          .update({
+            deleted_at: new Date().toISOString(),
+          })
+          .eq("id", duplicate.id);
+
+        // Update local state - remove old version from library
+        setLibraryProjects(prev => prev.filter(p => p.id !== duplicate.id));
+      }
+
+      // Fetch files and annotations from the submitted project
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [filesRes, annotationsRes] = await Promise.all([
+        (supabase as any).from("code_files").select("*").eq("project_id", projectId),
+        (supabase as any).from("annotations").select("*").eq("project_id", projectId),
+      ]);
+
+      const files = filesRes.data || [];
+      const annotations = annotationsRes.data || [];
+
+      // Create library copy with new ID
+      const libraryProjectId = crypto.randomUUID();
+      const now = new Date().toISOString();
+
+      const libraryProject = {
+        id: libraryProjectId,
+        name: libraryName,
+        description: sourceProject.description,
+        mode: sourceProject.mode,
+        session_data: sourceProject.session_data,
+        owner_id: null, // No owner - community owned
+        is_public: true,
+        accession_status: "approved" as AccessionStatus,
+        approved_at: now,
+        approved_by: user.id,
+        created_at: now,
+        updated_at: now,
+      };
+
+      // Insert library project
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: insertError } = await (supabase as any)
+        .from("projects")
+        .insert(libraryProject);
+
+      if (insertError) {
+        return { error: new Error(insertError.message) };
+      }
+
+      // Copy files to library project
+      if (files.length > 0) {
+        const libraryFiles = files.map((f: {
+          id: string;
+          filename: string;
+          language: string | null;
+          content: string;
+          original_content: string | null;
+          uploaded_by: string | null;
+        }) => ({
+          id: crypto.randomUUID(),
+          project_id: libraryProjectId,
+          filename: f.filename,
+          language: f.language,
+          content: f.content,
+          original_content: f.original_content,
+          uploaded_by: f.uploaded_by,
+          created_at: now,
+          updated_at: now,
+        }));
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from("code_files").insert(libraryFiles);
+      }
+
+      // Copy annotations to library project (with new file IDs mapping)
+      if (annotations.length > 0 && files.length > 0) {
+        // Need to get the new file IDs that were just inserted
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: newFiles } = await (supabase as any)
+          .from("code_files")
+          .select("id, filename")
+          .eq("project_id", libraryProjectId);
+
+        // Map by filename since we can't track UUIDs through insert
+        const fileNameToIdMap = new Map<string, string>();
+        newFiles?.forEach((f: { id: string; filename: string }) => {
+          fileNameToIdMap.set(f.filename, f.id);
+        });
+
+        const libraryAnnotations = annotations
+          .map((a: {
+            id: string;
+            file_id: string;
+            user_id: string | null;
+            line_number: number;
+            end_line_number: number | null;
+            line_content: string | null;
+            type: AnnotationType;
+            content: string;
+          }) => {
+            // Find the original file name
+            const originalFile = files.find((f: { id: string; filename: string }) => f.id === a.file_id);
+            if (!originalFile) return null;
+
+            // Get new file ID by filename
+            const newFileId = fileNameToIdMap.get(originalFile.filename);
+            if (!newFileId) return null;
+
+            return {
+              id: crypto.randomUUID(),
+              project_id: libraryProjectId,
+              file_id: newFileId,
+              user_id: a.user_id,
+              // Note: added_by_initials is in the database but not in the base types
+              // We fetch it via select * but TypeScript doesn't know about it
+              // Cast to any to access it, or it will default to null in insert
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              added_by_initials: (a as any).added_by_initials || null,
+              line_number: a.line_number,
+              end_line_number: a.end_line_number,
+              line_content: a.line_content,
+              type: a.type,
+              content: a.content,
+              created_at: now,
+              updated_at: now,
+            };
+          })
+          .filter(Boolean);
+
+        if (libraryAnnotations.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any).from("annotations").insert(libraryAnnotations);
+        }
+      }
+
+      // Return the original project to the user as a draft
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
         .from("projects")
         .update({
-          name: libraryName,
-          owner_id: null, // Transfer to public/community ownership
-          accession_status: "approved" as AccessionStatus,
-          approved_at: new Date().toISOString(),
-          approved_by: user.id,
+          is_public: false,
+          accession_status: "draft" as AccessionStatus,
+          submitted_at: null,
         })
-        .eq("id", projectId)
-        .eq("accession_status", "submitted"); // Only approve submitted projects
-
-      if (error) {
-        return { error: new Error(error.message) };
-      }
+        .eq("id", projectId);
 
       // Remove from pending list
       setPendingSubmissions(prev => prev.filter(p => p.id !== projectId));

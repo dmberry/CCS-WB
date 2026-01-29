@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 2.8.3** | CCS Methodology v2.5
+**Version 2.8.4** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -81,9 +81,10 @@ The critique mode features a three-panel layout for focused code analysis:
 
 ### Sample Projects
 Load pre-packaged historical code for immediate critique and analysis:
-- **ELIZA (1965)**: Weizenbaum's chatbot with 30+ scholarly annotations
-- **Apollo 11 Comanche055**: Command Module guidance computer source code (85 AGC files)
-- **Apollo 11 Luminary099**: Lunar Module guidance computer source code (90 AGC files)
+- **ELIZA (1965b)**: Weizenbaum's chatbot with 30+ scholarly annotations
+- **Colossal Cave Adventure (1977)**: Will Crowther's original FORTRAN IV source code
+- **Apollo 11 Comanche055 (1969)**: Command Module guidance computer source code (85 AGC files)
+- **Apollo 11 Luminary099 (1969)**: Lunar Module guidance computer source code (90 AGC files)
 
 Sample projects demonstrate annotation practices and provide rich material for exploring computational culture of the 1960s. Add your own samples by editing `public/sample-code/Samples.md`.
 
@@ -306,6 +307,9 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 2.8.4 | **Library versioning**: Approving submissions now creates library copy while preserving user's working copy, auto-replaces duplicate library entries, profiles table RLS policies for admin persistence, sample projects dated (ELIZA 1965b, Apollo 11 1969, Colossal Cave 1977) |
+| 2.8.3 | **Apollo 11 sample projects**: Added Comanche055 (Command Module, 85 AGC files) and Luminary099 (Lunar Module, 90 AGC files) as critique mode samples, dynamic sample loading from Samples.md, AGC language support |
+| 2.8.2 | **Skin fixes**: Removed underline from annotation widgets in Teams skin, fixed dropdown/popover text readability in 7 skins, fixed Geocities webring visibility, forced light mode backgrounds for Teams/Myspace/HyperCard skins |
 | 2.8.1 | **Admin orphaned projects tab**: View, reassign, or delete projects with no owner (created when users are deleted), expanded Hackerman easter egg quotes (humanities scholars reading code, classic CS observations, AI/ML hacking jokes, Claude soul document and Gemini jokes) |
 | 2.6.2 | **Trash can for files and projects**: Soft delete for cloud projects and files with recovery via Trash tabs/dropdowns, rename projects from cloud dropdown and Projects modal, admin library management (rename, delete, duplicate, deaccession approved projects) |
 | 2.6.1 | **Library & accessioning**: Admin panel for reviewing library submissions (Submit to Library button for owners, Admin: Review Submissions for admins), BASIC syntax highlighting with full keyword support, code font selection (8 monospace fonts including Fira Code, JetBrains Mono, Source Code Pro) in Settings → Appearance |
