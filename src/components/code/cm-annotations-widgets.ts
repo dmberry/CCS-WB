@@ -291,6 +291,11 @@ export class AnnotationWidget extends WidgetType {
     );
   }
 
+  destroy(dom: HTMLElement) {
+    // Remove all event listeners and clean up DOM
+    dom.remove();
+  }
+
   toDOM(): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "cm-annotation-widget";
