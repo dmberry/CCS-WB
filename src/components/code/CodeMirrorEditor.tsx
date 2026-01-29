@@ -427,7 +427,7 @@ export function CodeMirrorEditor({
           : []
       ),
     });
-  }, [annotations, readOnly, stableOnEdit, stableOnDelete, isDark, inlineEditState, inlineEditCallbacks, highlightedAnnotationType, annotationDisplaySettings, newRemoteAnnotationIds, userInitials, expandedAnnotationId, onToggleReplies, onAddReply, onDeleteReply]);
+  }, [annotations, readOnly, stableOnEdit, stableOnDelete, isDark, inlineEditState, inlineEditCallbacks, highlightedAnnotationType, annotationDisplaySettings, newRemoteAnnotationIds, userInitials, expandedAnnotationId, onToggleReplies, onAddReply, onDeleteReply, replyInputOpenFor, onOpenReplyInput, onCloseReplyInput]);
 
   // Update highlight annotated lines extension when setting or annotations change
   useEffect(() => {
