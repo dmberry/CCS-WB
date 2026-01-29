@@ -212,6 +212,38 @@ export interface Database {
           updated_at?: string;
         };
       };
+      annotation_replies: {
+        Row: {
+          id: string;
+          annotation_id: string;
+          project_id: string;
+          user_id: string | null;
+          added_by_initials: string | null;
+          content: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          annotation_id: string;
+          project_id: string;
+          user_id?: string | null;
+          added_by_initials?: string | null;
+          content: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          annotation_id?: string;
+          project_id?: string;
+          user_id?: string | null;
+          added_by_initials?: string | null;
+          content?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       chat_messages: {
         Row: {
           id: string;
@@ -287,6 +319,7 @@ export type Project = Database["public"]["Tables"]["projects"]["Row"];
 export type ProjectMember = Database["public"]["Tables"]["project_members"]["Row"];
 export type CodeFile = Database["public"]["Tables"]["code_files"]["Row"];
 export type Annotation = Database["public"]["Tables"]["annotations"]["Row"];
+export type AnnotationReply = Database["public"]["Tables"]["annotation_replies"]["Row"];
 export type ChatMessage = Database["public"]["Tables"]["chat_messages"]["Row"];
 export type ProjectInvite = Database["public"]["Tables"]["project_invites"]["Row"];
 
@@ -296,6 +329,7 @@ export type ProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
 export type ProjectMemberInsert = Database["public"]["Tables"]["project_members"]["Insert"];
 export type CodeFileInsert = Database["public"]["Tables"]["code_files"]["Insert"];
 export type AnnotationInsert = Database["public"]["Tables"]["annotations"]["Insert"];
+export type AnnotationReplyInsert = Database["public"]["Tables"]["annotation_replies"]["Insert"];
 export type ChatMessageInsert = Database["public"]["Tables"]["chat_messages"]["Insert"];
 export type ProjectInviteInsert = Database["public"]["Tables"]["project_invites"]["Insert"];
 

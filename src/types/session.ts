@@ -102,6 +102,13 @@ export interface InterpretationNote {
 }
 
 // Line-anchored annotation for close reading
+export interface AnnotationReplyData {
+  id: string;
+  content: string;
+  createdAt: string;
+  addedBy?: string;         // Initials of the user who added this reply
+}
+
 export interface LineAnnotation {
   id: string;
   codeFileId: string;       // Which code file this annotation belongs to
@@ -113,6 +120,7 @@ export interface LineAnnotation {
   createdAt: string;
   orphaned?: boolean;       // True if the annotated line was deleted during editing
   addedBy?: string;         // Initials of the user who added this annotation (for future multi-user support)
+  replies?: AnnotationReplyData[]; // Thread of replies to this annotation
 }
 
 export type LineAnnotationType = LineAnnotation['type'];

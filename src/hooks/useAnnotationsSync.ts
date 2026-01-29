@@ -211,6 +211,66 @@ export function useAnnotationsSync({
     [supabase, enabled, isAuthenticated]
   );
 
+  // Push a new reply to an annotation
+  const pushReply = useCallback(
+    async (annotationId: string, content: string, replyId?: string) => {
+      if (!supabase || !enabled || !isAuthenticated || !currentProjectId) {
+        return;
+      }
+
+      const userInitials = user?.user_metadata?.initials || user?.email?.substring(0, 3).toUpperCase();
+
+      const row = {
+        id: replyId || crypto.randomUUID(),
+        annotation_id: annotationId,
+        project_id: currentProjectId,
+        user_id: user?.id || null,
+        added_by_initials: userInitials || null,
+        content,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("annotation_replies")
+        .upsert(row, { onConflict: "id" });
+
+      if (error) {
+        console.error("Error pushing reply:", error);
+      } else {
+        // Trigger a fetch to update replies
+        lastUpdateRef.current = Date.now();
+        setTimeout(() => fetchAndUpdate(), 200);
+      }
+    },
+    [supabase, enabled, isAuthenticated, currentProjectId, user]
+  );
+
+  // Delete a reply from an annotation
+  const deleteReply = useCallback(
+    async (replyId: string) => {
+      if (!supabase || !enabled || !isAuthenticated) {
+        return;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("annotation_replies")
+        .delete()
+        .eq("id", replyId);
+
+      if (error) {
+        console.error("Error deleting reply:", error);
+      } else {
+        // Trigger a fetch to update replies
+        lastUpdateRef.current = Date.now();
+        setTimeout(() => fetchAndUpdate(), 200);
+      }
+    },
+    [supabase, enabled, isAuthenticated]
+  );
+
   // Helper to fetch and update annotations
   const fetchAndUpdate = useCallback(async () => {
     const currentFileIdMap = fileIdMapRef.current;
@@ -224,6 +284,7 @@ export function useAnnotationsSync({
     );
 
     try {
+      // Fetch annotations
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from("annotations")
@@ -236,9 +297,60 @@ export function useAnnotationsSync({
         return;
       }
 
-      const remoteAnnotations = (data || []).map((row: AnnotationRow) =>
-        rowToAnnotation(row, reverseMap[row.file_id] || row.file_id)
-      );
+      const annotations = data || [];
+      const annotationIds = annotations.map((a: AnnotationRow) => a.id);
+
+      // Fetch replies for all annotations
+      let repliesMap: Record<string, Array<{
+        id: string;
+        content: string;
+        created_at: string;
+        added_by_initials: string | null;
+      }>> = {};
+
+      if (annotationIds.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: repliesData } = await (supabase as any)
+          .from("annotation_replies")
+          .select("*")
+          .in("annotation_id", annotationIds)
+          .order("created_at", { ascending: true });
+
+        if (repliesData) {
+          repliesData.forEach((reply: {
+            annotation_id: string;
+            id: string;
+            content: string;
+            created_at: string;
+            added_by_initials: string | null;
+          }) => {
+            if (!repliesMap[reply.annotation_id]) {
+              repliesMap[reply.annotation_id] = [];
+            }
+            repliesMap[reply.annotation_id].push({
+              id: reply.id,
+              content: reply.content,
+              created_at: reply.created_at,
+              added_by_initials: reply.added_by_initials,
+            });
+          });
+        }
+      }
+
+      const remoteAnnotations = annotations.map((row: AnnotationRow) => {
+        const annotation = rowToAnnotation(row, reverseMap[row.file_id] || row.file_id);
+        // Attach replies to annotation
+        const replies = repliesMap[row.id];
+        if (replies) {
+          annotation.replies = replies.map(r => ({
+            id: r.id,
+            content: r.content,
+            createdAt: r.created_at,
+            addedBy: r.added_by_initials || undefined,
+          }));
+        }
+        return annotation;
+      });
       onRemoteChangeRef.current(remoteAnnotations);
     } catch (err) {
       console.error("Error in fetchAndUpdate:", err);
@@ -354,6 +466,8 @@ export function useAnnotationsSync({
   return {
     pushAnnotation,
     deleteAnnotation,
+    pushReply,
+    deleteReply,
     fetchRemoteAnnotations,
     isConnected: !!channelRef.current,
   };

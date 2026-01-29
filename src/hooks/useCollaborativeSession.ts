@@ -189,6 +189,8 @@ export function useCollaborativeSession() {
   const {
     pushAnnotation,
     deleteAnnotation: deleteAnnotationFromDb,
+    pushReply,
+    deleteReply,
     fetchRemoteAnnotations,
     isConnected: annotationsConnected,
   } = useAnnotationsSync({
@@ -842,6 +844,10 @@ export function useCollaborativeSession() {
     rejectFileDeletion,
     refreshFromCloud,
     saveAllToCloud,
+
+    // Annotation reply methods
+    pushReply,
+    deleteReply,
 
     // File trash methods
     loadTrashedFiles,
