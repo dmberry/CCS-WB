@@ -194,14 +194,33 @@ export function useAnnotationsSync({
         .order("updated_at", { ascending: false })
         .limit(1);
 
-      // Check replies (for annotations in this project)
+      // Check replies (only for annotations in current files, matching actual fetch scope)
+      // First get annotation IDs for current files
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { count: repliesCount, data: recentReply, error: repliesError } = await (supabase as any)
-        .from("annotation_replies")
-        .select("updated_at", { count: "exact", head: false })
-        .eq("project_id", currentProjectId)
-        .order("updated_at", { ascending: false })
-        .limit(1);
+      const { data: currentAnnotations } = await (supabase as any)
+        .from("annotations")
+        .select("id")
+        .in("file_id", fileIds);
+
+      const currentAnnotationIds = currentAnnotations?.map((a: { id: string }) => a.id) || [];
+
+      // Now check replies only for those annotations
+      let repliesCount = 0;
+      let recentReply: Array<{ updated_at: string }> | null = null;
+      let repliesError = null;
+
+      if (currentAnnotationIds.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const result = await (supabase as any)
+          .from("annotation_replies")
+          .select("updated_at", { count: "exact", head: false })
+          .in("annotation_id", currentAnnotationIds)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        repliesCount = result.count || 0;
+        recentReply = result.data;
+        repliesError = result.error;
+      }
 
       if (!annotationsError && !repliesError) {
         const currentAnnotationsCount = annotationsCount || 0;
@@ -217,6 +236,16 @@ export function useAnnotationsSync({
             lastState.repliesCount === currentRepliesCount &&
             lastState.repliesLastUpdated === currentRepliesLastUpdated) {
           return; // No changes, skip fetch
+        }
+
+        // Log when changes detected (helps diagnose intermittent issues)
+        if (lastState) {
+          const changes = [];
+          if (lastState.annotationsCount !== currentAnnotationsCount) changes.push(`annotations: ${lastState.annotationsCount} → ${currentAnnotationsCount}`);
+          if (lastState.annotationsLastUpdated !== currentAnnotationsLastUpdated) changes.push(`annotation time: ${lastState.annotationsLastUpdated.slice(11, 19)} → ${currentAnnotationsLastUpdated.slice(11, 19)}`);
+          if (lastState.repliesCount !== currentRepliesCount) changes.push(`replies: ${lastState.repliesCount} → ${currentRepliesCount}`);
+          if (lastState.repliesLastUpdated !== currentRepliesLastUpdated) changes.push(`reply time: ${lastState.repliesLastUpdated.slice(11, 19)} → ${currentRepliesLastUpdated.slice(11, 19)}`);
+          console.log("Sync: Changes detected -", changes.join(", "));
         }
       }
     } catch (err) {
