@@ -1354,8 +1354,41 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
   const handleDeleteReply = useCallback(async (replyId: string) => {
     if (!deleteReply) return;
+
+    // Check if user is deleting someone else's reply (project owner deleting member's reply)
+    let needsConfirmation = false;
+    let replyAuthor: string | undefined;
+
+    // Find the reply in annotations to check ownership
+    for (const annotation of lineAnnotations) {
+      const reply = annotation.replies?.find(r => r.id === replyId);
+      if (reply) {
+        replyAuthor = reply.addedBy;
+        // Need confirmation if:
+        // 1. Reply has an author (not the current user's initials)
+        // 2. Current user is project owner (can delete anyone's reply via RLS)
+        // 3. Reply author doesn't match current user's initials
+        const currentUserInitials = user?.user_metadata?.initials || user?.email?.substring(0, 3).toUpperCase();
+        const currentProject = projects.find(p => p.id === currentProjectId);
+        const isOwner = currentProject?.owner_id === user?.id;
+
+        if (isOwner && reply.addedBy && reply.addedBy !== currentUserInitials) {
+          needsConfirmation = true;
+        }
+        break;
+      }
+    }
+
+    // Show confirmation if project owner is deleting someone else's reply
+    if (needsConfirmation) {
+      const confirmed = window.confirm(
+        `Delete reply by ${replyAuthor}?\n\nThis will permanently delete this reply.`
+      );
+      if (!confirmed) return;
+    }
+
     await deleteReply(replyId);
-  }, [deleteReply]);
+  }, [deleteReply, lineAnnotations, user, projects, currentProjectId]);
 
   // Load session with code contents and mode validation
   const handleLoadSession = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
