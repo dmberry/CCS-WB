@@ -13,8 +13,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = new NextResponse();
-    const supabase = createSupabaseRouteClient(request, response);
+    // Create response object to capture Set-Cookie headers
+    const responseHeaders = new Headers();
+    const supabase = createSupabaseRouteClient(request, { headers: responseHeaders });
 
     if (!supabase) {
       return NextResponse.json(
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await (supabase as any).auth.getUser();
 
     if (authError || !user) {
+      console.error("Auth error in update-color:", authError);
       return NextResponse.json(
         { error: "Not authenticated" },
         { status: 401 }
@@ -49,11 +51,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Return response with auth cookies
-    response.headers.set("Content-Type", "application/json");
+    // Return response with auth cookies from Supabase
     return new NextResponse(JSON.stringify({ success: true }), {
       status: 200,
-      headers: response.headers,
+      headers: responseHeaders,
     });
   } catch (error) {
     console.error("Error in update-color API:", error);
