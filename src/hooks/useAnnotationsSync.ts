@@ -236,13 +236,20 @@ export function useAnnotationsSync({
     );
 
     try {
-      // Fetch annotations
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      // Fetch annotations with timeout
+      console.log("fetchAndUpdate: Starting annotations query");
+      const annotationsPromise = (supabase as any)
         .from("annotations")
         .select("*")
         .in("file_id", fileIds)
         .order("created_at", { ascending: true });
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Query timeout after 10s")), 10000)
+      );
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await Promise.race([annotationsPromise, timeoutPromise]) as any;
 
       if (error) {
         console.error("fetchAndUpdate: Error fetching annotations:", error);
