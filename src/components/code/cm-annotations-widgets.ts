@@ -430,7 +430,6 @@ export class AnnotationWidget extends WidgetType {
         margin-top: 8px;
         padding-left: 16px;
         border-left: 2px solid ${color};
-        opacity: ${baseOpacity};
       `;
 
       // Render existing replies
@@ -576,22 +575,49 @@ export class AnnotationWidget extends WidgetType {
 
           // Auto-focus the input
           setTimeout(() => replyInput.focus(), 10);
+        } else if (this.annotation.replies && this.annotation.replies.length > 0) {
+          // Show small "+" button inline after the last reply
+          const lastReplyDiv = repliesSection.lastElementChild as HTMLElement;
+          if (lastReplyDiv) {
+            const addReplyBtn = document.createElement("button");
+            addReplyBtn.className = "cm-annotation-btn cm-annotation-add-reply-btn";
+            addReplyBtn.innerHTML = "+";
+            addReplyBtn.title = "Add a reply";
+            addReplyBtn.style.cssText = `
+              margin-left: 8px;
+              padding: 0px 6px;
+              background: transparent;
+              border: 1px solid ${color};
+              border-radius: 3px;
+              cursor: pointer;
+              font-size: 0.85em;
+              color: ${color};
+              font-weight: bold;
+              vertical-align: middle;
+            `;
+            addReplyBtn.onclick = (e) => {
+              e.stopPropagation();
+              this.onOpenReplyInput?.(this.annotation.id);
+            };
+            // Insert at the end of the last reply div
+            lastReplyDiv.appendChild(addReplyBtn);
+          }
         } else {
-          // Show "+" button to open reply input
+          // No replies yet - show + button on its own line but smaller
           const addReplyBtn = document.createElement("button");
           addReplyBtn.className = "cm-annotation-btn cm-annotation-add-reply-btn";
-          addReplyBtn.innerHTML = "+";
+          addReplyBtn.innerHTML = "+ Add reply";
           addReplyBtn.title = "Add a reply";
           addReplyBtn.style.cssText = `
-            margin-top: 8px;
-            padding: 4px 12px;
-            background: ${this.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'};
-            border: 1px solid ${this.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'};
-            border-radius: 4px;
+            margin-top: 4px;
+            padding: 2px 8px;
+            background: transparent;
+            border: 1px solid ${color};
+            border-radius: 3px;
             cursor: pointer;
-            font-size: 1.1em;
+            font-size: 0.85em;
             color: ${color};
-            font-weight: bold;
+            font-weight: normal;
           `;
           addReplyBtn.onclick = (e) => {
             e.stopPropagation();
