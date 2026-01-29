@@ -1771,16 +1771,16 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                 setProjectName(newName.trim());
               }
             }}
-            className="hidden sm:block absolute left-1/2 transform -translate-x-1/2 hover:bg-cream px-2 py-0.5 rounded-sm transition-colors max-w-[200px] truncate flex items-center gap-1"
+            className="hidden sm:flex absolute left-1/2 transform -translate-x-1/2 hover:bg-cream px-2 py-0.5 rounded-sm transition-colors items-center gap-1.5"
             title="Local session (click to rename)"
           >
-            <HardDrive className="h-2.5 w-2.5 text-slate-muted flex-shrink-0" strokeWidth={1.5} />
+            <HardDrive className="h-3 w-3 text-slate-muted flex-shrink-0" strokeWidth={1.5} />
             {projectName ? (
-              <span className="font-mono text-[10px] text-ink">
+              <span className="font-mono text-[10px] text-ink whitespace-nowrap">
                 {projectName.replace(/[^a-z0-9-_ ]/gi, "").replace(/\s+/g, "-").toLowerCase()}-{MODE_CODES[session.mode] || "XX"}.ccs
               </span>
             ) : (
-              <span className="font-mono text-[10px] text-slate-muted italic">
+              <span className="font-mono text-[10px] text-slate-muted italic whitespace-nowrap">
                 untitled-{MODE_CODES[session.mode] || "XX"}.ccs
               </span>
             )}
