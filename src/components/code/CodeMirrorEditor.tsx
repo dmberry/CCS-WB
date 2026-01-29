@@ -218,7 +218,7 @@ export function CodeMirrorEditor({
           ? createAnnotateGutter(stableOnLineClick, showDiscoveryAnimation, animationTriggerKey, animationColor)
           : lineNumbers()
       ),
-      themeCompartment.current.of(getCCSTheme(isDark, codeFontFamily)),
+      themeCompartment.current.of(getCCSTheme(isDark)),
       fontSizeCompartment.current.of(getFontSizeTheme(fontSize)),
       languageCompartment.current.of([]),
       readOnlyCompartment.current.of(EditorState.readOnly.of(readOnly)),
@@ -352,13 +352,13 @@ export function CodeMirrorEditor({
     }
   }, [value]);
 
-  // Update theme when effectiveTheme or code font changes
+  // Update theme when effectiveTheme changes
   useEffect(() => {
     if (isInitialMount.current) return;
     viewRef.current?.dispatch({
-      effects: themeCompartment.current.reconfigure(getCCSTheme(isDark, codeFontFamily)),
+      effects: themeCompartment.current.reconfigure(getCCSTheme(isDark)),
     });
-  }, [isDark, codeFontFamily]);
+  }, [isDark]);
 
   // Update font size
   useEffect(() => {
@@ -473,6 +473,8 @@ export function CodeMirrorEditor({
         height: "100%",
         width: "100%",
         overflow: "auto",
+        // @ts-ignore - CSS custom property
+        "--code-font-family": codeFontFamily,
       }}
     />
   );
