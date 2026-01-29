@@ -252,8 +252,7 @@ export function useAnnotationsSync({
       }>> = {};
 
       if (annotationIds.length > 0) {
-        // Fetch replies - try simplest syntax first (no join)
-        // We'll fetch profile colors separately if needed
+        // Fetch replies
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: repliesData, error: repliesError } = await (supabase as any)
           .from("annotation_replies")
@@ -266,6 +265,25 @@ export function useAnnotationsSync({
         }
 
         if (repliesData) {
+          // Collect unique user IDs from replies to fetch their profile colors
+          const userIds = [...new Set(repliesData.map((r: { user_id: string | null }) => r.user_id).filter(Boolean))];
+
+          // Fetch profile colors for these users
+          let profileColors: Record<string, string> = {};
+          if (userIds.length > 0) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: profilesData } = await (supabase as any)
+              .from("profiles")
+              .select("user_id, profile_color")
+              .in("user_id", userIds);
+
+            if (profilesData) {
+              profileColors = Object.fromEntries(
+                profilesData.map((p: { user_id: string; profile_color: string | null }) => [p.user_id, p.profile_color])
+              );
+            }
+          }
+
           repliesData.forEach((reply: {
             annotation_id: string;
             id: string;
@@ -282,7 +300,7 @@ export function useAnnotationsSync({
               content: reply.content,
               created_at: reply.created_at,
               added_by_initials: reply.added_by_initials,
-              profile_color: null, // TODO: Fetch from profiles table separately
+              profile_color: reply.user_id ? profileColors[reply.user_id] || null : null,
             });
           });
         }

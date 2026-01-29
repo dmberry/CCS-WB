@@ -467,22 +467,11 @@ _Add relevant references, documentation links, or related scholarship:_
         content: string;
         created_at: string;
         added_by_initials: string | null;
+        user_id: string | null;
         profiles: { profile_color: string | null } | null;
       }> = [];
 
-      if (annotationIds.length > 0) {
-        // Fetch replies without profile join for now (avoids FK constraint errors)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data } = await (supabase as any)
-          .from("annotation_replies")
-          .select("*")
-          .in("annotation_id", annotationIds)
-          .order("created_at", { ascending: true });
-
-        repliesData = data || [];
-      }
-
-      // Build replies map
+      // Build replies map with profile colors
       const repliesMap: Record<string, Array<{
         id: string;
         content: string;
@@ -491,18 +480,55 @@ _Add relevant references, documentation links, or related scholarship:_
         profileColor?: string;
       }>> = {};
 
-      repliesData.forEach(reply => {
-        if (!repliesMap[reply.annotation_id]) {
-          repliesMap[reply.annotation_id] = [];
+      if (annotationIds.length > 0) {
+        // Fetch replies
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data } = await (supabase as any)
+          .from("annotation_replies")
+          .select("*")
+          .in("annotation_id", annotationIds)
+          .order("created_at", { ascending: true });
+
+        repliesData = data || [];
+
+        // Fetch profile colors for reply authors
+        const userIds = [...new Set(repliesData.map((r: { user_id: string | null }) => r.user_id).filter(Boolean))] as string[];
+        let profileColors: Record<string, string> = {};
+
+        if (userIds.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: profilesData } = await (supabase as any)
+            .from("profiles")
+            .select("user_id, profile_color")
+            .in("user_id", userIds);
+
+          if (profilesData) {
+            profileColors = Object.fromEntries(
+              profilesData.map((p: { user_id: string; profile_color: string | null }) => [p.user_id, p.profile_color])
+            );
+          }
         }
-        repliesMap[reply.annotation_id].push({
-          id: reply.id,
-          content: reply.content,
-          createdAt: reply.created_at,
-          addedBy: reply.added_by_initials || undefined,
-          profileColor: undefined, // TODO: Fetch from profiles table separately
+
+        repliesData.forEach((reply: {
+          annotation_id: string;
+          id: string;
+          content: string;
+          created_at: string;
+          added_by_initials: string | null;
+          user_id: string | null;
+        }) => {
+          if (!repliesMap[reply.annotation_id]) {
+            repliesMap[reply.annotation_id] = [];
+          }
+          repliesMap[reply.annotation_id].push({
+            id: reply.id,
+            content: reply.content,
+            createdAt: reply.created_at,
+            addedBy: reply.added_by_initials || undefined,
+            profileColor: reply.user_id && profileColors[reply.user_id] ? profileColors[reply.user_id] : undefined,
+          });
         });
-      });
+      }
 
       // Build lineAnnotations from database
       const lineAnnotations = (annotationsData || []).map((row: {
