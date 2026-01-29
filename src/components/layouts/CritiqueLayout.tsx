@@ -1424,34 +1424,25 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
   const handleDeleteAnnotation = useCallback(async (annotationId: string) => {
     if (!removeLineAnnotation) return;
 
-    // Check if user is deleting someone else's annotation (project owner deleting member's annotation)
-    let needsConfirmation = false;
-    let annotationAuthor: string | undefined;
-
     // Find the annotation to check ownership
     const annotation = session.lineAnnotations?.find(a => a.id === annotationId);
+    let confirmMessage = "Delete this annotation?\n\nThis will permanently delete the annotation and all its replies.";
+
     if (annotation) {
-      annotationAuthor = annotation.addedBy;
-      // Need confirmation if:
-      // 1. Annotation has an author (not the current user's initials)
-      // 2. Current user is project owner (can delete anyone's annotation via RLS)
-      // 3. Annotation author doesn't match current user's initials
+      const annotationAuthor = annotation.addedBy;
       const currentUserInitials = user?.user_metadata?.initials || user?.email?.substring(0, 3).toUpperCase();
       const currentProject = projects.find(p => p.id === currentProjectId);
       const isOwner = currentProject?.owner_id === user?.id;
 
-      if (isOwner && annotation.addedBy && annotation.addedBy !== currentUserInitials) {
-        needsConfirmation = true;
+      // Different message if owner is deleting someone else's annotation
+      if (isOwner && annotationAuthor && annotationAuthor !== currentUserInitials) {
+        confirmMessage = `Delete annotation by ${annotationAuthor}?\n\nThis will permanently delete this annotation and all its replies.`;
       }
     }
 
-    // Show confirmation if project owner is deleting someone else's annotation
-    if (needsConfirmation) {
-      const confirmed = window.confirm(
-        `Delete annotation by ${annotationAuthor}?\n\nThis will permanently delete this annotation and all its replies.`
-      );
-      if (!confirmed) return;
-    }
+    // Always show confirmation for annotation deletion
+    const confirmed = window.confirm(confirmMessage);
+    if (!confirmed) return;
 
     // Call the wrapped removeLineAnnotation
     await removeLineAnnotation(annotationId);
