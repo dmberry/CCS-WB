@@ -341,12 +341,18 @@ export function useAnnotationsSync({
           const originalContent = originalAnnotation?.content || "";
           const newContent = annotation.content;
 
+          // Extract only the latest content (after any existing brackets) to prevent nesting
+          // If content is "[old] text", extract just "text"
+          // If content is "text", use "text"
+          const editHistoryRegex = /^\[.*?\]\s*/;
+          const latestContent = originalContent.replace(editHistoryRegex, "").trim();
+
           // Generate new UUID for the new annotation with original text in square brackets
           annotationToSave = {
             ...annotation,
             id: crypto.randomUUID(),
             addedBy: profile?.initials || user?.user_metadata?.initials || undefined,
-            content: `[${originalContent}] ${newContent}`,
+            content: `[${latestContent}] ${newContent}`,
           };
         }
       } catch (err) {
