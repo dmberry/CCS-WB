@@ -367,17 +367,23 @@ export function useCollaborativeSession() {
 
   // Wrapped removeLineAnnotation that syncs to Supabase
   const removeLineAnnotation = useCallback(
-    (id: string) => {
+    async (id: string) => {
       console.log("removeLineAnnotation:", { id, isInProject });
 
-      // Remove locally
-      sessionContext.removeLineAnnotation(id);
-
-      // If in project, sync to Supabase
+      // If in project, check permission before removing
       if (isInProject) {
         console.log("removeLineAnnotation: calling deleteAnnotationFromDb");
-        deleteAnnotationFromDb(id);
+        const result = await deleteAnnotationFromDb(id);
+
+        if (!result.success) {
+          console.warn("Failed to delete annotation:", result.error);
+          // Don't remove locally - the sync will restore it from server
+          return;
+        }
       }
+
+      // Remove locally (only if not in project OR deletion succeeded)
+      sessionContext.removeLineAnnotation(id);
     },
     [sessionContext, isInProject, deleteAnnotationFromDb]
   );

@@ -443,9 +443,9 @@ export function useAnnotationsSync({
 
   // Delete an annotation from Supabase
   const deleteAnnotation = useCallback(
-    async (annotationId: string) => {
+    async (annotationId: string): Promise<{ success: boolean; error?: string }> => {
       if (!supabase || !enabled || !isAuthenticated) {
-        return;
+        return { success: false, error: "Not authenticated" };
       }
 
       // Mark that we're making an update (to skip processing our own changes)
@@ -453,7 +453,7 @@ export function useAnnotationsSync({
 
       try {
         // Retry with exponential backoff
-        await retryWithBackoff(
+        const count = await retryWithBackoff(
           async () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const { error, count } = await (supabase as any)
@@ -471,10 +471,22 @@ export function useAnnotationsSync({
           "deleteAnnotation"
         );
 
+        // Check if anything was actually deleted (RLS may have blocked it)
+        if (count === 0 || count === null) {
+          console.warn("deleteAnnotation: No rows deleted (permission denied by RLS)");
+          // Immediately restore the annotation in UI by fetching
+          setTimeout(() => fetchAndUpdate(), 0);
+          return { success: false, error: "Permission denied: You cannot delete this annotation" };
+        }
+
         // Trigger a fetch to update annotations across clients
         setTimeout(() => fetchAndUpdate(), 200);
+        return { success: true };
       } catch (err) {
         console.error("deleteAnnotation: All retry attempts failed:", err);
+        // Restore the annotation in UI
+        setTimeout(() => fetchAndUpdate(), 0);
+        return { success: false, error: err instanceof Error ? err.message : "Delete failed" };
       }
     },
     [supabase, enabled, isAuthenticated, fetchAndUpdate]
@@ -536,14 +548,14 @@ export function useAnnotationsSync({
 
   // Delete a reply from an annotation
   const deleteReply = useCallback(
-    async (replyId: string) => {
+    async (replyId: string): Promise<{ success: boolean; error?: string }> => {
       if (!supabase || !enabled || !isAuthenticated) {
-        return;
+        return { success: false, error: "Not authenticated" };
       }
 
       try {
         // Retry with exponential backoff
-        await retryWithBackoff(
+        const data = await retryWithBackoff(
           async () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const { error, data } = await (supabase as any)
@@ -562,11 +574,23 @@ export function useAnnotationsSync({
           "deleteReply"
         );
 
+        // Check if anything was actually deleted (RLS may have blocked it)
+        if (!data || data.length === 0) {
+          console.warn("deleteReply: No rows deleted (permission denied by RLS)");
+          // Immediately restore the reply in UI by fetching
+          setTimeout(() => fetchAndUpdate(), 0);
+          return { success: false, error: "Permission denied: You cannot delete this reply" };
+        }
+
         // Trigger a fetch to update replies
         lastUpdateRef.current = Date.now();
         setTimeout(() => fetchAndUpdate(), 200);
+        return { success: true };
       } catch (err) {
         console.error("deleteReply: All retry attempts failed:", err);
+        // Restore the reply in UI
+        setTimeout(() => fetchAndUpdate(), 0);
+        return { success: false, error: err instanceof Error ? err.message : "Delete failed" };
       }
     },
     [supabase, enabled, isAuthenticated, fetchAndUpdate]

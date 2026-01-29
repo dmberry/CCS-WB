@@ -484,6 +484,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
 
     const fetchMembers = async () => {
       const { members } = await getProjectMembers(currentProjectId);
+      console.log("Shared project indicator - member count:", members?.length || 0, "members:", members);
       setProjectMemberCount(members?.length || 0);
     };
 
@@ -1404,7 +1405,11 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
       if (!confirmed) return;
     }
 
-    await deleteReply(replyId);
+    const result = await deleteReply(replyId);
+    if (!result.success) {
+      console.warn("Failed to delete reply:", result.error);
+      alert(result.error || "Failed to delete reply. You may not have permission to delete this reply.");
+    }
   }, [deleteReply, session.lineAnnotations, user, projects, currentProjectId]);
 
   // Load session with code contents and mode validation
