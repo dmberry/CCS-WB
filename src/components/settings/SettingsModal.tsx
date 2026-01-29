@@ -405,6 +405,7 @@ export function SettingsModal({
                                   method: "POST",
                                   headers: { "Content-Type": "application/json" },
                                   body: JSON.stringify({ color: tempColor }),
+                                  credentials: "include",
                                 });
                                 // Refresh profile from database
                                 await refreshProfile();
@@ -439,6 +440,7 @@ export function SettingsModal({
                                 method: "POST",
                                 headers: { "Content-Type": "application/json" },
                                 body: JSON.stringify({ color: null }),
+                                credentials: "include",
                               });
                               await refreshProfile();
                               setTempColor(null);
