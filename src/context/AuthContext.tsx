@@ -267,11 +267,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, newSession) => {
         if (!mounted) return;
 
+        console.log("Auth state changed:", event, newSession?.user ? "user present" : "no user");
+
         setSession(newSession);
         setUser(newSession?.user ?? null);
 
         if (newSession?.user) {
-          // Fetch or create profile on sign in
+          // Fetch or create profile on sign in or token refresh
           let userProfile = await fetchProfile(newSession.user.id);
           if (!userProfile) {
             userProfile = await createProfile(newSession.user);
@@ -282,8 +284,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (event === "SIGNED_IN") {
             setShowLoginModal(false);
           }
+
+          // When session is refreshed after inactivity, trigger projects reload
+          if (event === "TOKEN_REFRESHED") {
+            console.log("Session refreshed - projects may need reloading");
+            // Dispatch custom event that ProjectsContext can listen to
+            window.dispatchEvent(new CustomEvent("auth-session-refreshed"));
+          }
         } else {
           setProfile(null);
+
+          // Session expired - show login modal
+          if (event === "SIGNED_OUT") {
+            console.log("Session expired - user signed out");
+          }
         }
       }
     );

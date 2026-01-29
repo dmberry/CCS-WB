@@ -188,6 +188,10 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
 
       if (ownedError && Object.keys(ownedError).length > 0) {
         console.error("Error fetching owned projects:", ownedError.message);
+        // Check if it's an auth error
+        if (ownedError.code === 'PGRST301' || ownedError.message?.includes('JWT') || ownedError.message?.includes('expired')) {
+          console.warn("Session expired while fetching projects - projects list may be stale");
+        }
       }
       if (sharedError && Object.keys(sharedError).length > 0) {
         console.error("Error fetching shared projects:", sharedError.message);
@@ -236,6 +240,21 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
       setProjects([]);
       setCurrentProjectId(null);
     }
+  }, [isAuthenticated, fetchProjects]);
+
+  // Refresh projects when session is refreshed after inactivity
+  useEffect(() => {
+    const handleSessionRefreshed = () => {
+      console.log("ProjectsContext: Session refreshed, reloading projects");
+      if (isAuthenticated) {
+        fetchProjects();
+      }
+    };
+
+    window.addEventListener("auth-session-refreshed", handleSessionRefreshed);
+    return () => {
+      window.removeEventListener("auth-session-refreshed", handleSessionRefreshed);
+    };
   }, [isAuthenticated, fetchProjects]);
 
   // Create a new project
@@ -390,6 +409,11 @@ _Add relevant references, documentation links, or related scholarship:_
       const { data: annotationsData, error: annotationsError } = annotationsResult;
 
       if (projectError) {
+        // Check if it's an auth error (session expired)
+        if (projectError.code === 'PGRST301' || projectError.message?.includes('JWT') || projectError.message?.includes('expired')) {
+          console.error("Authentication error loading project - session may have expired:", projectError);
+          return { session: null, error: new Error("Your session has expired. Please refresh the page to sign in again.") };
+        }
         return { session: null, error: new Error(projectError.message) };
       }
 
