@@ -81,6 +81,43 @@ function annotationToRow(
   };
 }
 
+/**
+ * Retry a database operation with exponential backoff
+ * Tries 3 times: immediately, after 2s, after 4s
+ */
+async function retryWithBackoff<T>(
+  operation: () => Promise<T>,
+  operationName: string,
+  maxRetries = 3
+): Promise<T> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`${operationName} timeout after 10s`)), 10000)
+      );
+
+      const result = await Promise.race([operation(), timeoutPromise]);
+      console.log(`${operationName}: Success on attempt ${attempt}`);
+      return result;
+    } catch (error) {
+      const isLastAttempt = attempt === maxRetries;
+      console.warn(`${operationName}: Attempt ${attempt}/${maxRetries} failed:`, error);
+
+      if (isLastAttempt) {
+        console.error(`${operationName}: All ${maxRetries} attempts failed`);
+        throw error;
+      }
+
+      // Exponential backoff: 2s, 4s
+      const delayMs = Math.pow(2, attempt) * 1000;
+      console.log(`${operationName}: Retrying in ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+
+  throw new Error(`${operationName}: Failed after ${maxRetries} attempts`);
+}
+
 export function useAnnotationsSync({
   localAnnotations,
   onRemoteChange,
@@ -278,38 +315,34 @@ export function useAnnotationsSync({
       console.log("pushAnnotation: upserting row", row);
 
       try {
-        // Add timeout protection for upsert operation
-        const upsertPromise = (supabase as any)
-          .from("annotations")
-          .upsert(row, { onConflict: "id" })
-          .select();
+        // Retry with exponential backoff
+        const result = await retryWithBackoff(
+          async () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data, error } = await (supabase as any)
+              .from("annotations")
+              .upsert(row, { onConflict: "id" })
+              .select();
 
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Upsert timeout after 10s")), 10000)
+            if (error) {
+              console.error("pushAnnotation: Database error:", error);
+              throw error;
+            }
+
+            return data;
+          },
+          "pushAnnotation"
         );
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data, error } = await Promise.race([upsertPromise, timeoutPromise]) as any;
-
-        if (error) {
-          console.error("pushAnnotation: Database error:", error);
-          console.error("pushAnnotation: Error details:", {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code,
-          });
-        } else {
-          console.log("pushAnnotation: Successfully saved", data);
-          console.log("pushAnnotation: Triggering fetchAndUpdate in 200ms");
-          // Trigger a fetch to update annotations across clients
-          setTimeout(() => {
-            console.log("pushAnnotation: Calling fetchAndUpdate now");
-            fetchAndUpdate();
-          }, 200);
-        }
+        console.log("pushAnnotation: Successfully saved", result);
+        console.log("pushAnnotation: Triggering fetchAndUpdate in 200ms");
+        // Trigger a fetch to update annotations across clients
+        setTimeout(() => {
+          console.log("pushAnnotation: Calling fetchAndUpdate now");
+          fetchAndUpdate();
+        }, 200);
       } catch (err) {
-        console.error("pushAnnotation: Exception caught:", err);
+        console.error("pushAnnotation: All retry attempts failed:", err);
       }
     },
     [supabase, enabled, isAuthenticated, currentProjectId, user?.id, fetchAndUpdate]
@@ -334,28 +367,30 @@ export function useAnnotationsSync({
       lastUpdateRef.current = Date.now();
 
       try {
-        // Add timeout protection for delete operation
-        const deletePromise = (supabase as any)
-          .from("annotations")
-          .delete()
-          .eq("id", annotationId);
+        // Retry with exponential backoff
+        const result = await retryWithBackoff(
+          async () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { error, count } = await (supabase as any)
+              .from("annotations")
+              .delete()
+              .eq("id", annotationId);
 
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Delete timeout after 10s")), 10000)
+            if (error) {
+              console.error("deleteAnnotation: Database error:", error);
+              throw error;
+            }
+
+            return count;
+          },
+          "deleteAnnotation"
         );
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error, count } = await Promise.race([deletePromise, timeoutPromise]) as any;
-
-        if (error) {
-          console.error("deleteAnnotation: Database error:", error);
-        } else {
-          console.log("deleteAnnotation: success, count:", count);
-          // Trigger a fetch to update annotations across clients
-          setTimeout(() => fetchAndUpdate(), 200);
-        }
+        console.log("deleteAnnotation: success, count:", result);
+        // Trigger a fetch to update annotations across clients
+        setTimeout(() => fetchAndUpdate(), 200);
       } catch (err) {
-        console.error("deleteAnnotation: Exception caught:", err);
+        console.error("deleteAnnotation: All retry attempts failed:", err);
       }
     },
     [supabase, enabled, isAuthenticated, fetchAndUpdate]
@@ -386,40 +421,35 @@ export function useAnnotationsSync({
       console.log("pushReply: Saving reply to database", { annotationId, content, replyId: row.id, userId: user?.id });
 
       try {
-        // Add timeout protection for upsert operation
-        const upsertPromise = (supabase as any)
-          .from("annotation_replies")
-          .upsert(row, { onConflict: "id" })
-          .select();
+        // Retry with exponential backoff
+        const result = await retryWithBackoff(
+          async () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data, error } = await (supabase as any)
+              .from("annotation_replies")
+              .upsert(row, { onConflict: "id" })
+              .select();
 
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Upsert timeout after 10s")), 10000)
+            if (error) {
+              console.error("pushReply: Database error:", error);
+              throw error;
+            }
+
+            return data;
+          },
+          "pushReply"
         );
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data, error } = await Promise.race([upsertPromise, timeoutPromise]) as any;
-
-        if (error) {
-          console.error("pushReply: Database error:", error);
-          console.error("pushReply: Error details:", {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code,
-            row,
-          });
-        } else {
-          console.log("pushReply: Reply saved successfully", data);
-          console.log("pushReply: Triggering fetchAndUpdate in 200ms");
-          // Trigger a fetch to update replies
-          lastUpdateRef.current = Date.now();
-          setTimeout(() => {
-            console.log("pushReply: Calling fetchAndUpdate now");
-            fetchAndUpdate();
-          }, 200);
-        }
+        console.log("pushReply: Reply saved successfully", result);
+        console.log("pushReply: Triggering fetchAndUpdate in 200ms");
+        // Trigger a fetch to update replies
+        lastUpdateRef.current = Date.now();
+        setTimeout(() => {
+          console.log("pushReply: Calling fetchAndUpdate now");
+          fetchAndUpdate();
+        }, 200);
       } catch (err) {
-        console.error("pushReply: Exception caught:", err);
+        console.error("pushReply: All retry attempts failed:", err);
       }
     },
     [supabase, enabled, isAuthenticated, currentProjectId, user, profile, fetchAndUpdate]
@@ -440,37 +470,32 @@ export function useAnnotationsSync({
       console.log("deleteReply: Starting deletion", { replyId });
 
       try {
-        // Add timeout protection for delete operation
-        const deletePromise = (supabase as any)
-          .from("annotation_replies")
-          .delete()
-          .eq("id", replyId)
-          .select();
+        // Retry with exponential backoff
+        const result = await retryWithBackoff(
+          async () => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { error, data } = await (supabase as any)
+              .from("annotation_replies")
+              .delete()
+              .eq("id", replyId)
+              .select();
 
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("Delete timeout after 10s")), 10000)
+            if (error) {
+              console.error("deleteReply: Database error:", error);
+              throw error;
+            }
+
+            return data;
+          },
+          "deleteReply"
         );
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error, data } = await Promise.race([deletePromise, timeoutPromise]) as any;
-
-        if (error) {
-          console.error("deleteReply: Database error:", error);
-          console.error("deleteReply: Error details:", {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code,
-            replyId,
-          });
-        } else {
-          console.log("deleteReply: Successfully deleted", { replyId, deletedRows: data?.length || 0 });
-          // Trigger a fetch to update replies
-          lastUpdateRef.current = Date.now();
-          setTimeout(() => fetchAndUpdate(), 200);
-        }
+        console.log("deleteReply: Successfully deleted", { replyId, deletedRows: result?.length || 0 });
+        // Trigger a fetch to update replies
+        lastUpdateRef.current = Date.now();
+        setTimeout(() => fetchAndUpdate(), 200);
       } catch (err) {
-        console.error("deleteReply: Exception caught:", err);
+        console.error("deleteReply: All retry attempts failed:", err);
       }
     },
     [supabase, enabled, isAuthenticated, fetchAndUpdate]
