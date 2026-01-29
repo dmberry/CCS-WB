@@ -18,6 +18,66 @@ import {
 } from "./cm-annotations-config";
 
 // ============================================================================
+// Utility Functions
+// ============================================================================
+
+/**
+ * Converts URLs in text to clickable links
+ * Returns a DocumentFragment with text nodes and link elements
+ */
+function createContentWithLinks(text: string): DocumentFragment {
+  const fragment = document.createDocumentFragment();
+
+  // URL regex pattern - matches http://, https://, and www. URLs
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = urlRegex.exec(text)) !== null) {
+    // Add text before the URL
+    if (match.index > lastIndex) {
+      fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+    }
+
+    // Create clickable link
+    const link = document.createElement("a");
+    let url = match[0];
+
+    // Add https:// prefix if URL starts with www.
+    if (url.startsWith("www.")) {
+      url = "https://" + url;
+    }
+
+    link.href = url;
+    link.textContent = match[0]; // Display original text (with or without https://)
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.style.cssText = `
+      color: inherit;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+      text-underline-offset: 2px;
+    `;
+
+    // Prevent link click from triggering annotation events
+    link.onclick = (e) => {
+      e.stopPropagation();
+    };
+
+    fragment.appendChild(link);
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text after last URL
+  if (lastIndex < text.length) {
+    fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
+
+  return fragment;
+}
+
+// ============================================================================
 // InlineAnnotationEditor Widget
 // ============================================================================
 
@@ -362,7 +422,7 @@ export class AnnotationWidget extends WidgetType {
       contentText = `[${lineRange}${ANNOTATION_PREFIXES[this.annotation.type]}] ${this.annotation.content}`;
     }
 
-    content.appendChild(document.createTextNode(contentText));
+    content.appendChild(createContentWithLinks(contentText));
 
     // Author initials
     if (this.annotation.addedBy) {
@@ -460,7 +520,7 @@ export class AnnotationWidget extends WidgetType {
           `;
 
           const replyContent = document.createElement("span");
-          replyContent.textContent = reply.content;
+          replyContent.appendChild(createContentWithLinks(reply.content));
           replyDiv.appendChild(replyContent);
 
           // Reply author initials (colored to match left border)
