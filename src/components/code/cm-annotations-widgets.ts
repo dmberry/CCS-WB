@@ -343,7 +343,9 @@ export class AnnotationWidget extends WidgetType {
     readonly onDeleteReply: ((replyId: string) => void) | undefined = undefined,
     readonly hasReplyInputOpen: boolean = false,
     readonly onOpenReplyInput: ((id: string) => void) | undefined = undefined,
-    readonly onCloseReplyInput: (() => void) | undefined = undefined
+    readonly onCloseReplyInput: (() => void) | undefined = undefined,
+    // Feature flag for reply functionality (cloud projects only for now, can enable for local files later)
+    readonly repliesEnabled: boolean = true
   ) {
     super();
   }
@@ -369,6 +371,7 @@ export class AnnotationWidget extends WidgetType {
       this.isRemoteNew === other.isRemoteNew &&
       this.expandedAnnotationId === other.expandedAnnotationId &&
       this.hasReplyInputOpen === other.hasReplyInputOpen &&
+      this.repliesEnabled === other.repliesEnabled &&
       repliesEqual
     );
   }
@@ -468,8 +471,8 @@ export class AnnotationWidget extends WidgetType {
     const actions = document.createElement("div");
     actions.className = "cm-annotation-actions";
 
-    // Reply button
-    if (this.onToggleReplies) {
+    // Reply button (only in cloud projects for now)
+    if (this.repliesEnabled && this.onToggleReplies) {
       const replyCount = this.annotation.replies?.length || 0;
       const replyBtn = document.createElement("button");
       replyBtn.className = "cm-annotation-btn cm-annotation-reply-btn";
@@ -508,9 +511,9 @@ export class AnnotationWidget extends WidgetType {
 
     wrapper.appendChild(actions);
 
-    // Replies section (shown when expanded)
+    // Replies section (shown when expanded, cloud projects only for now)
     const isExpanded = this.expandedAnnotationId === this.annotation.id;
-    if (isExpanded && (this.annotation.replies?.length || this.onAddReply)) {
+    if (this.repliesEnabled && isExpanded && (this.annotation.replies?.length || this.onAddReply)) {
       const repliesSection = document.createElement("div");
       repliesSection.className = "cm-annotation-replies";
       const repliesOpacity = this.isHighlighted ? 1 : baseOpacity;

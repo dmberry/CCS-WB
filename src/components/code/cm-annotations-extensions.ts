@@ -44,7 +44,8 @@ export function createSimpleAnnotationsExtension(
   onDeleteReply?: (replyId: string) => void,
   replyInputOpenFor?: string | null,
   onOpenReplyInput?: (id: string) => void,
-  onCloseReplyInput?: () => void
+  onCloseReplyInput?: () => void,
+  isInProject?: boolean // Enable reply functionality (cloud projects only for now)
 ): Extension {
   const settings = displaySettings || DEFAULT_ANNOTATION_DISPLAY_SETTINGS;
 
@@ -97,7 +98,8 @@ export function createSimpleAnnotationsExtension(
               onDeleteReply,
               replyInputOpenFor === ann.id, // Only this annotation cares if it has input open
               onOpenReplyInput,
-              onCloseReplyInput
+              onCloseReplyInput,
+              isInProject ?? true // Enable replies for cloud projects, disable for local files
             ),
             block: true,
             side: 1,

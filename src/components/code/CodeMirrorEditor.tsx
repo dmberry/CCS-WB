@@ -79,6 +79,8 @@ export interface CodeMirrorEditorProps {
   onOpenReplyInput?: (annotationId: string) => void;
   /** Callback to close reply input */
   onCloseReplyInput?: () => void;
+  /** Whether we're in a cloud project (enables reply functionality) */
+  isInProject?: boolean;
   /** CSS class for the container */
   className?: string;
 }
@@ -109,6 +111,7 @@ export function CodeMirrorEditor({
   replyInputOpenFor,
   onOpenReplyInput,
   onCloseReplyInput,
+  isInProject,
   className,
 }: CodeMirrorEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -231,7 +234,8 @@ export function CodeMirrorEditor({
               onDeleteReply,
               replyInputOpenFor,
               onOpenReplyInput,
-              onCloseReplyInput
+              onCloseReplyInput,
+              isInProject
             )
           : []
       ),
@@ -422,7 +426,8 @@ export function CodeMirrorEditor({
               onDeleteReply,
               replyInputOpenFor,
               onOpenReplyInput,
-              onCloseReplyInput
+              onCloseReplyInput,
+              isInProject
             )
           : []
       ),

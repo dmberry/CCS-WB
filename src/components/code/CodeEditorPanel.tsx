@@ -2597,6 +2597,7 @@ export function CodeEditorPanel({
               replyInputOpenFor={replyInputOpenFor}
               onOpenReplyInput={onOpenReplyInput}
               onCloseReplyInput={onCloseReplyInput}
+              isInProject={isInProject}
               className="flex-1"
             />
           )}
