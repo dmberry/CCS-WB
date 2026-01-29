@@ -205,6 +205,32 @@ export class InlineAnnotationEditor extends WidgetType {
 }
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+/**
+ * Generate a consistent color for a user based on their initials
+ * Uses a hash function to convert initials to a hue value
+ */
+function getAuthorColor(initials: string, isDark: boolean): string {
+  // Hash the initials to get a consistent hue (0-360)
+  let hash = 0;
+  for (let i = 0; i < initials.length; i++) {
+    hash = initials.charCodeAt(i) + ((hash << 5) - hash);
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  const hue = Math.abs(hash) % 360;
+
+  // Use controlled saturation and lightness for readability
+  // Dark mode: lighter, more saturated
+  // Light mode: darker, less saturated
+  const saturation = isDark ? 65 : 55;
+  const lightness = isDark ? 55 : 45;
+
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+}
+
+// ============================================================================
 // AnnotationWidget
 // ============================================================================
 
@@ -401,12 +427,18 @@ export class AnnotationWidget extends WidgetType {
       // Render existing replies
       if (this.annotation.replies && this.annotation.replies.length > 0) {
         this.annotation.replies.forEach(reply => {
+          // Generate author-specific color from initials
+          const authorColor = reply.addedBy
+            ? getAuthorColor(reply.addedBy, this.isDark)
+            : color; // Fall back to annotation color if no author
+
           const replyDiv = document.createElement("div");
           replyDiv.className = "cm-annotation-reply";
           replyDiv.style.cssText = `
-            padding: 6px 8px;
+            padding: 6px 8px 6px 12px;
             margin-bottom: 6px;
             background: ${this.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'};
+            border-left: 3px solid ${authorColor};
             border-radius: 4px;
             font-size: 0.9em;
             position: relative;
@@ -416,14 +448,15 @@ export class AnnotationWidget extends WidgetType {
           replyContent.textContent = reply.content;
           replyDiv.appendChild(replyContent);
 
-          // Reply author initials
+          // Reply author initials (colored to match left border)
           if (reply.addedBy) {
             const replyInitials = document.createElement("span");
             replyInitials.textContent = ` ${reply.addedBy}`;
             replyInitials.style.cssText = `
               font-size: 0.65em;
-              opacity: 0.6;
-              font-weight: 500;
+              color: ${authorColor};
+              opacity: 0.85;
+              font-weight: 600;
               text-transform: uppercase;
               letter-spacing: 0.02em;
               margin-left: 4px;
