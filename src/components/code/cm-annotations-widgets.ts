@@ -22,11 +22,33 @@ import {
 // ============================================================================
 
 /**
- * Converts URLs in text to clickable links
- * Returns a DocumentFragment with text nodes and link elements
+ * Converts URLs in text to clickable links and styles quoted original text
+ * Returns a DocumentFragment with text nodes, styled spans, and link elements
  */
 function createContentWithLinks(text: string): DocumentFragment {
   const fragment = document.createDocumentFragment();
+
+  // Check if text starts with [original text] pattern (edit history)
+  const editHistoryRegex = /^(\[.*?\])\s*/;
+  const editMatch = text.match(editHistoryRegex);
+
+  let textToProcess = text;
+
+  if (editMatch) {
+    // Style the original text in brackets differently
+    const originalText = editMatch[1];
+    const originalSpan = document.createElement("span");
+    originalSpan.textContent = originalText + " ";
+    originalSpan.style.cssText = `
+      opacity: 0.6;
+      font-style: italic;
+      font-size: 0.95em;
+    `;
+    fragment.appendChild(originalSpan);
+
+    // Process the rest of the text (after the brackets)
+    textToProcess = text.slice(editMatch[0].length);
+  }
 
   // URL regex pattern - matches http://, https://, and www. URLs
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
@@ -34,10 +56,10 @@ function createContentWithLinks(text: string): DocumentFragment {
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
-  while ((match = urlRegex.exec(text)) !== null) {
+  while ((match = urlRegex.exec(textToProcess)) !== null) {
     // Add text before the URL
     if (match.index > lastIndex) {
-      fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+      fragment.appendChild(document.createTextNode(textToProcess.slice(lastIndex, match.index)));
     }
 
     // Create clickable link
@@ -70,8 +92,8 @@ function createContentWithLinks(text: string): DocumentFragment {
   }
 
   // Add remaining text after last URL
-  if (lastIndex < text.length) {
-    fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+  if (lastIndex < textToProcess.length) {
+    fragment.appendChild(document.createTextNode(textToProcess.slice(lastIndex)));
   }
 
   return fragment;
