@@ -704,11 +704,31 @@ const ccsHighlightStyleDark = HighlightStyle.define([
 /**
  * Get the CCS theme extension for CodeMirror
  * @param isDark - Whether to use dark mode theme
+ * @param fontFamily - Optional font family to use (overrides CSS variable)
  * @returns CodeMirror extension array
  */
-export function getCCSTheme(isDark: boolean): Extension {
+export function getCCSTheme(isDark: boolean, fontFamily?: string): Extension {
+  const baseTheme = isDark ? ccsDarkTheme : ccsLightTheme;
+
+  // If a specific font family is provided, create a theme override
+  if (fontFamily) {
+    const fontOverride = EditorView.theme({
+      ".cm-content": {
+        fontFamily: fontFamily,
+      },
+      ".cm-annotation-content": {
+        fontFamily: fontFamily,
+      },
+    });
+    return [
+      baseTheme,
+      fontOverride,
+      syntaxHighlighting(isDark ? ccsHighlightStyleDark : ccsHighlightStyleLight),
+    ];
+  }
+
   return [
-    isDark ? ccsDarkTheme : ccsLightTheme,
+    baseTheme,
     syntaxHighlighting(isDark ? ccsHighlightStyleDark : ccsHighlightStyleLight),
   ];
 }

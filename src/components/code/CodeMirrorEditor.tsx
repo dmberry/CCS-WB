@@ -21,6 +21,7 @@ import {
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { search, searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { useAppSettings } from "@/context/AppSettingsContext";
+import { CODE_FONT_OPTIONS } from "@/types/app-settings";
 import { getCCSTheme, getFontSizeTheme } from "./cm-theme";
 import { loadLanguage, normaliseLanguage, getLanguageColor } from "./cm-languages";
 import { createSimpleAnnotationsExtension, createAnnotateGutter, createHighlightAnnotatedLinesExtension, createSubtleAnnotationHighlightExtension, InlineEditState, InlineEditCallbacks } from "./cm-annotations";
@@ -116,7 +117,13 @@ export function CodeMirrorEditor({
 }: CodeMirrorEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const { effectiveTheme } = useAppSettings();
+  const { effectiveTheme, settings } = useAppSettings();
+
+  // Get the current font family from settings
+  const codeFontFamily = useMemo(() => {
+    const fontOption = CODE_FONT_OPTIONS.find(f => f.id === settings.codeFont);
+    return fontOption?.family || CODE_FONT_OPTIONS[0].family;
+  }, [settings.codeFont]);
 
   // Compartments for dynamic reconfiguration
   const themeCompartment = useRef(new Compartment());
@@ -211,7 +218,7 @@ export function CodeMirrorEditor({
           ? createAnnotateGutter(stableOnLineClick, showDiscoveryAnimation, animationTriggerKey, animationColor)
           : lineNumbers()
       ),
-      themeCompartment.current.of(getCCSTheme(isDark)),
+      themeCompartment.current.of(getCCSTheme(isDark, codeFontFamily)),
       fontSizeCompartment.current.of(getFontSizeTheme(fontSize)),
       languageCompartment.current.of([]),
       readOnlyCompartment.current.of(EditorState.readOnly.of(readOnly)),
@@ -345,13 +352,13 @@ export function CodeMirrorEditor({
     }
   }, [value]);
 
-  // Update theme when effectiveTheme changes
+  // Update theme when effectiveTheme or code font changes
   useEffect(() => {
     if (isInitialMount.current) return;
     viewRef.current?.dispatch({
-      effects: themeCompartment.current.reconfigure(getCCSTheme(isDark)),
+      effects: themeCompartment.current.reconfigure(getCCSTheme(isDark, codeFontFamily)),
     });
-  }, [isDark]);
+  }, [isDark, codeFontFamily]);
 
   // Update font size
   useEffect(() => {
