@@ -211,66 +211,6 @@ export function useAnnotationsSync({
     [supabase, enabled, isAuthenticated]
   );
 
-  // Push a new reply to an annotation
-  const pushReply = useCallback(
-    async (annotationId: string, content: string, replyId?: string) => {
-      if (!supabase || !enabled || !isAuthenticated || !currentProjectId) {
-        return;
-      }
-
-      const userInitials = user?.user_metadata?.initials || user?.email?.substring(0, 3).toUpperCase();
-
-      const row = {
-        id: replyId || crypto.randomUUID(),
-        annotation_id: annotationId,
-        project_id: currentProjectId,
-        user_id: user?.id || null,
-        added_by_initials: userInitials || null,
-        content,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
-        .from("annotation_replies")
-        .upsert(row, { onConflict: "id" });
-
-      if (error) {
-        console.error("Error pushing reply:", error);
-      } else {
-        // Trigger a fetch to update replies
-        lastUpdateRef.current = Date.now();
-        setTimeout(() => fetchAndUpdate(), 200);
-      }
-    },
-    [supabase, enabled, isAuthenticated, currentProjectId, user]
-  );
-
-  // Delete a reply from an annotation
-  const deleteReply = useCallback(
-    async (replyId: string) => {
-      if (!supabase || !enabled || !isAuthenticated) {
-        return;
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
-        .from("annotation_replies")
-        .delete()
-        .eq("id", replyId);
-
-      if (error) {
-        console.error("Error deleting reply:", error);
-      } else {
-        // Trigger a fetch to update replies
-        lastUpdateRef.current = Date.now();
-        setTimeout(() => fetchAndUpdate(), 200);
-      }
-    },
-    [supabase, enabled, isAuthenticated]
-  );
-
   // Helper to fetch and update annotations
   const fetchAndUpdate = useCallback(async () => {
     const currentFileIdMap = fileIdMapRef.current;
@@ -356,6 +296,66 @@ export function useAnnotationsSync({
       console.error("Error in fetchAndUpdate:", err);
     }
   }, [supabase, currentProjectId]);
+
+  // Push a new reply to an annotation
+  const pushReply = useCallback(
+    async (annotationId: string, content: string, replyId?: string) => {
+      if (!supabase || !enabled || !isAuthenticated || !currentProjectId) {
+        return;
+      }
+
+      const userInitials = user?.user_metadata?.initials || user?.email?.substring(0, 3).toUpperCase();
+
+      const row = {
+        id: replyId || crypto.randomUUID(),
+        annotation_id: annotationId,
+        project_id: currentProjectId,
+        user_id: user?.id || null,
+        added_by_initials: userInitials || null,
+        content,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("annotation_replies")
+        .upsert(row, { onConflict: "id" });
+
+      if (error) {
+        console.error("Error pushing reply:", error);
+      } else {
+        // Trigger a fetch to update replies
+        lastUpdateRef.current = Date.now();
+        setTimeout(() => fetchAndUpdate(), 200);
+      }
+    },
+    [supabase, enabled, isAuthenticated, currentProjectId, user]
+  );
+
+  // Delete a reply from an annotation
+  const deleteReply = useCallback(
+    async (replyId: string) => {
+      if (!supabase || !enabled || !isAuthenticated) {
+        return;
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from("annotation_replies")
+        .delete()
+        .eq("id", replyId);
+
+      if (error) {
+        console.error("Error deleting reply:", error);
+      } else {
+        // Trigger a fetch to update replies
+        lastUpdateRef.current = Date.now();
+        setTimeout(() => fetchAndUpdate(), 200);
+      }
+    },
+    [supabase, enabled, isAuthenticated]
+  );
 
   // Polling interval (5 seconds) - reliable baseline for sync
   // Also handles visibility change to resume sync when tab becomes active (Safari suspension fix)

@@ -126,6 +126,9 @@ export class InlineAnnotationEditor extends WidgetType {
 
     // Keyboard handlers
     input.onkeydown = (e) => {
+      // Always stop propagation to prevent CodeMirror from intercepting input
+      e.stopPropagation();
+
       if (e.key === "Enter" && this.currentContent.trim()) {
         e.preventDefault();
         this.callbacks.onSubmit(this.currentType, this.currentContent.trim());
@@ -506,11 +509,12 @@ export class AnnotationWidget extends WidgetType {
         };
 
         replyInput.onkeydown = (e) => {
+          // Always stop propagation to prevent CodeMirror from intercepting input
+          e.stopPropagation();
+
           if (e.key === "Enter") {
-            e.stopPropagation();
             handleSubmit();
           } else if (e.key === "Escape") {
-            e.stopPropagation();
             this.onToggleReplies?.(this.annotation.id);
           }
         };
