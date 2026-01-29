@@ -707,9 +707,9 @@ export function exportSessionLogPDF(
         addWrappedText(`Annotations: 0`, 9);
       }
 
-      // Show first 50 lines of annotated code with pills for annotations
+      // Show annotated code with pills for annotations
       if (file.annotatedContent) {
-        const codeLines = file.annotatedContent.split("\n").slice(0, 50);
+        const codeLines = file.annotatedContent.split("\n");
         doc.setFontSize(8);
 
         // Regex to match annotation lines: // An:Type: content
@@ -804,12 +804,6 @@ export function exportSessionLogPDF(
           }
           yPos += 3;
         });
-        if (file.annotatedContent.split("\n").length > 50) {
-          addWrappedText(
-            `... (${file.annotatedContent.split("\n").length - 50} more lines)`,
-            8
-          );
-        }
         doc.setFont("helvetica", "normal");
       }
       yPos += 5;
