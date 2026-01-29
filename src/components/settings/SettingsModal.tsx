@@ -7,6 +7,7 @@ import { AIProviderSettings } from "./AIProviderSettings";
 import { useAppSettings } from "@/context/AppSettingsContext";
 import { useSkins } from "@/context/SkinsContext";
 import { useAuth, type AuthProvider } from "@/context/AuthContext";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import type { UserProfile } from "@/types/app-settings";
 import {
   FONT_SIZE_MIN,
@@ -417,17 +418,22 @@ export function SettingsModal({
                             onClick={async () => {
                               setIsSavingColor(true);
                               try {
-                                const response = await fetch("/api/profile/update-color", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ color: tempColor || null }),
-                                  credentials: "include",
-                                });
+                                const supabase = getSupabaseClient();
+                                if (!supabase || !user?.id) {
+                                  alert("Not authenticated");
+                                  return;
+                                }
 
-                                if (!response.ok) {
-                                  const error = await response.json();
-                                  console.error("API error:", error);
-                                  alert(`Failed to save color: ${error.error || "Unknown error"}`);
+                                // Update profile color directly
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                const { error } = await (supabase as any)
+                                  .from("profiles")
+                                  .update({ profile_color: tempColor || null })
+                                  .eq("id", user.id);
+
+                                if (error) {
+                                  console.error("Failed to update color:", error);
+                                  alert(`Failed to save color: ${error.message}`);
                                   return;
                                 }
 

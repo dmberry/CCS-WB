@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 2.9.2** | CCS Methodology v2.5
+**Version 2.9.3** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -307,6 +307,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 2.9.3 | **Collaboration fixes**: Fixed annotation edit history nesting (strips previous brackets before wrapping), added RLS policy for project owners to delete member replies, replaced color picker with simple dropdown (10 preset colors + auto), direct Supabase profile updates bypass auth issues |
 | 2.9.2 | **Critical fixes**: Fixed replies vanishing after submit (dependency array issue in useAnnotationsSync), fixed reply input delay (immediate focus), fixed "+" button breaking reply structure (append to correct parent), fixed color picker infinite reload loop (use onBlur + refreshProfile instead of onChange + window.reload), added cloud project reconnection on page reload with blue banner notification, improved profile color loading state |
 | 2.9.1 | **Reply UI improvements**: Cleaner "+" button UI instead of always-visible input, author-specific coloring (each user gets unique color for their replies), customizable profile colors in Settings → Profile, replies persist in all save formats (cloud, .ccs files, localStorage, PDF exports), replies respect annotation opacity settings |
 | 2.9.0 | **Annotation replies**: Threaded discussions on annotations with real-time sync, click 💬 button to expand/collapse reply threads, add and delete replies with 5s polling sync, reply counts displayed on annotations. **Code refactoring**: Split cm-annotations.ts (969 lines) into focused modules for better maintainability (config, widgets, extensions) |
