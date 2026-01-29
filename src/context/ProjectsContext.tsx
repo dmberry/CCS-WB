@@ -1686,10 +1686,9 @@ _Add relevant references, documentation links, or related scholarship:_
 
   // Fetch projects pending admin review
   const fetchPendingSubmissions = useCallback(async () => {
-    if (!supabase) return;
+    if (!supabase || !isAuthenticated) return;
 
     setIsLoadingAdmin(true);
-    console.log("Fetching pending submissions...");
 
     try {
       // Fetch submitted projects (without FK join - FK doesn't exist)
@@ -1700,9 +1699,7 @@ _Add relevant references, documentation links, or related scholarship:_
         .eq("is_public", true)
         .is("deleted_at", null) // Exclude soft-deleted projects
         .eq("accession_status", "submitted")
-        .order("submitted_at", { ascending: true });
-
-      console.log("Pending submissions result:", { data: projectsData, error: projectsError, count: projectsData?.length });
+        .order("submitted_at", { ascending: true});
 
       if (projectsError) {
         console.error("Error fetching pending submissions:", projectsError);
