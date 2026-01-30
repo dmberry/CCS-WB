@@ -78,25 +78,31 @@ His famous quote: "Proprietary software is an injustice in itself because it den
 
 ## Key Files Included
 
-This sample includes representative portions of GNU Emacs 15.34:
+This sample includes representative portions of GNU Emacs (emacs-18.59 release):
 
-- **COPYING**: The original distribution terms (pre-GPL)
-- **emacs.c**: Core C implementation and Lisp interpreter bootstrap
-- **simple.el**: Basic Emacs Lisp commands (movement, editing)
-- **GNU**: Stallman's GNU Manifesto (distributed with early Emacs)
+- **COPYING**: The GNU General Public License (GPL v1)
+- **simple.el**: Basic Emacs Lisp commands (movement, editing, line operations)
+- **doctor.el**: Full implementation of ELIZA psychotherapy chatbot in Emacs Lisp (1,613 lines)
+  - Demonstrates Emacs Lisp pattern-matching and natural language processing
+  - Creates narrative connection to ELIZA (1965) sample, showing 20-year evolution of same concept
+  - Illustrates GNU Project's philosophy of absorbing and reimplementing classic computer science concepts
+  - Copyright (C) 1985, 1987 Free Software Foundation, Inc.
 
 ## Suggested Annotations
 
 When analyzing this code, consider:
 
-1. **COPYING file**: How do informal sharing terms encode political philosophy? What freedoms are guaranteed?
-2. **C/Lisp boundary**: How does the C interpreter enable Lisp extensibility? What does this architecture assume about user agency?
-3. **Self-documentation**: How is documentation embedded in code? What does "self-documenting" mean for software literacy?
-4. **Function naming**: How do Emacs Lisp naming conventions reflect human readability vs. machine efficiency?
-5. **Buffer abstraction**: How does the buffer model shape user interaction with files and processes?
-6. **Keybindings**: Why `C-x` and `M-x` prefix keys? What does the key map system reveal about customizability?
-7. **GNU Manifesto**: What arguments does Stallman make? How does he frame software freedom as an ethical issue?
-8. **Community assumptions**: What kind of user does Emacs imagine? What literacy does it assume or require?
+1. **COPYING file**: How does the GPL encode political philosophy? What freedoms are guaranteed and how are they legally enforced?
+2. **simple.el - Function naming**: How do Emacs Lisp naming conventions reflect human readability vs. machine efficiency?
+3. **simple.el - Self-documentation**: How is documentation embedded in code? What does "self-documenting" mean for software literacy?
+4. **simple.el - Buffer abstraction**: How does the buffer model shape user interaction with files and processes?
+5. **doctor.el - ELIZA reimplementation**: How does this 1985 version compare to Weizenbaum's 1965 original? What's gained/lost in translation to Emacs Lisp?
+6. **doctor.el - Pattern matching**: How are conversation patterns encoded? What assumptions about human psychology are embedded in the code?
+7. **doctor.el - Emacs integration**: How does doctor.el demonstrate Emacs as a "Lisp machine"? What does it mean that a chatbot runs inside a text editor?
+8. **doctor.el - GPL header**: Compare the GPL notice to ELIZA's original MIT license. How does licensing shape code reuse and reimplementation?
+9. **doctor.el - Comments**: What do the comments reveal about intended audience? ("Psychological help for frustrated users")
+10. **Cross-sample comparison**: Compare doctor.el to ELIZA (1965) sample. How does GNU Project philosophy of "absorbing" classic programs manifest in code?
+11. **Community assumptions**: What kind of user does Emacs imagine? What literacy does it assume or require?
 
 ## References
 
