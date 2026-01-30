@@ -32,6 +32,7 @@ export const LANGUAGE_COLORS: Record<string, { light: string; dark: string }> = 
   basic: { light: "#0066cc", dark: "#4da6ff" }, // BASIC Dartmouth blue
   agc: { light: "#c45100", dark: "#ff8c1a" }, // AGC bright orange (Apollo spacesuit orange)
   assembly: { light: "#696969", dark: "#a9a9a9" }, // Assembly grey
+  iplv: { light: "#d32f2f", dark: "#ef5350" }, // IPL-V red (RAND Corporation colors)
 };
 
 /**
@@ -104,6 +105,7 @@ const languageLoaders: Record<string, LanguageLoader> = {
   basic: () => import("./cm-lang-basic").then((m) => m.basic()),
   agc: () => import("./cm-lang-agc").then((m) => m.agc()),
   fortran: () => import("./cm-lang-fortran").then((m) => m.fortran()),
+  iplv: () => import("./cm-lang-iplv").then((m) => m.iplv()),
 
   // Assembly - use C syntax as approximation for comments, numbers, strings
   assembly: () => import("@codemirror/lang-cpp").then((m) => m.cpp()),
@@ -200,6 +202,8 @@ const extensionToLanguage: Record<string, string> = {
   aea: "agc",
   // MAD (Michigan Algorithm Decoder) - has syntax highlighting
   mad: "mad",
+  // IPL-V (Information Processing Language V)
+  iplv: "iplv",
   // SLIP (Symmetric List Processor)
   slip: "plain",
   // PL/I
@@ -272,6 +276,7 @@ const languageAliases: Record<string, string> = {
   agc: "agc", // Apollo Guidance Computer assembly - has syntax highlighting
   aea: "agc", // AGC assembly source files
   mad: "mad", // Michigan Algorithm Decoder - has syntax highlighting
+  iplv: "iplv", // Information Processing Language V - has syntax highlighting
   slip: "plain", // Symmetric List Processor
   pli: "plain", // PL/I
   algol: "plain",
