@@ -2949,7 +2949,6 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           type="file"
           className="hidden"
           onChange={handleFileChange}
-          accept=".js,.jsx,.ts,.tsx,.py,.rb,.c,.cpp,.h,.hpp,.java,.go,.rs,.lisp,.scm,.el,.bas,.txt,.md,.json,.yaml,.yml,.xml,.html,.css,.scss,.sh,.bash,.zsh,.pl,.php,.swift,.kt,.scala,.clj,.hs,.ml,.fs,.lua,.r,.jl,.m,.sql,.asm,.s,.mad,.for,.f,.f77,.f90,.ftn,.cob,.cbl,.pli,.pl1,.alg,.sno,.apl,.slip"
         />
       </div>
 
