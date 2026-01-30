@@ -732,3 +732,19 @@ export function getFontSizeTheme(fontSize: number): Extension {
     },
   });
 }
+
+/**
+ * Get font family theme extension
+ * @param fontFamily - Font family string (e.g., "'Fira Code', monospace")
+ * @returns CodeMirror extension for font family
+ */
+export function getFontFamilyTheme(fontFamily: string): Extension {
+  return EditorView.theme({
+    ".cm-content": {
+      fontFamily: fontFamily,
+    },
+    ".cm-gutters": {
+      fontFamily: fontFamily,
+    },
+  });
+}

@@ -22,7 +22,7 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { search, searchKeymap, highlightSelectionMatches } from "@codemirror/search";
 import { useAppSettings } from "@/context/AppSettingsContext";
 import { CODE_FONT_OPTIONS } from "@/types/app-settings";
-import { getCCSTheme, getFontSizeTheme } from "./cm-theme";
+import { getCCSTheme, getFontSizeTheme, getFontFamilyTheme } from "./cm-theme";
 import { loadLanguage, normaliseLanguage, getLanguageColor } from "./cm-languages";
 import { createSimpleAnnotationsExtension, createAnnotateGutter, createHighlightAnnotatedLinesExtension, createSubtleAnnotationHighlightExtension, InlineEditState, InlineEditCallbacks } from "./cm-annotations";
 import type { LineAnnotation, LineAnnotationType, AnnotationDisplaySettings } from "@/types";
@@ -131,6 +131,7 @@ export function CodeMirrorEditor({
   const readOnlyCompartment = useRef(new Compartment());
   const annotationsCompartment = useRef(new Compartment());
   const fontSizeCompartment = useRef(new Compartment());
+  const fontFamilyCompartment = useRef(new Compartment());
   const gutterCompartment = useRef(new Compartment());
   const highlightLinesCompartment = useRef(new Compartment());
   const subtleHighlightCompartment = useRef(new Compartment());
@@ -220,6 +221,7 @@ export function CodeMirrorEditor({
       ),
       themeCompartment.current.of(getCCSTheme(isDark)),
       fontSizeCompartment.current.of(getFontSizeTheme(fontSize)),
+      fontFamilyCompartment.current.of(getFontFamilyTheme(codeFontFamily)),
       languageCompartment.current.of([]),
       readOnlyCompartment.current.of(EditorState.readOnly.of(readOnly)),
       annotationsCompartment.current.of(
@@ -352,14 +354,13 @@ export function CodeMirrorEditor({
     }
   }, [value]);
 
-  // Update theme when effectiveTheme or font changes
-  // Font change triggers theme reconfiguration to force CSS variable re-evaluation
+  // Update theme when effectiveTheme changes
   useEffect(() => {
     if (isInitialMount.current) return;
     viewRef.current?.dispatch({
       effects: themeCompartment.current.reconfigure(getCCSTheme(isDark)),
     });
-  }, [isDark, codeFontFamily]);
+  }, [isDark]);
 
   // Update font size
   useEffect(() => {
@@ -368,6 +369,14 @@ export function CodeMirrorEditor({
       effects: fontSizeCompartment.current.reconfigure(getFontSizeTheme(fontSize)),
     });
   }, [fontSize]);
+
+  // Update font family
+  useEffect(() => {
+    if (isInitialMount.current) return;
+    viewRef.current?.dispatch({
+      effects: fontFamilyCompartment.current.reconfigure(getFontFamilyTheme(codeFontFamily)),
+    });
+  }, [codeFontFamily]);
 
   // Update language when language prop changes
   useEffect(() => {
