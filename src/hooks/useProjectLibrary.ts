@@ -314,12 +314,15 @@ export function useProjectLibrary({
       }
 
       try {
+        const now = new Date().toISOString();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { error } = await (supabase as any)
           .from("projects")
           .update({
             accession_status: "submitted",
-            updated_at: new Date().toISOString(),
+            is_public: true, // Required for admin panel to show submission
+            submitted_at: now, // Required for ordering in admin panel
+            updated_at: now,
           })
           .eq("id", projectId)
           .eq("owner_id", user.id);
