@@ -164,6 +164,7 @@ This is a curated collection of example programs representing five foundational 
 ## References
 
 ### Primary Sources
+- Temkin, Daniel. *Forty-Four Esolangs: The Art of Esoteric Code*. MIT Press, 2025.
 - Temkin, Daniel. "Esolangs as Experiential Art." *esoteric.codes* blog, 2015-2025.
 - Woods, Don, and James M. Lyon. "INTERCAL Programming Language Reference Manual." 1972.
 - Raymond, Eric S. "The INTERCAL Programming Language Revised Reference Manual." C-INTERCAL distribution, 1996.
