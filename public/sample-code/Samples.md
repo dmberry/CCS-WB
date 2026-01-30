@@ -23,11 +23,11 @@ Each sample project is defined on a single line with the following format:
 
 - flowmatic-1958/flowmatic-1958.ccs: FLOW-MATIC (1958) | critique | Grace Hopper's business English - first natural language programming | 1950s | 0
 - eliza/eliza-1965b-CR.ccs: ELIZA (1965b) - Annotated | critique | Complete critique session with 30+ scholarly annotations | 1960s | 30
-- adventure-1977/adventure-1977.ccs: Colossal Cave Adventure (1977) | critique | Will Crowther's original FORTRAN IV source code | 1970s | 0
 - apollo-11-comanche/comanche055.ccs: Apollo 11 - Comanche055 (CM, 1969) | critique | Command Module guidance computer source code | 1960s | 0
 - apollo-11-luminary/luminary099.ccs: Apollo 11 - Luminary099 (LM, 1969) | critique | Lunar Module guidance computer source code | 1960s | 0
-- git-stash-2007/git-stash-2007.ccs: Git Stash (2007) | critique | Nanako Shiraishi's original script - feminist computing history and workplace interruption | 2000s | 0
 - xmodem-1977/xmodem-1977.ccs: XMODEM Protocol (1977) | critique | Ward Christensen's MODEM.ASM - foundational BBS file transfer protocol | 1970s | 0
+- adventure-1977/adventure-1977.ccs: Colossal Cave Adventure (1977) | critique | Will Crowther's original FORTRAN IV source code | 1970s | 0
+- git-stash-2007/git-stash-2007.ccs: Git Stash (2007) | critique | Nanako Shiraishi's original script - feminist computing history and workplace interruption | 2000s | 0
 
 ## Adding Your Own Sample Projects
 
