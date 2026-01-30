@@ -27,6 +27,7 @@ Each sample project is defined on a single line with the following format:
 - apollo-11-luminary/luminary099.ccs: 1969 - Apollo 11 Luminary099 | critique | Lunar Module guidance computer source code | 1960s | 0
 - xmodem-1977/xmodem-1977.ccs: 1977 - XMODEM Protocol | critique | Ward Christensen's MODEM.ASM - foundational BBS file transfer protocol | 1970s | 0
 - adventure-1977/adventure-1977.ccs: 1977 - Colossal Cave Adventure | critique | Will Crowther's original FORTRAN IV source code | 1970s | 0
+- gnu-emacs-1985/gnu-emacs-1985.ccs: 1985 - GNU Emacs | critique | Richard Stallman's free software manifesto - GPL, hacker culture, and software freedom | 1980s | 0
 - git-stash-2007/git-stash-2007.ccs: 2007 - Git Stash | critique | Nanako Shiraishi's original script - feminist computing history and workplace interruption | 2000s | 0
 
 ## Adding Your Own Sample Projects
