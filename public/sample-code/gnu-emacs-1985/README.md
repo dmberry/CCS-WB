@@ -78,7 +78,11 @@ His famous quote: "Proprietary software is an injustice in itself because it den
 
 ## Key Files Included
 
-This sample includes representative portions of GNU Emacs (emacs-18.59 release):
+**Important**: This is a curated sample containing 14 representative files from GNU Emacs 18.59 for Critical Code Studies analysis. The complete emacs-18.59 source code contains over 200 files and 160,000 lines of code.
+
+**Download full source**: https://ftp.gnu.org/old-gnu/emacs/emacs-18.59.tar.gz
+
+This sample includes:
 
 ### Manifestos and Documentation
 
