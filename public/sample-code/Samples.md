@@ -21,13 +21,13 @@ Each sample project is defined on a single line with the following format:
 
 ## Available Sample Projects
 
-- flowmatic-1958/flowmatic-1958.ccs: (1958) FLOW-MATIC | critique | Grace Hopper's business English - first natural language programming | 1950s | 0
-- eliza/eliza-1965b-CR.ccs: (1965) ELIZA - Annotated | critique | Complete critique session with 30+ scholarly annotations | 1960s | 30
-- apollo-11-comanche/comanche055.ccs: (1969) Apollo 11 - Comanche055 | critique | Command Module guidance computer source code | 1960s | 0
-- apollo-11-luminary/luminary099.ccs: (1969) Apollo 11 - Luminary099 | critique | Lunar Module guidance computer source code | 1960s | 0
-- xmodem-1977/xmodem-1977.ccs: (1977) XMODEM Protocol | critique | Ward Christensen's MODEM.ASM - foundational BBS file transfer protocol | 1970s | 0
-- adventure-1977/adventure-1977.ccs: (1977) Colossal Cave Adventure | critique | Will Crowther's original FORTRAN IV source code | 1970s | 0
-- git-stash-2007/git-stash-2007.ccs: (2007) Git Stash | critique | Nanako Shiraishi's original script - feminist computing history and workplace interruption | 2000s | 0
+- flowmatic-1958/flowmatic-1958.ccs: 1958 - FLOW-MATIC | critique | Grace Hopper's business English - first natural language programming | 1950s | 0
+- eliza/eliza-1965b-CR.ccs: 1965 - ELIZA (Annotated) | critique | Complete critique session with 30+ scholarly annotations | 1960s | 30
+- apollo-11-comanche/comanche055.ccs: 1969 - Apollo 11 Comanche055 | critique | Command Module guidance computer source code | 1960s | 0
+- apollo-11-luminary/luminary099.ccs: 1969 - Apollo 11 Luminary099 | critique | Lunar Module guidance computer source code | 1960s | 0
+- xmodem-1977/xmodem-1977.ccs: 1977 - XMODEM Protocol | critique | Ward Christensen's MODEM.ASM - foundational BBS file transfer protocol | 1970s | 0
+- adventure-1977/adventure-1977.ccs: 1977 - Colossal Cave Adventure | critique | Will Crowther's original FORTRAN IV source code | 1970s | 0
+- git-stash-2007/git-stash-2007.ccs: 2007 - Git Stash | critique | Nanako Shiraishi's original script - feminist computing history and workplace interruption | 2000s | 0
 
 ## Adding Your Own Sample Projects
 
