@@ -80,29 +80,115 @@ His famous quote: "Proprietary software is an injustice in itself because it den
 
 This sample includes representative portions of GNU Emacs (emacs-18.59 release):
 
+### Manifestos and Documentation
+
+- **GNU-MANIFESTO**: Richard Stallman's founding document of the free software movement (1985)
+  - Explains why GNU exists and defines software freedom
+  - Political and ethical justification for free software
+  - Essential reading for understanding Emacs as activism
+
 - **COPYING**: The GNU General Public License (GPL v1)
-- **simple.el**: Basic Emacs Lisp commands (movement, editing, line operations)
-- **doctor.el**: Full implementation of ELIZA psychotherapy chatbot in Emacs Lisp (1,613 lines)
+  - Legal implementation of copyleft
+  - Encodes software freedom in enforceable terms
+
+- **ChangeLog**: Excerpt from development history
+  - Shows collaborative development practices
+  - Documents hacker culture conventions
+  - Demonstrates collective authorship model
+
+### Emacs Lisp Files (Extensibility Layer)
+
+- **simple.el**: Basic editing commands (movement, editing, line operations)
+  - Foundation of user interaction
+  - Shows buffer manipulation primitives
+
+- **doctor.el**: Full ELIZA psychotherapy chatbot implementation (1,613 lines)
   - Demonstrates Emacs Lisp pattern-matching and natural language processing
-  - Creates narrative connection to ELIZA (1965) sample, showing 20-year evolution of same concept
-  - Illustrates GNU Project's philosophy of absorbing and reimplementing classic computer science concepts
+  - Creates narrative connection to ELIZA (1965) sample
+  - Illustrates GNU Project's philosophy of absorbing classic CS concepts
   - Copyright (C) 1985, 1987 Free Software Foundation, Inc.
+
+- **files.el**: File handling (visiting, saving, backups, auto-save)
+  - Core file I/O abstractions
+  - Shows Unix filesystem integration
+
+- **window.el**: Window management and splitting
+  - Multi-window interface primitives
+  - Buffer/window separation
+
+- **abbrev.el**: Abbreviation expansion mode
+  - Text automation features
+  - User customization patterns
+
+- **dired.el**: Directory editor
+  - Shows Emacs as file manager, not just text editor
+  - Lisp-based filesystem browser
+
+- **compile.el**: Compilation mode
+  - Demonstrates Emacs as IDE
+  - Integration with external tools (make, gcc)
+
+- **mail-utils.el**: Email utilities
+  - Shows Emacs as mail client
+  - "Kitchen sink" philosophy of extensibility
+
+### Core C Implementation (Foundation)
+
+- **emacs.c**: Main C implementation
+  - Lisp interpreter bootstrap
+  - Shows how Emacs Lisp sits atop C core
+  - Initialization and main loop
+
+- **lisp.h**: C header defining Lisp data structures
+  - Memory model and object representation
+  - Low-level implementation of high-level abstractions
+  - Interface between C and Lisp layers
 
 ## Suggested Annotations
 
 When analyzing this code, consider:
 
-1. **COPYING file**: How does the GPL encode political philosophy? What freedoms are guaranteed and how are they legally enforced?
-2. **simple.el - Function naming**: How do Emacs Lisp naming conventions reflect human readability vs. machine efficiency?
-3. **simple.el - Self-documentation**: How is documentation embedded in code? What does "self-documenting" mean for software literacy?
-4. **simple.el - Buffer abstraction**: How does the buffer model shape user interaction with files and processes?
-5. **doctor.el - ELIZA reimplementation**: How does this 1985 version compare to Weizenbaum's 1965 original? What's gained/lost in translation to Emacs Lisp?
-6. **doctor.el - Pattern matching**: How are conversation patterns encoded? What assumptions about human psychology are embedded in the code?
-7. **doctor.el - Emacs integration**: How does doctor.el demonstrate Emacs as a "Lisp machine"? What does it mean that a chatbot runs inside a text editor?
-8. **doctor.el - GPL header**: Compare the GPL notice to ELIZA's original MIT license. How does licensing shape code reuse and reimplementation?
-9. **doctor.el - Comments**: What do the comments reveal about intended audience? ("Psychological help for frustrated users")
-10. **Cross-sample comparison**: Compare doctor.el to ELIZA (1965) sample. How does GNU Project philosophy of "absorbing" classic programs manifest in code?
-11. **Community assumptions**: What kind of user does Emacs imagine? What literacy does it assume or require?
+### Manifestos and Philosophy
+
+1. **GNU-MANIFESTO - Software freedom definition**: How does Stallman define the four essential freedoms? How do they differ from "open source"?
+2. **GNU-MANIFESTO - Labor politics**: How does the manifesto frame programmer labor and autonomy? What's the relationship between code and political economy?
+3. **GNU-MANIFESTO - Unix reimplementation**: Why create a Unix clone rather than something new? What does compatibility mean politically?
+4. **COPYING - Copyleft mechanism**: How does the GPL use copyright law against itself? What makes copyleft different from public domain?
+5. **COPYING - Legal language**: How does legal text encode technical concepts? Who is the intended audience?
+6. **ChangeLog - Collaborative authorship**: How do ChangeLog entries document collective development? What's attributed and what's implicit?
+7. **ChangeLog - Hacker culture conventions**: What norms and practices are visible in ChangeLog format and language?
+
+### Emacs Lisp (Extensibility)
+
+8. **simple.el - Function naming**: How do Emacs Lisp naming conventions reflect human readability vs. machine efficiency?
+9. **simple.el - Self-documentation**: How is documentation embedded in code? What does "self-documenting" mean for software literacy?
+10. **simple.el - Buffer abstraction**: How does the buffer model shape user interaction with files and processes?
+11. **files.el - File saving**: How does auto-save and backup logic encode assumptions about failure and user behavior?
+12. **files.el - Unix integration**: How does Emacs abstract filesystem operations? What Unix concepts are exposed vs. hidden?
+13. **window.el - Spatial organization**: How does window splitting encode assumptions about programmer workflow and attention?
+14. **abbrev.el - User customization**: How do abbreviations show Emacs philosophy of making the editor adapt to the user?
+15. **dired.el - Editor as OS**: What does it mean that a text editor can browse filesystems? What's the "everything in Emacs" philosophy?
+16. **compile.el - IDE integration**: How does Emacs integrate external tools? What's the relationship between editor and compiler?
+17. **mail-utils.el - Feature creep vs. extensibility**: Is email in a text editor "bloat" or principled extensibility? Who decides?
+18. **doctor.el - ELIZA reimplementation**: How does this 1985 version compare to Weizenbaum's 1965 original? What's gained/lost in translation to Emacs Lisp?
+19. **doctor.el - Pattern matching**: How are conversation patterns encoded? What assumptions about human psychology are embedded in the code?
+20. **doctor.el - GPL header**: Compare the GPL notice to ELIZA's original MIT license. How does licensing shape code reuse and reimplementation?
+
+### Core C Implementation
+
+21. **emacs.c - Lisp interpreter bootstrap**: How does the C code initialize the Lisp environment? What comes first—C or Lisp?
+22. **emacs.c - Main loop**: How does the event loop structure user interaction? What's being abstracted away?
+23. **lisp.h - Data structure representation**: How are Lisp objects represented in C? What's the memory model?
+24. **lisp.h - Type system**: How does C implement Lisp's dynamic typing? What are the performance implications?
+25. **C/Lisp boundary**: How do the C and Lisp layers communicate? What operations must be in C vs. Lisp?
+
+### Cross-Cutting Themes
+
+26. **GPL headers across files**: How does licensing appear in every file? What does ubiquitous copyright notice accomplish?
+27. **Documentation density**: Compare comment-to-code ratios across files. What needs explanation and what's considered self-evident?
+28. **Community assumptions**: What kind of user does Emacs imagine? What literacy does it assume or require?
+29. **Unix philosophy tensions**: How does Emacs relate to "do one thing well"? Is it one tool or many?
+30. **Extensibility vs. complexity**: How does infinite customizability affect usability and maintenance?
 
 ## References
 
