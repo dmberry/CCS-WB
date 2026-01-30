@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 2.9.5** | CCS Methodology v2.5
+**Version 2.10.0** | CCS Methodology v2.5
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -307,6 +307,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 2.10.0 | **Architecture refactoring**: Split 2,381-line ProjectsContext into focused, maintainable modules - 7 domain hooks (useProjectCRUD, useProjectSave, useProjectSharing, useProjectTrash, useProjectMembers, useProjectLibrary, useProjectAdmin) + utilities + modals across 10 files. Improved maintainability, testability, and reusability while maintaining backward compatibility. Same API surface, zero breaking changes. |
 | 2.9.5 | **Sync fix**: Fixed 406 errors when adding annotations - changed edit history check from `.single()` to `.maybeSingle()` to handle new annotations gracefully. Eliminates console errors during normal annotation workflow. |
 | 2.9.4 | **Shared project indicator**: Clickable toolbar badge showing member count (icon + number), opens dropdown with member list (avatars, names, roles). **Permission handling**: Annotation/reply deletion now checks RLS permissions and prevents "phantom deletions" - items remain visible if user lacks permission, shows error alert. Badge positioned in right toolbar before help button with subtle styling matching other toolbar icons. |
 | 2.9.3 | **Collaboration fixes**: Fixed annotation edit history nesting (strips previous brackets before wrapping), added RLS policy for project owners to delete member replies, replaced color picker with simple dropdown (10 preset colors + auto), direct Supabase profile updates bypass auth issues. **Polling optimization**: Fixed state check field mismatch that prevented annotation syncing between users. **UX improvements**: Reply input auto-closes when clicking away, auto-fork protection creates copies for collaborators when owner deletes shared project. **Code cleanup**: Reduced verbose console logging in useAnnotationsSync |

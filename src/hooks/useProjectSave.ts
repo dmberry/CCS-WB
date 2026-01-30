@@ -1,0 +1,191 @@
+/**
+ * Hook for saving project session data
+ * Handles bulk upserts of files and annotations, orphan cleanup
+ */
+
+import { useCallback } from "react";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { Session } from "@/types/session";
+import type { ProjectWithOwner } from "@/lib/supabase/types";
+
+export interface ProjectSaveParams {
+  supabase: SupabaseClient | null;
+  user: User | null;
+  currentProjectId: string | null;
+  updateProjectTimestamp: (projectId: string, timestamp: string) => void;
+}
+
+export interface ProjectSaveState {
+  saveProject: (projectId: string, session: Session) => Promise<{ error: Error | null }>;
+}
+
+/**
+ * Custom hook for project save operations
+ * Performs bulk upserts for files and annotations, cleans up orphans
+ */
+export function useProjectSave({
+  supabase,
+  user,
+  currentProjectId,
+  updateProjectTimestamp,
+}: ProjectSaveParams): ProjectSaveState {
+  // Save session to a project - OPTIMIZED: bulk upserts + parallel queries
+  // Files and annotations are saved to their respective tables (code_files, annotations)
+  // session_data only stores other session state (messages, mode, settings, etc.)
+  const saveProject = useCallback(
+    async (projectId: string, session: Session) => {
+      console.log("saveProject: Starting save to", projectId);
+      if (!supabase || !user) {
+        console.error("saveProject: Supabase not configured or not authenticated");
+        return { error: new Error("Supabase not configured or not authenticated") };
+      }
+
+      try {
+        const now = new Date().toISOString();
+
+        // Build bulk data for files (skip README update - too expensive for every save)
+        const filesData = session.codeFiles
+          .map((file, i) => {
+            const content = session.codeContents[file.id];
+            if (content === undefined) return null;
+            return {
+              id: file.id,
+              project_id: projectId,
+              filename: file.name,
+              language: file.language || "plaintext",
+              content: content,
+              original_content: content,
+              uploaded_by: user.id,
+              display_order: i,
+              updated_at: now,
+            };
+          })
+          .filter(Boolean);
+
+        // Build bulk data for annotations
+        const annotationsData = session.lineAnnotations.map((annotation) => ({
+          id: annotation.id,
+          file_id: annotation.codeFileId,
+          project_id: projectId,
+          user_id: user.id,
+          line_number: annotation.lineNumber,
+          end_line_number: annotation.endLineNumber || null,
+          line_content: annotation.lineContent || null,
+          type: annotation.type,
+          content: annotation.content,
+          updated_at: now,
+        }));
+
+        // Session data without files/annotations (stored separately)
+        const sessionDataWithoutFiles = {
+          ...session,
+          codeFiles: [],
+          codeContents: {},
+          lineAnnotations: [],
+        };
+
+        const projectUpdateData = {
+          session_data: sessionDataWithoutFiles,
+          mode: session.mode,
+          updated_at: now,
+        };
+
+        // Run all upserts and fetches in parallel
+        console.log(
+          `saveProject: Bulk saving ${filesData.length} files, ${annotationsData.length} annotations`
+        );
+
+        const [
+          filesUpsertResult,
+          annotationsUpsertResult,
+          projectUpdateResult,
+          existingFilesResult,
+          existingAnnotationsResult,
+        ] = await Promise.all([
+          // Bulk upsert files
+          filesData.length > 0
+            ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (supabase as any).from("code_files").upsert(filesData, { onConflict: "id" })
+            : Promise.resolve({ error: null }),
+          // Bulk upsert annotations
+          annotationsData.length > 0
+            ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (supabase as any)
+                .from("annotations")
+                .upsert(annotationsData, { onConflict: "id" })
+            : Promise.resolve({ error: null }),
+          // Update project metadata
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (supabase as any)
+            .from("projects")
+            .update(projectUpdateData)
+            .eq("id", projectId)
+            .select(),
+          // Get existing file IDs for deletion check
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (supabase as any).from("code_files").select("id").eq("project_id", projectId),
+          // Get existing annotation IDs for deletion check
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (supabase as any).from("annotations").select("id").eq("project_id", projectId),
+        ]);
+
+        if (filesUpsertResult.error) {
+          console.error("saveProject: Error bulk saving files", filesUpsertResult.error);
+        }
+        if (annotationsUpsertResult.error) {
+          console.error(
+            "saveProject: Error bulk saving annotations",
+            annotationsUpsertResult.error
+          );
+        }
+        if (projectUpdateResult.error) {
+          console.error("saveProject: Error updating project", projectUpdateResult.error);
+          return { error: new Error(projectUpdateResult.error.message) };
+        }
+
+        // Calculate orphans to delete
+        const sessionFileIds = new Set(session.codeFiles.map((f) => f.id));
+        const filesToDelete = (existingFilesResult.data || [])
+          .filter((f: { id: string }) => !sessionFileIds.has(f.id))
+          .map((f: { id: string }) => f.id);
+
+        const sessionAnnotationIds = new Set(session.lineAnnotations.map((a) => a.id));
+        const annotationsToDelete = (existingAnnotationsResult.data || [])
+          .filter((a: { id: string }) => !sessionAnnotationIds.has(a.id))
+          .map((a: { id: string }) => a.id);
+
+        // Delete orphans in parallel (if any)
+        if (filesToDelete.length > 0 || annotationsToDelete.length > 0) {
+          console.log(
+            `saveProject: Deleting ${filesToDelete.length} orphan files, ${annotationsToDelete.length} orphan annotations`
+          );
+          await Promise.all([
+            filesToDelete.length > 0
+              ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (supabase as any).from("code_files").delete().in("id", filesToDelete)
+              : Promise.resolve(),
+            annotationsToDelete.length > 0
+              ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (supabase as any).from("annotations").delete().in("id", annotationsToDelete)
+              : Promise.resolve(),
+          ]);
+        }
+
+        console.log("saveProject: Success");
+
+        // Update local state timestamp via callback
+        updateProjectTimestamp(projectId, now);
+
+        return { error: null };
+      } catch (error) {
+        console.error("saveProject: Exception", error);
+        return { error: error as Error };
+      }
+    },
+    [supabase, user, updateProjectTimestamp]
+  );
+
+  return {
+    saveProject,
+  };
+}
