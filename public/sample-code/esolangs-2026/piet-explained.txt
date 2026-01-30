@@ -1,0 +1,81 @@
+PIET PROGRAMMING LANGUAGE: VISUAL CODE AS ART
+
+Piet programs cannot be represented as text files - they ARE image files (PNG, GIF).
+Programs consist of colored pixels arranged in grids, resembling abstract art.
+
+HOW PIET WORKS:
+
+1. COLOR WHEEL SEMANTICS
+   - 20 distinct colors arranged in a color wheel
+   - 6 hues: red, yellow, green, cyan, blue, magenta
+   - 3 lightness levels: light, normal, dark
+   - Plus black (wall) and white (free pass)
+
+2. PROGRAM EXECUTION
+   - Starts at top-left corner, moving right
+   - Direction pointer determines travel direction
+   - Codel chooser determines which edge to exit from
+   - Movement between color blocks determines operations
+
+3. OPERATIONS BY COLOR CHANGE
+   - Hue change: determines operation type
+   - Lightness change: modifies the operation
+
+   Examples:
+   - 1 hue step, no lightness = push
+   - 2 hue steps, no lightness = pop
+   - 3 hue steps, 1 lighter = add
+   - 1 hue step, 1 darker = duplicate
+
+4. VISUAL AESTHETICS
+   - Programs look like Mondrian paintings
+   - Code and art become indistinguishable
+   - Some hide programs in larger images
+   - Others develop signature styles
+
+EXAMPLE "HELLO WORLD" VISUAL DESCRIPTION:
+
+A typical Piet "Hello World" is a grid approximately 40x25 codels.
+It contains:
+- Large colored blocks (10-20 codels) for pushing ASCII values
+- Thin single-codel strips for operations
+- Strategic black walls for direction changes
+- White corridors for pointer navigation
+
+The visual appearance: blocky colored rectangles in reds, yellows, blues,
+arranged to look vaguely like abstract geometric art. To the untrained eye,
+it could be confused with a small Mondrian composition or a pixelated
+retro game sprite.
+
+WHY PIET MATTERS FOR CRITICAL CODE STUDIES:
+
+1. Makes syntax visual rather than textual
+2. Foregrounds aesthetic choices in language design
+3. Collapses distinction between code and art object
+4. Demonstrates that "readable code" assumes text
+5. Creates community around style and interpretation
+
+VIEWING PIET PROGRAMS:
+
+To see actual Piet programs:
+- Visit: https://www.dangermouse.net/esoteric/piet/samples.html
+- David Morgan-Mar's original gallery of example programs
+- Each program is downloadable as PNG or GIF
+- Includes "Hello World", pi calculator, and more complex programs
+
+PIET INTERPRETERS:
+
+- npiet: Official interpreter (C)
+- pietinterpreter: Java-based interpreter
+- Many online interpreters available
+- Can trace execution path visually
+
+CREATING PIET PROGRAMS:
+
+Requires either:
+- Image editor (manual pixel placement)
+- Specialized Piet IDE (PietDev, PietCreator)
+- Textual notation converted to image
+
+The creative process is fundamentally different from text-based coding -
+it's spatial, visual, and aesthetic from the start.

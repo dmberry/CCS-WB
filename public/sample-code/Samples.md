@@ -33,6 +33,7 @@ Each sample project is defined on a single line with the following format:
 - my-boyfriend-1996/my-boyfriend-1996.ccs: 1996 - My Boyfriend Came Back from the War | critique | Olia Lialina's frame-splitting narrative - net.art and vernacular web aesthetics | 1990s | 0
 - git-stash-2007/git-stash-2007.ccs: 2007 - Git Stash | critique | Nanako Shiraishi's original script - feminist computing history and workplace interruption | 2000s | 0
 - transformer-2017/transformer-2017.ccs: 2017 - Transformer Architecture | critique | Attention Is All You Need - multi-head attention and the foundation of modern LLMs | 2010s | 0
+- esolangs-2026/esolangs-2026.ccs: 2026 - Esoteric Programming Languages Collection | critique | Five foundational esolangs (INTERCAL, FALSE, brainfuck, Befunge, Piet) demonstrating computational critique and hacker folk art | 1990s | 0
 
 ## Adding Your Own Sample Projects
 

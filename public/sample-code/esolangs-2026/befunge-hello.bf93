@@ -1,0 +1,33 @@
+===============================================================================
+Befunge "Hello World!" Program
+===============================================================================
+Language: Befunge-93
+Created: 1993 by Chris Pressey
+Purpose: Two-dimensional code space with self-modification
+
+Befunge treats code as a 2D grid. The instruction pointer navigates this
+space based on direction commands:
+> = Move right
+< = Move left
+^ = Move up
+v = Move down
+
+Other key commands:
+" = Toggle string mode (push characters to stack)
+, = Pop and output as character
+* = Multiply top two stack values
+@ = End program
+
+This program navigates a spatial grid to output "Hello World!".
+The path moves right, down, left, creating flows through 2D space.
+Code becomes a navigable landscape rather than a linear sequence.
+
+Befunge challenges the assumption that code must be read left-to-right,
+top-to-bottom, introducing spatiality as fundamental to program structure.
+===============================================================================
+
+>              v
+v  ,,,,,"Hello"<
+>48*,          v
+v,,,,,,"World!"<
+>25*,@
