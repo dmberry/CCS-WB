@@ -1,0 +1,141 @@
+AGRIPPA PROGRAMMER'S NOTES AND LETTERS
+Excerpts from materials preserved by The Agrippa Files, UC Santa Barbara
+
+Note: The programmer's name has been redacted at their request.
+
+---
+
+LETTER FROM PROGRAMMER (March 28, 1992)
+Item #D6 - Regarding the encryption algorithm
+
+The programmer describes the encryption design in a letter to the publisher:
+
+"I've been thinking about the 'DES' algorithm [Data Encryption Standard] and how
+to implement it for Agrippa. The scrolling text will need to be timed carefully
+so that the entire poem plays out over approximately 8-10 minutes.
+
+The encryption routine will trigger automatically after the final line scrolls
+off screen. The key is derived from the system time, making each encryption
+unique and unreproducible.
+
+The program is written in Macintosh Allegro Common Lisp and will be compiled
+into a standalone application. The text file itself is embedded in the resource
+fork of the Mac application."
+
+---
+
+NOTES ON AGRIPPA'S CODE (March 25, 1992)
+Item #D7 - Technical specifications
+
+From the programmer's working notes:
+
+"Scrolling routine:
+- Text displays in fixed-width font
+- Scroll rate: approximately 3-4 lines per second
+- No user controls (no pause, rewind, or stop)
+- Visual effect: continuous upward scroll, like film credits
+
+Encryption method:
+- After final line disappears, wait 2-3 seconds
+- Apply XOR cipher to text file using time-based seed
+- Overwrite original text in memory and on disk
+- Display 'encryption complete' visual effect
+
+Implementation notes:
+- Mac System 7 compatibility required
+- Total binary size: under 500KB
+- Lisp compiled to 68k machine code
+- Resource fork contains: text, fonts, graphics resources"
+
+---
+
+LETTER FROM PROGRAMMER (May 7, 1992)
+Item #D32 - Regarding distribution and testing
+
+"We've completed testing on Mac Classic, SE/30, and LC systems. The program
+runs successfully on all tested configurations.
+
+One concern: if users simply copy the disk before running it, they'll preserve
+the unencrypted text. But that would require some technical knowledge. Most
+buyers will likely run it once as intended.
+
+The encryption is more theatrical than cryptographically secure - it's meant
+as a poetic gesture about ephemerality, not a serious attempt at data
+protection. Anyone with a debugger could theoretically extract the text from
+memory during execution, but I doubt that will happen."
+
+[Narrator's note: It happened on opening night via video camera pointed at screen]
+
+---
+
+TECHNICAL DETAILS FROM "CRACKING THE AGRIPPA CODE" (2012)
+
+From Quinn DuPont's cryptanalysis contest:
+
+The encryption routine used a simple XOR cipher with a pseudorandom key generated
+from the Macintosh system clock. The algorithm was:
+
+1. Read current system time (ticks since system boot)
+2. Use time value as PRNG seed
+3. Generate pseudorandom byte stream equal to text length
+4. XOR each text byte with corresponding random byte
+5. Overwrite original text file with encrypted result
+
+This made the encryption effectively one-way since the exact system time at
+execution could never be reproduced. However, it was cryptographically weak -
+had anyone captured the memory state, the text could have been trivially recovered.
+
+The visual "encryption effect" displayed a series of random characters cascading
+down the screen, simulating the appearance of the text being scrambled. This was
+purely cosmetic - the actual encryption happened invisibly in the background.
+
+---
+
+From Robert Xiao's analysis (2012 contest winner):
+
+"The compiled 68k machine code shows that Agrippa used Macintosh Toolbox calls
+for display and disk I/O. The text scrolling was implemented using QuickDraw
+scrolling regions.
+
+The encryption routine was surprisingly simple - about 50 lines of disassembled
+code. The theatrical presentation (scrolling, visual effects, timing) comprised
+the majority of the program's complexity.
+
+The program was not malicious - it did not attempt to damage the disk or system.
+It simply encrypted one specific file (itself) after one execution. Very elegant
+in its simplicity."
+
+---
+
+REFLECTIONS ON PRESERVATION
+
+From The Agrippa Files commentary:
+
+The programmer's prediction proved both right and wrong. The text was preserved -
+but not through debuggers or memory dumps. Instead, someone at the December 9,
+1992 public reading simply pointed a video camera at the screen and recorded the
+poem as it scrolled by.
+
+This "lo-fi hack" frustrated the work's designed obsolescence. Within days, a
+transcription circulated online via FTP and Usenet. The elaborate encryption
+routine was bypassed entirely through analog capture.
+
+The irony: Gibson's poem about photographs fading and mechanical failure was
+itself captured photographically (via video) and preserved mechanically (via
+network infrastructure). The work's themes were enacted by its own circumvention.
+
+In 2011, Freek Wiedijk extracted the text directly from disk using Mac emulation -
+the encryption was never triggered because he dumped memory before execution
+completed. The original "unread" copies remain encrypted, while preserved copies
+proliferate infinitely online.
+
+Which version is authentic? The one that disappeared as intended? Or the one that
+survived despite intention?
+
+---
+
+Sources:
+- The Agrippa Files (agrippa.english.ucsb.edu)
+- Cracking the Agrippa Code contest (2012)
+- Kirschenbaum, M. G. (2008). Mechanisms: New Media and the Forensic Imagination.
+  MIT Press.
