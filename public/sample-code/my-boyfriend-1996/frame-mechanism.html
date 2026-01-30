@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Frame-Splitting Mechanism (Educational Sample)</title>
+<meta charset="utf-8">
+<style>
+body {
+  background: black;
+  color: white;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 20px;
+  font-size: 14px;
+}
+a {
+  color: white;
+  text-decoration: underline;
+}
+a:hover {
+  color: #cccccc;
+}
+.code {
+  background: #222;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #444;
+  font-family: monospace;
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+
+<h1>Frame-Splitting Mechanism</h1>
+
+<p><strong>EDUCATIONAL SAMPLE</strong> - This demonstrates the technical mechanism used in Olia Lialina's "My Boyfriend Came Back from the War" (1996)</p>
+
+<p>This is NOT the original artwork. To experience the actual work, visit:<br>
+<a href="http://www.teleportacia.org/war/" target="_blank">http://www.teleportacia.org/war/</a></p>
+
+<hr>
+
+<h2>How Frame-Splitting Works</h2>
+
+<p>The artwork uses HTML framesets to recursively subdivide the browser viewport. Each click on a hyperlink triggers a new frameset that splits the current frame into smaller sections.</p>
+
+<h3>Initial State (Level 0)</h3>
+<div class="code">
+&lt;frameset cols="50%,50%"&gt;<br>
+&nbsp;&nbsp;&lt;frame src="left.html"&gt;<br>
+&nbsp;&nbsp;&lt;frame src="right.html"&gt;<br>
+&lt;/frameset&gt;
+</div>
+<p>This creates a vertical split: two equal-width frames side by side.</p>
+
+<h3>After First Click (Level 1)</h3>
+<p>When user clicks a link in left.html:</p>
+<div class="code">
+&lt;frameset rows="50%,50%"&gt;<br>
+&nbsp;&nbsp;&lt;frame src="top.html"&gt;<br>
+&nbsp;&nbsp;&lt;frame src="bottom.html"&gt;<br>
+&lt;/frameset&gt;
+</div>
+<p>The left frame subdivides horizontally into top and bottom sections.</p>
+
+<h3>Recursive Pattern</h3>
+<p>Each subsequent frame can be further subdivided:</p>
+<ul>
+<li><strong>Vertical splits:</strong> <code>cols="50%,50%"</code> or other proportions</li>
+<li><strong>Horizontal splits:</strong> <code>rows="50%,50%"</code> or other proportions</li>
+<li><strong>Multiple splits:</strong> <code>cols="33%,33%,34%"</code> for three columns</li>
+</ul>
+
+<h3>Frame Accumulation</h3>
+<p>Unlike page-based hypertext (which replaces content), frame-splitting <strong>accumulates</strong> content. Previous frames remain visible as new ones appear, creating a palimpsest of text and images.</p>
+
+<p>This accumulation creates visual metaphor for:</p>
+<ul>
+<li>Fragmented memory</li>
+<li>Interrupted communication</li>
+<li>Temporal layering</li>
+<li>Psychological rupture</li>
+</ul>
+
+<hr>
+
+<h2>Technical Constraints of 1996</h2>
+
+<ul>
+<li><strong>Bandwidth:</strong> 28.8k modems (3.6 KB/sec) - images needed to be tiny</li>
+<li><strong>Screen resolution:</strong> 640x480 or 800x600 typical - frames got very small</li>
+<li><strong>Browser compatibility:</strong> Netscape Navigator 2.0, Internet Explorer 3.0 - limited CSS</li>
+<li><strong>No JavaScript libraries:</strong> Hand-coded HTML only</li>
+<li><strong>GIF images:</strong> Limited to 256 colors, file size restrictions</li>
+</ul>
+
+<hr>
+
+<h2>Why Frames Were Perfect</h2>
+
+<p>HTML frames (now deprecated) were ideal for this artwork because:</p>
+
+<ol>
+<li><strong>Native browser feature</strong> - no plugins required</li>
+<li><strong>Persistent visibility</strong> - multiple frames visible simultaneously</li>
+<li><strong>Recursive structure</strong> - framesets within framesets within framesets</li>
+<li><strong>Spatial metaphor</strong> - browser window as compositional space</li>
+<li><strong>Vernacular aesthetic</strong> - frames were amateur/DIY, not professional</li>
+</ol>
+
+<hr>
+
+<h2>Frame-Splitting as Narrative Syntax</h2>
+
+<p>The frame structure IS the narrative. Each split decision creates meaning:</p>
+
+<ul>
+<li><strong>Direction:</strong> Horizontal vs vertical splits have different connotations</li>
+<li><strong>Proportion:</strong> 50/50 equal vs asymmetric divisions</li>
+<li><strong>Depth:</strong> How many levels of nesting?</li>
+<li><strong>Density:</strong> How many frames accumulate?</li>
+<li><strong>Navigation:</strong> Which frames contain clickable links?</li>
+</ul>
+
+<p>This is <strong>computational narrative</strong> - the code structure IS the storytelling mechanism.</p>
+
+<hr>
+
+<h2>Critical Questions</h2>
+
+<ul>
+<li>How does spatial subdivision create temporal narrative?</li>
+<li>What does frame accumulation (vs page replacement) signify?</li>
+<li>How do 1996 bandwidth constraints shape aesthetic choices?</li>
+<li>Why black backgrounds and white text? (Default HTML? Aesthetic choice? Both?)</li>
+<li>How does the work exploit browser materiality?</li>
+<li>What happens when browsers deprecate frames? Is the work lost?</li>
+<li>How does vernacular amateur aesthetic resist professionalization?</li>
+<li>What does the simplicity of the code enable? (Remixability? Accessibility? Durability?)</li>
+</ul>
+
+<hr>
+
+<h2>For Critical Code Studies</h2>
+
+<p>This is CCS methodology in practice:</p>
+
+<ol>
+<li><strong>Read the code as text</strong> - What does frameset structure communicate?</li>
+<li><strong>Analyze technical decisions</strong> - Why frames? Why this split pattern?</li>
+<li><strong>Contextualize historically</strong> - How do 1996 constraints shape implementation?</li>
+<li><strong>Examine materiality</strong> - How does browser rendering create meaning?</li>
+<li><strong>Consider alternatives</strong> - What other technical approaches were possible? Why this one?</li>
+</ol>
+
+<p>The code is not neutral infrastructure. It is interpretive act, aesthetic choice, and cultural text.</p>
+
+<hr>
+
+<p><em>This educational sample created for CCS Workbench. View original artwork at teleportacia.org.</em></p>
+
+</body>
+</html>

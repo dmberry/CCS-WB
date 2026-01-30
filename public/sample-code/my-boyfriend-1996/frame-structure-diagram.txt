@@ -1,0 +1,191 @@
+FRAME STRUCTURE DIAGRAM: "My Boyfriend Came Back from the War"
+Educational visualization of recursive frame-splitting mechanism
+=================================================================
+
+LEVEL 0: Initial State (Two vertical frames)
+┌─────────────────────────────────────────────────────┐
+│                         │                           │
+│                         │                           │
+│        FRAME 1          │         FRAME 2           │
+│                         │                           │
+│                         │                           │
+│      [text + link]      │      [image or text]      │
+│                         │                           │
+│                         │                           │
+└─────────────────────────────────────────────────────┘
+
+<frameset cols="50%,50%">
+  <frame src="frame1.html">
+  <frame src="frame2.html">
+</frameset>
+
+
+LEVEL 1: After First Click (Left frame subdivides horizontally)
+┌─────────────────────────────────────────────────────┐
+│          FRAME 1A       │                           │
+│       [new text/image]  │                           │
+├─────────────────────────┤         FRAME 2           │
+│          FRAME 1B       │      [unchanged]          │
+│       [new text/image]  │                           │
+└─────────────────────────────────────────────────────┘
+
+Frame 1 now contains:
+<frameset rows="50%,50%">
+  <frame src="frame1a.html">
+  <frame src="frame1b.html">
+</frameset>
+
+
+LEVEL 2: After Second Click (Right frame subdivides vertically)
+┌─────────────────────────────────────────────────────┐
+│          FRAME 1A       │  FRAME 2A  │  FRAME 2B   │
+│       [unchanged]       │  [new]     │  [new]      │
+├─────────────────────────┼────────────┼─────────────┤
+│          FRAME 1B       │            │             │
+│       [unchanged]       │ FRAME 2A continues       │
+│                         │            │             │
+└─────────────────────────────────────────────────────┘
+
+Frame 2 now contains:
+<frameset cols="50%,50%">
+  <frame src="frame2a.html">
+  <frame src="frame2b.html">
+</frameset>
+
+
+LEVEL 3: Deep Nesting (Multiple subdivisions accumulate)
+┌─────────────────────────────────────────────────────┐
+│    1A1   │    1A2     │  2A1  │  2B1  │   2B2      │
+│  [img]   │  [text]    │ [img] │[text] │  [img]     │
+├──────────┴────────────┼───────┴───────┴────────────┤
+│                       │                             │
+│        FRAME 1B       │       FRAME 2A2             │
+│      [text + links]   │       [text fragment]       │
+│                       │                             │
+└───────────────────────┴─────────────────────────────┘
+
+Each frame can be further subdivided recursively.
+The viewport accumulates smaller and smaller fragments.
+Previous frames persist—creating palimpsest effect.
+
+
+ASYMMETRIC EXAMPLE (Proportional splits)
+┌─────────────────────────────────────────────────────┐
+│                     │                               │
+│                     │                               │
+│      70% WIDE       │          30% WIDE             │
+│                     │                               │
+│                     │                               │
+└─────────────────────────────────────────────────────┘
+
+<frameset cols="70%,30%">
+  <frame src="left.html">
+  <frame src="right.html">
+</frameset>
+
+Asymmetric divisions create visual hierarchy.
+Smaller frames feel more cramped, fragmented.
+
+
+MAXIMUM FRAGMENTATION (Late in narrative)
+┌──┬──┬──┬───┬───────┬───┬───┐
+│  │  │  │   │       │   │   │
+├──┼──┼──┤   │       ├───┼───┤
+│  │  │  │   │       │   │   │
+├──┴──┴──┤   │       ├───┴───┤
+│        │   │       │       │
+│        ├───┤       │       │
+│        │   │       │       │
+├────────┴───┴───────┼───────┤
+│                    │       │
+└────────────────────┴───────┘
+
+By the end, viewport may contain 10-15+ visible frames simultaneously.
+Each contains fragment: text snippet, image, or clickable link.
+The accumulation creates visual density—fragmented, claustrophobic.
+
+
+KEY CHARACTERISTICS OF THE FRAME STRUCTURE:
+
+1. ACCUMULATION (not replacement)
+   - Unlike hypertext links that navigate to new pages
+   - Frames persist even when subdivided
+   - Creates visual history of navigation path
+
+2. RECURSIVE NESTING
+   - Framesets within framesets within framesets
+   - Technically unlimited depth (practically limited by screen size)
+   - Each frame can spawn two or more children
+
+3. SPATIAL METAPHOR
+   - Viewport treated as compositional space
+   - Frame divisions create visual rhythm
+   - Horizontal vs vertical splits have different connotations
+
+4. NAVIGATION CONTROL
+   - Only certain frames contain clickable links
+   - User cannot "go back" easily (no traditional back button)
+   - Forward-only temporal movement
+
+5. CONSTRAINT AND DENSITY
+   - As frames multiply, each gets smaller
+   - Text becomes harder to read
+   - Mirrors psychological experience of fragmentation
+
+6. BROWSER DEPENDENCY
+   - Relies on browser's frame rendering
+   - Different browsers may handle nesting differently
+   - Deprecated technology creates preservation challenges
+
+
+TEMPORAL DIMENSION:
+
+Start:  Large frames, spacious, few elements
+        ↓
+        [user clicks]
+        ↓
+Middle: More frames, medium size, accumulating
+        ↓
+        [user clicks]
+        ↓
+End:    Many frames, small/cramped, dense palimpsest
+
+
+NARRATIVE PARALLAX:
+
+Multiple frames visible = multiple narrative threads visible
+Like split-screen cinema, but recursive and cumulative
+Viewer must decide where to focus attention
+No single "correct" reading path
+
+
+TECHNICAL NOTES:
+
+- HTML frames deprecated in HTML5 (2014)
+- Modern browsers still support for backward compatibility
+- Preservation requires frame-aware emulation
+- Source code extremely simple: ~15 HTML files total
+- Each file typically <2KB (minimal bandwidth)
+- No JavaScript required for core functionality
+- GIF images kept tiny (~5-10KB each)
+
+
+FOR CRITICAL CODE STUDIES:
+
+This diagram shows how STRUCTURE creates MEANING:
+- Frame hierarchy = narrative hierarchy
+- Spatial subdivision = temporal progression
+- Viewport density = psychological density
+- Code simplicity = aesthetic choice (vernacular web)
+- Browser dependency = material infrastructure matters
+
+The frame-splitting mechanism IS the artwork's core innovation.
+Not the text content, not the images—the CODE STRUCTURE.
+
+This is what CCS reveals: technical implementation as interpretive act.
+
+
+---
+Educational diagram created for CCS Workbench
+Based on technical analysis of "My Boyfriend Came Back from the War" (1996)
+Original work by Olia Lialina: http://www.teleportacia.org/war/
