@@ -1610,23 +1610,16 @@ export function CodeEditorPanel({
                               tabIndex={0}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // Select file and briefly highlight annotations
+                                // Select file and toggle annotation highlighting
                                 setSelectedFileId(file.id);
-                                setAnnotationDisplaySettings(prev => ({ ...prev, highlightAnnotatedLines: true }));
-                                // Reset after a short delay
-                                setTimeout(() => {
-                                  setAnnotationDisplaySettings(prev => ({ ...prev, highlightAnnotatedLines: false }));
-                                }, 2000);
+                                setAnnotationDisplaySettings(prev => ({ ...prev, highlightAnnotatedLines: !prev.highlightAnnotatedLines }));
                               }}
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
                                   e.preventDefault();
                                   e.stopPropagation();
                                   setSelectedFileId(file.id);
-                                  setAnnotationDisplaySettings(prev => ({ ...prev, highlightAnnotatedLines: true }));
-                                  setTimeout(() => {
-                                    setAnnotationDisplaySettings(prev => ({ ...prev, highlightAnnotatedLines: false }));
-                                  }, 2000);
+                                  setAnnotationDisplaySettings(prev => ({ ...prev, highlightAnnotatedLines: !prev.highlightAnnotatedLines }));
                                 }
                               }}
                               className={cn(
@@ -1635,7 +1628,7 @@ export function CodeEditorPanel({
                                   ? "text-white bg-burgundy border border-burgundy shadow-sm"
                                   : "text-burgundy/80 border border-burgundy/30 hover:bg-burgundy/10"
                               )}
-                              title={annotationDisplaySettings.highlightAnnotatedLines ? "Focus mode active (click to refresh)" : "Has annotations (click to highlight)"}
+                              title={annotationDisplaySettings.highlightAnnotatedLines ? "Exit focus mode (click to turn off)" : "Has annotations (click to highlight)"}
                             >
                               A
                             </span>

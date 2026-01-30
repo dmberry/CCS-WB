@@ -482,26 +482,27 @@ export function useAnnotationsSync({
 
       try {
         // Retry with exponential backoff
-        const count = await retryWithBackoff(
+        const data = await retryWithBackoff(
           async () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const { error, count } = await (supabase as any)
+            const { error, data } = await (supabase as any)
               .from("annotations")
               .delete()
-              .eq("id", annotationId);
+              .eq("id", annotationId)
+              .select();
 
             if (error) {
               console.error("deleteAnnotation: Database error:", error);
               throw error;
             }
 
-            return count;
+            return data;
           },
           "deleteAnnotation"
         );
 
         // Check if anything was actually deleted (RLS may have blocked it)
-        if (count === 0 || count === null) {
+        if (!data || data.length === 0) {
           console.warn("deleteAnnotation: No rows deleted (permission denied by RLS)");
           // Immediately restore the annotation in UI by fetching
           setTimeout(() => fetchAndUpdate(), 0);

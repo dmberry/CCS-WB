@@ -47,6 +47,15 @@ export interface Database {
           is_admin: boolean;
           profile_color: string | null;
           created_at: string;
+          // XP system fields
+          xp: number;
+          level: number;
+          last_daily_login: string | null;
+          created_annotations: number;
+          created_replies: number;
+          created_projects: number;
+          library_submissions: number;
+          library_approvals: number;
         };
         Insert: {
           id: string;
@@ -57,6 +66,15 @@ export interface Database {
           is_admin?: boolean;
           profile_color?: string | null;
           created_at?: string;
+          // XP system fields
+          xp?: number;
+          level?: number;
+          last_daily_login?: string | null;
+          created_annotations?: number;
+          created_replies?: number;
+          created_projects?: number;
+          library_submissions?: number;
+          library_approvals?: number;
         };
         Update: {
           id?: string;
@@ -67,6 +85,15 @@ export interface Database {
           is_admin?: boolean;
           profile_color?: string | null;
           created_at?: string;
+          // XP system fields
+          xp?: number;
+          level?: number;
+          last_daily_login?: string | null;
+          created_annotations?: number;
+          created_replies?: number;
+          created_projects?: number;
+          library_submissions?: number;
+          library_approvals?: number;
         };
       };
       projects: {
@@ -305,6 +332,78 @@ export interface Database {
           expires_at?: string;
         };
       };
+      project_favorites: {
+        Row: {
+          id: string;
+          project_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          user_id?: string;
+          created_at?: string;
+        };
+      };
+      project_ratings: {
+        Row: {
+          id: string;
+          project_id: string;
+          user_id: string;
+          rating: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          user_id: string;
+          rating: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          project_id?: string;
+          user_id?: string;
+          rating?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      xp_transactions: {
+        Row: {
+          id: string;
+          user_id: string;
+          action_type: string;
+          xp_earned: number;
+          reference_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          action_type: string;
+          xp_earned: number;
+          reference_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          action_type?: string;
+          xp_earned?: number;
+          reference_id?: string | null;
+          created_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -325,6 +424,9 @@ export type Annotation = Database["public"]["Tables"]["annotations"]["Row"];
 export type AnnotationReply = Database["public"]["Tables"]["annotation_replies"]["Row"];
 export type ChatMessage = Database["public"]["Tables"]["chat_messages"]["Row"];
 export type ProjectInvite = Database["public"]["Tables"]["project_invites"]["Row"];
+export type ProjectFavorite = Database["public"]["Tables"]["project_favorites"]["Row"];
+export type ProjectRating = Database["public"]["Tables"]["project_ratings"]["Row"];
+export type XPTransaction = Database["public"]["Tables"]["xp_transactions"]["Row"];
 
 // Types for inserting data
 export type ProfileInsert = Database["public"]["Tables"]["profiles"]["Insert"];
@@ -335,6 +437,9 @@ export type AnnotationInsert = Database["public"]["Tables"]["annotations"]["Inse
 export type AnnotationReplyInsert = Database["public"]["Tables"]["annotation_replies"]["Insert"];
 export type ChatMessageInsert = Database["public"]["Tables"]["chat_messages"]["Insert"];
 export type ProjectInviteInsert = Database["public"]["Tables"]["project_invites"]["Insert"];
+export type ProjectFavoriteInsert = Database["public"]["Tables"]["project_favorites"]["Insert"];
+export type ProjectRatingInsert = Database["public"]["Tables"]["project_ratings"]["Insert"];
+export type XPTransactionInsert = Database["public"]["Tables"]["xp_transactions"]["Insert"];
 
 // Extended types with relations
 export interface ProjectWithOwner extends Project {
@@ -366,3 +471,23 @@ export interface MemberWithProfile extends ProjectMember {
 export interface LibraryProject extends Project {
   owner?: Profile;
 }
+
+// Library project with engagement statistics
+export interface LibraryProjectWithStats extends LibraryProject {
+  favorite_count: number;
+  is_favorited_by_user: boolean;
+  average_rating: number | null;
+  rating_count: number;
+  user_rating: number | null;
+}
+
+// XP action types for gamification
+export type XPActionType =
+  | "annotation"
+  | "reply"
+  | "submit"
+  | "approved"
+  | "favorite_received"
+  | "rating_received"
+  | "project_created"
+  | "daily_login";
