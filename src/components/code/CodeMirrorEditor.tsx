@@ -250,7 +250,7 @@ export function CodeMirrorEditor({
       ),
       // Highlight annotated lines extension (dims non-annotated lines, colours annotated lines by type)
       highlightLinesCompartment.current.of(
-        readOnly && annotationDisplaySettings?.highlightAnnotatedLines
+        annotationDisplaySettings?.highlightAnnotatedLines
           ? createHighlightAnnotatedLinesExtension(annotations, true, isDark)
           : []
       ),
@@ -456,12 +456,12 @@ export function CodeMirrorEditor({
     if (isInitialMount.current) return;
     viewRef.current?.dispatch({
       effects: highlightLinesCompartment.current.reconfigure(
-        readOnly && annotationDisplaySettings?.highlightAnnotatedLines
+        annotationDisplaySettings?.highlightAnnotatedLines
           ? createHighlightAnnotatedLinesExtension(annotations, true, isDark)
           : []
       ),
     });
-  }, [annotations, readOnly, annotationDisplaySettings?.highlightAnnotatedLines, isDark]);
+  }, [annotations, annotationDisplaySettings?.highlightAnnotatedLines, isDark]);
 
   // Update subtle highlight extension when annotations or visibility/intensity changes
   useEffect(() => {
