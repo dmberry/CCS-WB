@@ -511,6 +511,7 @@ export function CodeEditorPanel({
   // annotationDisplaySettings is now from session.displaySettings.annotations (defined above)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(144); // Default width in pixels (w-36 = 9rem = 144px)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false); // Mobile overlay sidebar state
   const [isDraggingSidebar, setIsDraggingSidebar] = useState(false);
   const panelContainerRef = useRef<HTMLDivElement>(null);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -551,6 +552,7 @@ export function CodeEditorPanel({
       const projectData = await fetchSampleProject(sample.filename);
       onLoadSampleProject(projectData);
       setShowSamplesDropdown(false);
+      setMobileSidebarOpen(false); // Close mobile sidebar after loading sample
     } catch (error) {
       console.error("Failed to load sample project:", error);
     } finally {
@@ -1326,20 +1328,48 @@ export function CodeEditorPanel({
 
   return (
     <div ref={panelContainerRef} className="flex h-full bg-card border-r border-parchment">
+      {/* Mobile sidebar backdrop */}
+      {mobileSidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-ink/40 z-40"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
       {/* File tree sidebar - hidden in fullscreen mode */}
       {!isFullScreen && (
       <div
-        className="hidden md:flex border-r border-parchment bg-cream/30 flex-col"
-        style={{ width: sidebarCollapsed ? 32 : sidebarWidth }}
+        className={cn(
+          "border-r border-parchment bg-cream/30 flex-col",
+          // Desktop: normal flex layout
+          "hidden md:flex",
+          // Mobile: fixed overlay when open
+          mobileSidebarOpen && "flex fixed left-0 top-0 bottom-0 z-50"
+        )}
+        style={{ width: sidebarCollapsed ? 32 : (mobileSidebarOpen ? 280 : sidebarWidth) }}
       >
         <div className="px-1 py-1.5 border-b border-parchment flex items-center justify-between gap-1">
           {!sidebarCollapsed && (
             <>
               <div className="flex items-center gap-0.5 pl-1 overflow-hidden flex-1 min-w-0">
+                {/* Mobile close button - only visible on mobile */}
+                {mobileSidebarOpen && (
+                  <button
+                    onClick={() => setMobileSidebarOpen(false)}
+                    className="md:hidden p-1 text-slate-muted hover:text-burgundy transition-colors"
+                    title="Close menu"
+                  >
+                    <X className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  </button>
+                )}
+
                 {/* New file button - leftmost (hidden in read-only mode) */}
                 {onAddNewFile && !readOnly && (
                   <button
-                    onClick={onAddNewFile}
+                    onClick={() => {
+                      onAddNewFile();
+                      setMobileSidebarOpen(false);
+                    }}
                     className="p-1 text-slate-muted hover:text-burgundy transition-colors"
                     title="Create new file"
                   >
@@ -1349,7 +1379,10 @@ export function CodeEditorPanel({
                 {/* Load code button (hidden in read-only mode) */}
                 {onLoadCode && !readOnly && (
                   <button
-                    onClick={onLoadCode}
+                    onClick={() => {
+                      onLoadCode();
+                      setMobileSidebarOpen(false);
+                    }}
                     className="p-1 text-slate-muted hover:text-burgundy transition-colors"
                     title="Load code file"
                   >
@@ -1581,6 +1614,7 @@ export function CodeEditorPanel({
                             setEditorMode("annotate");
                           }
                           setSelectedFileId(file.id);
+                          setMobileSidebarOpen(false); // Close mobile sidebar after selection
                         }}
                         className="flex-1 min-w-0 py-1 pr-2 text-left overflow-hidden flex items-center gap-0.5"
                         title={file.name}
@@ -1841,6 +1875,15 @@ export function CodeEditorPanel({
           <div ref={toolbarRef} className="px-4 py-2 border-b border-parchment bg-cream/50 flex items-center justify-between">
             {/* Left group: mode toggle and tools */}
             <div className="flex items-center gap-2">
+              {/* Mobile menu button - visible only on mobile */}
+              <button
+                onClick={() => setMobileSidebarOpen(true)}
+                className="md:hidden p-2 text-slate hover:text-ink transition-colors"
+                title="Open files menu"
+              >
+                <Menu className="h-4 w-4" strokeWidth={1.5} />
+              </button>
+
               {/* Edit/Annotate mode toggle - hidden in read-only mode */}
               {!readOnly && (
                 <div className="flex items-center border border-parchment rounded-sm overflow-hidden">
