@@ -14,6 +14,7 @@ import { LibraryModal } from "@/components/projects/LibraryModal";
 import { AdminModal } from "@/components/projects/AdminModal";
 import { ProjectSyncBanner } from "@/components/projects/ProjectSyncBanner";
 import { Clippy } from "@/components/easter-eggs/Clippy";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 
 const libreBaskerville = Libre_Baskerville({
   subsets: ["latin"],
@@ -77,6 +78,15 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {/* PWA Configuration */}
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+        <meta name="theme-color" content="#7D4A3A" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="CCS Workbench" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+
         {/* Google Fonts for code font options */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -105,6 +115,26 @@ export default function RootLayout({
             `,
           }}
         />
+
+        {/* Service Worker Registration */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/service-worker.js').then(
+                    function(registration) {
+                      console.log('[SW] Registration successful:', registration.scope);
+                    },
+                    function(error) {
+                      console.log('[SW] Registration failed:', error);
+                    }
+                  );
+                });
+              }
+            `,
+          }}
+        />
       </head>
       <body className="font-body antialiased bg-ivory text-ink selection:bg-burgundy/20 selection:text-burgundy-900">
         <AppSettingsProvider>
@@ -120,6 +150,7 @@ export default function RootLayout({
                     <AdminModal />
                     <ProjectSyncBanner />
                     <Clippy />
+                    <InstallPrompt />
                   </ProjectsProvider>
                 </SessionProvider>
                 <LoginModal />
