@@ -2617,12 +2617,15 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           />
         )}
 
-        {/* Right: Chat Panel - only show when AI enabled and not fullscreen */}
+        {/* Right: Chat Panel - only show when AI enabled and not fullscreen, hidden on mobile */}
         {aiEnabled && !annotationFullScreen && (
-        <div className={cn(
-          "flex flex-col transition-all duration-200",
-          chatCollapsed ? "w-10 flex-shrink-0" : "flex-1 min-w-0"
-        )}>
+        <div
+          className={cn(
+            "hidden md:flex flex-col transition-all duration-200",
+            chatCollapsed ? "w-10 flex-shrink-0" : "flex-1 min-w-0"
+          )}
+          data-mobile-chat-hook
+        >
           {/* Collapsed state - just show expand button */}
           {chatCollapsed ? (
             <div className="flex-1 flex flex-col items-center pt-2 bg-cream/30 border-l border-parchment">
