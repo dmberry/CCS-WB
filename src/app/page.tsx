@@ -152,7 +152,8 @@ export default function WelcomePage() {
         <div className="max-w-5xl mx-auto px-4 py-1">
           <div className="flex items-center justify-between">
             <h1 className="font-display text-sm text-ink tracking-tight">
-              Critical Code Studies Workbench
+              <span className="hidden sm:inline">Critical Code Studies Workbench</span>
+              <span className="sm:hidden">CCS Workbench</span>
             </h1>
             <div className="flex items-center gap-1">
               <button
@@ -179,7 +180,7 @@ export default function WelcomePage() {
               </button>
               <button
                 onClick={() => setShowHelp(true)}
-                className="p-1 rounded-sm transition-colors text-slate hover:text-ink hover:bg-cream"
+                className="p-2 md:p-1 rounded-sm transition-colors text-slate hover:text-ink hover:bg-cream"
                 aria-label="Help"
                 title="Help & Getting Started"
               >
@@ -187,7 +188,7 @@ export default function WelcomePage() {
               </button>
               <button
                 onClick={() => setShowSettings(true)}
-                className="p-1 rounded-sm transition-colors text-slate hover:text-ink hover:bg-cream"
+                className="p-2 md:p-1 rounded-sm transition-colors text-slate hover:text-ink hover:bg-cream"
                 aria-label="Settings"
                 title="Settings"
               >
@@ -470,7 +471,7 @@ export default function WelcomePage() {
             {/* Help icon for experience levels */}
             <button
               onClick={() => setShowLevelHelp(!showLevelHelp)}
-              className="p-1 rounded-sm text-slate-muted hover:text-ink hover:bg-cream transition-colors"
+              className="p-2 md:p-1 rounded-sm text-slate-muted hover:text-ink hover:bg-cream transition-colors"
               aria-label="What do experience levels do?"
             >
               <Info className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -528,8 +529,8 @@ export default function WelcomePage() {
           </div>
         </div>
 
-        {/* Entry mode cards - compact horizontal layout */}
-        <div className="grid grid-cols-4 gap-3">
+        {/* Entry mode cards - responsive grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {entryModes.map((entry, index) => {
             const Icon = entry.icon;
             return (
@@ -537,13 +538,13 @@ export default function WelcomePage() {
                 key={entry.mode}
                 onClick={() => handleModeSelect(entry.mode)}
                 className={cn(
-                  "flex flex-col items-center text-center p-4",
+                  "flex flex-col items-center text-center p-6 md:p-4",
                   "bg-card border border-parchment rounded-sm",
                   "shadow-editorial hover:shadow-editorial-md",
                   "hover:border-parchment-dark hover:-translate-y-0.5",
                   "transition-all duration-300 ease-out",
                   "focus:outline-none focus:ring-1 focus:ring-burgundy focus:ring-offset-1 focus:ring-offset-background",
-                  "group"
+                  "group min-h-[120px]"
                 )}
               >
                 <div
