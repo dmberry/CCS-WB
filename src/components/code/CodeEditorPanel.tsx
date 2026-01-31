@@ -473,8 +473,14 @@ export function CodeEditorPanel({
         // Files from collaborators have source === "shared"
         const localNewFiles = newFiles.filter(f => f.source !== "shared");
         if (localNewFiles.length > 0) {
-          // Select the last locally-added file
-          setSelectedFileId(localNewFiles[localNewFiles.length - 1].id);
+          // Check if README.md is among the new files (prioritize it for sample projects)
+          const readmeFile = localNewFiles.find(f => f.name.toLowerCase() === 'readme.md');
+          if (readmeFile) {
+            setSelectedFileId(readmeFile.id);
+          } else {
+            // Select the last locally-added file
+            setSelectedFileId(localNewFiles[localNewFiles.length - 1].id);
+          }
         }
         // If only shared files were added, keep current selection
       } else {
@@ -1340,7 +1346,7 @@ export function CodeEditorPanel({
       {!isFullScreen && (
       <div
         className={cn(
-          "border-r border-parchment bg-cream/30 flex-col",
+          "border-r border-parchment bg-cream flex-col",
           // Desktop: normal flex layout
           "hidden md:flex",
           // Mobile: fixed overlay when open
@@ -1688,7 +1694,7 @@ export function CodeEditorPanel({
             <div className="border-t border-parchment/50 flex-shrink-0">
               <button
                 onClick={handleToggleTrash}
-                className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-cream/50 dark:hover:bg-slate-800/50 transition-colors"
+                className="w-full flex items-center gap-1.5 px-2 py-1.5 text-left hover:bg-cream dark:hover:bg-slate-800/50 transition-colors"
               >
                 <ChevronRight
                   className={cn(
@@ -1717,7 +1723,7 @@ export function CodeEditorPanel({
                         {trashedFiles.map((file) => (
                           <li
                             key={file.id}
-                            className="flex items-center gap-1.5 py-1 px-2 rounded hover:bg-cream/50 dark:hover:bg-slate-800/50 transition-colors group"
+                            className="flex items-center gap-1.5 py-1 px-2 rounded hover:bg-cream dark:hover:bg-slate-800/50 transition-colors group"
                           >
                             <span className="flex-1 text-[10px] font-mono text-slate-muted truncate">
                               {file.name}
@@ -1768,7 +1774,7 @@ export function CodeEditorPanel({
             const orphaned = fileAnnotations.filter(a => a.orphaned);
 
             return (
-              <div className="mt-auto border-t border-parchment bg-cream/50 px-2 py-1.5 max-h-24 overflow-y-auto">
+              <div className="mt-auto border-t border-parchment bg-cream px-2 py-1.5 max-h-24 overflow-y-auto">
                 <div className="font-sans text-[9px] uppercase tracking-wider text-slate-muted pb-1 mb-1.5 border-b border-parchment/50">
                   Annotations ({fileAnnotations.length})
                 </div>
@@ -1837,7 +1843,7 @@ export function CodeEditorPanel({
                 key={sample.id}
                 onClick={() => handleLoadSampleProject(sample.id)}
                 disabled={loadingSample === sample.id}
-                className="w-full text-left px-2 py-1.5 hover:bg-cream/50 transition-colors disabled:opacity-50"
+                className="w-full text-left px-2 py-1.5 hover:bg-cream transition-colors disabled:opacity-50"
               >
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-mono text-burgundy">{sample.name}</span>
@@ -1872,7 +1878,7 @@ export function CodeEditorPanel({
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile-only header with hamburger menu - always visible */}
         {!selectedFile && (
-          <div className="md:hidden px-4 py-2 border-b border-parchment bg-cream/50 flex items-center gap-2">
+          <div className="md:hidden px-4 py-2 border-b border-parchment bg-cream flex items-center gap-2">
             <button
               onClick={() => setMobileSidebarOpen(true)}
               className="p-2 text-slate hover:text-ink transition-colors"
@@ -1888,7 +1894,7 @@ export function CodeEditorPanel({
 
         {/* Editor header */}
         {selectedFile && (
-          <div ref={toolbarRef} className="px-4 py-2 border-b border-parchment bg-cream/50 flex items-center justify-between">
+          <div ref={toolbarRef} className="px-4 py-2 border-b border-parchment bg-cream flex items-center justify-between">
             {/* Left group: mode toggle and tools */}
             <div className="flex items-center gap-2">
               {/* Mobile menu button - visible only on mobile */}
@@ -2071,7 +2077,7 @@ export function CodeEditorPanel({
                           "p-1 rounded transition-all",
                           annotationDisplaySettings.highlightAnnotatedLines
                             ? "text-white bg-burgundy shadow-sm"
-                            : "text-slate-muted hover:text-ink hover:bg-cream/50"
+                            : "text-slate-muted hover:text-ink hover:bg-cream"
                         )}
                         title={annotationDisplaySettings.highlightAnnotatedLines ? "Exit focus mode (show all code equally)" : "Focus mode: highlight annotated lines"}
                       >
@@ -2144,7 +2150,7 @@ export function CodeEditorPanel({
               {/* Cursor position indicator for punch card files - shown in both narrow and wide */}
               {toolbarNarrow && isPunchCardFormat && cursorPosition && (
                 <span
-                  className="font-mono text-[9px] text-slate-muted px-1.5 py-0.5 bg-cream/50 rounded"
+                  className="font-mono text-[9px] text-slate-muted px-1.5 py-0.5 bg-cream rounded"
                   title="Line : Column (for 80-column punch card code)"
                 >
                   L{cursorPosition.line}:C{cursorPosition.column}
@@ -2280,7 +2286,7 @@ export function CodeEditorPanel({
               {/* Cursor position indicator for punch card files */}
               {isPunchCardFormat && cursorPosition && (
                 <span
-                  className="font-mono text-[9px] text-slate-muted px-1.5 py-0.5 bg-cream/50 rounded"
+                  className="font-mono text-[9px] text-slate-muted px-1.5 py-0.5 bg-cream rounded"
                   title="Line : Column (for 80-column punch card code)"
                 >
                   L{cursorPosition.line}:C{cursorPosition.column}
@@ -2310,7 +2316,7 @@ export function CodeEditorPanel({
                       </div>
                       <div className="max-h-64 overflow-y-auto">
                         {sharedProjectMembers.map((member) => (
-                          <div key={member.user_id} className="px-3 py-2 hover:bg-cream/50 flex items-center gap-2">
+                          <div key={member.user_id} className="px-3 py-2 hover:bg-cream flex items-center gap-2">
                             {member.avatar_url ? (
                               <img src={member.avatar_url} alt="" className="w-6 h-6 rounded-full" />
                             ) : (

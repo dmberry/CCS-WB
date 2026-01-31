@@ -700,3 +700,11 @@ html:not(.skin-active) .font-display {
 .skin-toggle-thumb[data-toggle-state="on"] {
   transform: translateX(16px) !important;
 }
+
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+  /* Smaller annotation font on mobile for better readability */
+  :root {
+    --annotation-font-size: 8px !important;
+  }
+}

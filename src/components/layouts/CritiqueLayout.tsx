@@ -2542,6 +2542,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
               // Reset manual resize flag
               userHasManuallyResized.current = false;
               // Note: importSession handles restoring all files, annotations, and messages
+              // README.md will be auto-selected by CodeEditorPanel's useEffect
             }}
             onAddNewFile={() => {
               // Generate unique filename (untitled.md, untitled-2.md, etc.)
