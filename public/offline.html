@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - CCS Workbench</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #FAF8F3;
+      color: #2C2617;
+      line-height: 1.6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 600px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      color: #7D4A3A;
+      margin-bottom: 1rem;
+    }
+
+    p {
+      font-size: 1.125rem;
+      margin-bottom: 1.5rem;
+      color: #5A4F3F;
+    }
+
+    .icon {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 2rem;
+      background: linear-gradient(135deg, #7D4A3A 0%, #A67C6A 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+    }
+
+    .features {
+      background: white;
+      border-radius: 8px;
+      padding: 2rem;
+      margin-top: 2rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      text-align: left;
+    }
+
+    .features h2 {
+      font-size: 1.25rem;
+      color: #7D4A3A;
+      margin-bottom: 1rem;
+    }
+
+    .features ul {
+      list-style: none;
+    }
+
+    .features li {
+      padding: 0.5rem 0;
+      padding-left: 1.5rem;
+      position: relative;
+    }
+
+    .features li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #7D4A3A;
+      font-weight: bold;
+    }
+
+    .btn {
+      display: inline-block;
+      background: #7D4A3A;
+      color: white;
+      padding: 0.75rem 2rem;
+      border-radius: 4px;
+      text-decoration: none;
+      margin-top: 1.5rem;
+      transition: background 0.2s;
+    }
+
+    .btn:hover {
+      background: #6B3E2F;
+    }
+
+    .status {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: #FFF9E6;
+      border-left: 4px solid #FFB800;
+      border-radius: 4px;
+      text-align: left;
+    }
+
+    .status strong {
+      color: #7D4A3A;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">📡</div>
+
+    <h1>You're Offline</h1>
+
+    <p>
+      You're currently offline, but don't worry - CCS Workbench continues to work!
+    </p>
+
+    <div class="status">
+      <strong>Auto-save still works:</strong> Your annotations and edits are being saved locally to your device.
+      They'll sync when you're back online.
+    </div>
+
+    <div class="features">
+      <h2>What Still Works Offline:</h2>
+      <ul>
+        <li>View and edit your local projects</li>
+        <li>Create new annotations</li>
+        <li>Load cached sample code projects</li>
+        <li>All critical code study tools</li>
+        <li>Auto-save to local storage</li>
+      </ul>
+    </div>
+
+    <div class="features">
+      <h2>What Requires Connection:</h2>
+      <ul>
+        <li>AI-powered code analysis</li>
+        <li>Loading new sample projects</li>
+        <li>Syncing across devices</li>
+      </ul>
+    </div>
+
+    <a href="/" class="btn">Return to CCS Workbench</a>
+
+    <p style="margin-top: 2rem; font-size: 0.875rem; color: #7D4A3A;">
+      Connection will be restored automatically when you're back online.
+    </p>
+  </div>
+
+  <script>
+    // Auto-redirect when back online
+    window.addEventListener('online', () => {
+      window.location.href = '/';
+    });
+
+    // Show online/offline status
+    if (navigator.onLine) {
+      // Already online, redirect immediately
+      window.location.href = '/';
+    }
+  </script>
+</body>
+</html>
