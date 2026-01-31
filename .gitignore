@@ -82,3 +82,4 @@ assistant.db
 
 # Knowledge files (local working documents, not for GitHub)
 knowledge/
+PROJECT_NOTES.md
