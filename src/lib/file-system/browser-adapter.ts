@@ -58,7 +58,7 @@ export class BrowserFileSystemAdapter implements FileSystemAdapter {
    * Opens native file picker dialog
    */
   async requestWriteHandle(suggestedName: string): Promise<FileHandle | null> {
-    if (!this.useFSAA) {
+    if (!this.useFSAA || !window.showSaveFilePicker) {
       // Fallback browsers don't need handles for new files
       // We'll just create metadata and store content in localStorage
       return {
