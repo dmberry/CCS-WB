@@ -186,6 +186,27 @@ export function CodeMirrorEditor({
     [onLineClick]
   );
 
+  // Mobile-specific configuration
+  const mobileExtensions = useMemo(() => {
+    if (typeof window === 'undefined') return [];
+    const isMobile = window.innerWidth < 768;
+    if (!isMobile) return [];
+
+    return [
+      EditorView.theme({
+        '&': {
+          fontSize: '16px', // Prevent iOS zoom on focus
+        },
+        '.cm-scroller': {
+          fontSize: '16px',
+        },
+        '.cm-gutters': {
+          minWidth: '44px', // Touch-friendly tap targets
+        },
+      }),
+    ];
+  }, []);
+
   // Create base extensions (static, not including gutter which varies by mode)
   const baseExtensions = useMemo(
     (): Extension[] => [
@@ -200,8 +221,9 @@ export function CodeMirrorEditor({
       highlightSelectionMatches(), // Highlight all matches of selection
       keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
       EditorView.lineWrapping,
+      ...mobileExtensions, // Add mobile-specific configuration
     ],
-    []
+    [mobileExtensions]
   );
 
   // Initialize editor on mount
