@@ -79,3 +79,6 @@ assistant.db
 .claude_assistant_settings.json
 .playwright-mcp/
 .DS_Store
+
+# Knowledge files (local working documents, not for GitHub)
+knowledge/
