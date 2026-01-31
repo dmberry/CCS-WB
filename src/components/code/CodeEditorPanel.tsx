@@ -1870,6 +1870,22 @@ export function CodeEditorPanel({
 
       {/* Code editor area */}
       <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Mobile-only header with hamburger menu - always visible */}
+        {!selectedFile && (
+          <div className="md:hidden px-4 py-2 border-b border-parchment bg-cream/50 flex items-center gap-2">
+            <button
+              onClick={() => setMobileSidebarOpen(true)}
+              className="p-2 text-slate hover:text-ink transition-colors"
+              title="Open files menu"
+            >
+              <Menu className="h-4 w-4" strokeWidth={1.5} />
+            </button>
+            <span className="font-sans text-xs text-slate-muted">
+              {codeFiles.length === 0 ? 'No files loaded' : 'Select a file'}
+            </span>
+          </div>
+        )}
+
         {/* Editor header */}
         {selectedFile && (
           <div ref={toolbarRef} className="px-4 py-2 border-b border-parchment bg-cream/50 flex items-center justify-between">
