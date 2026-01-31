@@ -1890,7 +1890,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             onClick={() => setShowNewProjectModal(true)}
             disabled={!!currentProjectId}
             className={cn(
-              "hidden sm:block p-1.5 transition-colors",
+              "hidden sm:block p-2 md:p-1.5 transition-colors",
               currentProjectId
                 ? "text-slate/40 cursor-not-allowed"
                 : "text-slate hover:text-ink"
@@ -1901,7 +1901,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
           </button>
           <button
             onClick={handleSaveSession}
-            className="p-1.5 text-slate hover:text-ink"
+            className="p-2 md:p-1.5 text-slate hover:text-ink"
             title="Save session"
           >
             <Save className="h-4 w-4" strokeWidth={1.5} />
@@ -1910,7 +1910,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             onClick={() => sessionLoadInputRef.current?.click()}
             disabled={!!currentProjectId}
             className={cn(
-              "hidden sm:block p-1.5 transition-colors",
+              "hidden sm:block p-2 md:p-1.5 transition-colors",
               currentProjectId
                 ? "text-slate/40 cursor-not-allowed"
                 : "text-slate hover:text-ink"
@@ -1920,7 +1920,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
             <FolderOpen className="h-4 w-4" strokeWidth={1.5} />
           </button>
           <div className="hidden sm:block w-px h-4 bg-parchment mx-1" />
-          <button onClick={() => setShowExportModal(true)} className="p-1.5 text-slate hover:text-ink" title="Export session log">
+          <button onClick={() => setShowExportModal(true)} className="p-2 md:p-1.5 text-slate hover:text-ink" title="Export session log">
             <Download className="h-4 w-4" strokeWidth={1.5} />
           </button>
           {/* AI Status Button */}
@@ -1957,7 +1957,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
                 }
               }}
               className={cn(
-                "p-1.5 rounded-sm transition-colors",
+                "p-2 md:p-1.5 rounded-sm transition-colors",
                 showCloudMenu
                   ? "bg-cream"
                   : "hover:bg-cream"
@@ -2437,7 +2437,7 @@ export const CritiqueLayout = forwardRef<CritiqueLayoutRef, CritiqueLayoutProps>
               setSettingsTab("appearance");
               setShowSettingsModal(true);
             }}
-            className="p-1.5 rounded-sm text-slate hover:text-ink hover:bg-cream transition-colors"
+            className="p-2 md:p-1.5 rounded-sm text-slate hover:text-ink hover:bg-cream transition-colors"
             title="Settings"
           >
             <Settings className="h-4 w-4" strokeWidth={1.5} />

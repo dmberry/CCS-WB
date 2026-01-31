@@ -1329,7 +1329,7 @@ export function CodeEditorPanel({
       {/* File tree sidebar - hidden in fullscreen mode */}
       {!isFullScreen && (
       <div
-        className="border-r border-parchment bg-cream/30 flex flex-col"
+        className="hidden md:flex border-r border-parchment bg-cream/30 flex-col"
         style={{ width: sidebarCollapsed ? 32 : sidebarWidth }}
       >
         <div className="px-1 py-1.5 border-b border-parchment flex items-center justify-between gap-1">

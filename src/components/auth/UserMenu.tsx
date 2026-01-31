@@ -96,7 +96,7 @@ export function UserMenu({ className, onProfileClick }: UserMenuProps) {
         )}
       >
         <Users className="h-3 w-3" />
-        <span>Collaborate</span>
+        <span className="hidden sm:inline">Collaborate</span>
       </button>
     );
   }
