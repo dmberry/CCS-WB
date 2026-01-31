@@ -6,7 +6,7 @@
  * - Electron (future implementation)
  */
 
-import type { EntryMode } from '@/context/SessionContext';
+import type { EntryMode } from '@/types';
 
 /**
  * Platform-agnostic file handle
