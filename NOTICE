@@ -1,0 +1,30 @@
+Critical Code Studies Workbench (CCS-WB)
+Copyright (C) 2025-2026 David M. Berry
+
+RELICENSING NOTICE
+==================
+
+As of version 5.2.0 (August 2026), CCS-WB is licensed under the GNU General
+Public License, version 3.0 or (at your option) any later version. See the
+LICENSE file for the full text.
+
+Earlier releases of CCS-WB (all versions prior to 5.2.0) were distributed
+under the MIT License. As the sole copyright holder of the entire codebase
+— verified against the project's version-control history, in which every
+commit from the initial commit (0a1d38e, January 2026) onward is authored
+by David M. Berry — the copyright holder hereby relicenses those earlier
+versions under the GNU General Public License, version 3.0 or later.
+
+Anyone in possession of an earlier MIT-licensed tree of CCS-WB may, at
+their option, treat that code as available under GPL-3.0-or-later on the
+same terms as the current release. The MIT licence continues to be available
+for those earlier versions for anyone who prefers to rely on it; this notice
+adds GPL-3.0-or-later as an additional standing offer, it does not withdraw
+the MIT grant already made.
+
+A previous LICENSE file carried the line "Based loosely on an original
+codebase by Matthew Grimes." That credit reflected general inspiration and
+prior conversation, not incorporated code: no commits by Matthew Grimes
+exist in the CCS-WB repository, and no code authored by him is present in
+this software. The acknowledgement has been removed from the LICENSE file
+as of version 5.2.0.

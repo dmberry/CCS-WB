@@ -1,7 +1,8 @@
 {
   "name": "ccs-wb",
-  "version": "5.1.7",
+  "version": "5.2.0",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

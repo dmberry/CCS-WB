@@ -1,6 +1,6 @@
 # Critical Code Studies Workbench
 
-**Version 5.1.7** | CCS Methodology v2.7
+**Version 5.2.0** | CCS Methodology v2.7
 
 A web application for close reading and hermeneutic analysis of software as cultural artefact.
 
@@ -484,6 +484,7 @@ When analysing code, use these annotation types:
 
 | Version | Changes |
 |---------|---------|
+| 5.2.0 | **Relicensed to GNU General Public License v3.0 or later.** CCS-WB moves from MIT to GPL-3.0-or-later. As sole copyright holder (verified against `git log` — every commit from `0a1d38e` onward is by David M. Berry), the copyright holder also relicenses all prior versions of this software under GPL-3.0-or-later; anyone with an older MIT-tagged tree may, at their option, treat that code as available under GPL-3.0-or-later. The earlier LICENSE noted "based loosely on an original codebase by Matthew Grimes" — that credit reflected general inspiration, not incorporated code (no Grimes-authored commits exist in the repository), and the acknowledgement has been removed. New `LICENSE` carries the standard GPLv3 header naming David M. Berry (2025-2026) with the "or (at your option) any later version" clause plus the full GPL v3 text; `package.json` declares `"license": "GPL-3.0-or-later"`; README updated. |
 | 5.1.7 | **Documented the Spacewar! sample folder convention.** The Spacewar! sample folder ships its `.ccs` *plus* 26 loose `.txt` files alongside it, where other samples (adventure-1977, git-stash-2007, etc.) ship as `.ccs`-only. The asymmetry was a fair question. Structurally, the Spacewar `.ccs` is the same as every other sample's — `codeFiles[]` metadata + `codeContents{}` with file bodies inlined; the workbench loads only from the `.ccs` and the loose files are external copies, redundant for app behaviour. The convention is now spelled out in a new "A note on this folder on disk" section near the top of `public/sample-code/spacewar-1962/README.md`: ship as `.ccs`-only by default; keep loose external copies only when the corpus is a primary scholarly object that benefits from being directly browsable, greppable, and downloadable on GitHub. The Spacewar corpus qualifies; most don't. On-disk README only — the workbench loads its own copy of the README from `codeContents`, and that user-facing scholarly intro doesn't need the disk-vs-workbench footnote. |
 | 5.1.6 | **Header mark fixes: correct CCS-WB tool icon, no navigation away.** Two issues with the v5.1.5 menu-bar mark addressed. **(a) Wrong icon**: v5.1.5 was using the generic Computational Hermeneutics org mark (the circle with two arcs) as the CCS-WB title icon; replaced with the CCS-WB-specific tool icon from the CH design system (`/branding/ch/tools/ccs-wb.svg` — the editor frame with the manuscript-gold annotation marker, which is the canonical CCS-WB brand in the family). Bumped from 20px to 24px so the detail in the mark reads. The generic CH org mark stays inside Settings → About in the "Part of Computational Hermeneutics" block, which is the correct place for it. **(b) Safety**: the v5.1.5 mark was an anchor link to the org hub with `target="_blank"`; even with new-tab intent, on mobile gestures or middle-click some browsers can pull the user away from an in-progress session, potentially losing unsaved work. Removed the link entirely — the menu-bar mark is now a non-interactive `<span>` with a hover tooltip pointing users at Settings → About for the actual link. |
 | 5.1.5 | **Computational Hermeneutics mark in the menu bar + About methodology fix.** The CH logo mark (the circle + burgundy/gold arcs from the org brand kit) now sits to the left of the "CCS Workbench" / "Critical Code Studies Workbench" title in both the landing page header and the workbench header — 20px, opacity 80→100 on hover, anchor link to [computational-hermeneutics.github.io](https://computational-hermeneutics.github.io) with a *"Part of Computational Hermeneutics"* tooltip. Gives the org attribution a constant, ambient presence rather than burying it inside Settings → About. **Bug fix:** the Settings → About panel was hardcoding the methodology version as `CCS v2.5`; corrected to `CCS v2.7` to match the canonical version carried in the README and `CLAUDE.md` headers. |
@@ -560,7 +561,18 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-[MIT License](LICENSE)
+[GNU General Public License v3.0 or later](LICENSE)
+
+Copyright (C) 2025-2026 David M. Berry. This program is free software under
+the terms of the GPL, version 3 or (at your option) any later version. See
+[LICENSE](LICENSE) for the full text.
+
+**Relicensing:** CCS-WB was previously distributed under the MIT License
+(versions prior to 5.2.0). As sole copyright holder, David M. Berry hereby
+relicenses all prior versions of this software under GPL-3.0-or-later.
+Anyone in possession of an earlier MIT-licensed tree may, at their option,
+treat that code as available under GPL-3.0-or-later on the same terms as
+the current release. See [NOTICE](NOTICE) for the full relicensing statement.
 
 ## Acknowledgments
 
